@@ -1,22 +1,23 @@
 # Package
+# pkg <package name> <pin coordinates relative to pin 0>
 pkg dip14 0,0 1,0 2,0 3,0 4,0 5,0 6,0 6,-3 5,-3 4,-3 3,-3 2,-3 1,-3 0,-3
 pkg header20 0,0 1,0 2,0 3,0 4,0 5,0 6,0 7,0 8,0 9,0 10,0 11,0 12,0 13,0 14,0 15,0 16,0 17,0 18,0 19,0
-pkg led 0,0 1,0
-pkg pad 0,0
-
 pkg customFootprint 0,0 3,3 4,3 -2,1
 
 # Components
+# com <component name> <package name>
 com rpi header20
 com 7400 dip14
 com custom customFootprint
 
 # Positions (pin 0)
+# com <name of component> <absolute position of component pin 0>
 pos rpi 4,2
 pos 7400 10,15
 pos custom 5,20
 
 # Connections
+# c <from component name>.<pin index> <to component name>.<pin index>
 c 7400.9 rpi.10
 c 7400.4 rpi.9
 c rpi.8 7400.1
