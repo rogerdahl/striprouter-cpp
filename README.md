@@ -14,6 +14,8 @@ The circuit description is a text file that can be edited while the program is r
 
 ### Circuit description
 
+This is the example circuit description that is rendered in the screenshot.
+
 ```
 # Package
 # pkg <package name> <pin coordinates relative to pin 0>
