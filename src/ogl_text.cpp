@@ -20,11 +20,12 @@ const int MAX_TEXTURE_SIZE_W_H = 1024 * 1024;
 const int FT_SIZE_FACTOR = 64;
 const int BACKGROUND_PADDING_PIXELS = 0;
 
-OglText::OglText(u32 window_w, u32 window_h, const boost::filesystem::path &fontPath, u32 font_h)
-    : window_w_(window_w), window_h_(window_h), tex_w_h_(0), font_h_(font_h), fontPath_(fontPath)
+
+OglText::OglText(u32 windowW, u32 windowH, const boost::filesystem::path &fontPath, u32 font_h)
+    : windowW_(windowW), windowH_(windowH), tex_w_h_(0), font_h_(font_h), fontPath_(fontPath)
 {
   createFontTexture();
-  fmt::print("Info: Font texture size: {0}x{0}\n", tex_w_h_);
+//  fmt::print("Info: Font texture size: {0}x{0}\n", tex_w_h_);
 
   textProgramId = createProgram("text.vert", "text.frag");
   textBackgroundProgramId = createProgram("text_background.vert", "text_background.frag");
@@ -38,8 +39,6 @@ OglText::~OglText()
   glDeleteBuffers(1, &vertexBufId_);
   glDeleteBuffers(1, &texBufId_);
   glDeleteTextures(1, &textureId_);
-//    fillProgramId = createProgram("text.vert", "text.frag");
-//    textBackgroundProgramId = createProgram("text_background.vert", "text_background.frag");
 }
 
 void OglText::createFontTexture()
@@ -158,7 +157,7 @@ void OglText::print(u32 start_x, u32 start_y, u32 nLine, const string &str)
   glBindTexture(GL_TEXTURE_2D, textureId_);
   glActiveTexture(GL_TEXTURE0);
 
-  auto projection = glm::ortho(0.0f, static_cast<float>(window_w_), static_cast<float>(window_h_),
+  auto projection = glm::ortho(0.0f, static_cast<float>(windowW_), static_cast<float>(windowH_),
                                0.0f, 0.0f, 100.0f);
 
   glUseProgram(textProgramId);
@@ -253,7 +252,7 @@ u32 OglText::getStringHeight()
 void OglText::drawTextBackground(u32 start_x, u32 start_y, u32 nLine, const string &str)
 {
   auto strW = calcStringWidth(str);
-  auto projection = glm::ortho(0.0f, static_cast<float>(window_w_), static_cast<float>(window_h_), 0.0f, 0.0f, 100.0f);
+  auto projection = glm::ortho(0.0f, static_cast<float>(windowW_), static_cast<float>(windowH_), 0.0f, 0.0f, 100.0f);
   glUseProgram(textBackgroundProgramId);
   glUniformMatrix4fv(glGetUniformLocation(textBackgroundProgramId, "projection"), 1, GL_FALSE,
                      glm::value_ptr(projection));

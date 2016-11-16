@@ -20,7 +20,8 @@ struct CharMeta {
 
 class OglText {
 public:
-  OglText(u32 window_w, u32 window_h, const boost::filesystem::path &fontPath, u32 font_h);
+  OglText();
+  OglText(u32 windowW, u32 windowH, const boost::filesystem::path &fontPath, u32 font_h);
   ~OglText();
   void print(u32 start_x, u32 start_y, u32 line, const std::string &str);
   u32 calcStringWidth(const std::string &str);
@@ -30,8 +31,8 @@ private:
   bool renderFont(std::vector<u8> &fontVec, FT_Face face);
   void drawTextBackground(u32 start_x, u32 start_y, u32 line, const std::string &str);
 
-  u32 window_w_;
-  u32 window_h_;
+  u32 windowW_;
+  u32 windowH_;
 
   GLuint textureId_;
   GLuint textProgramId;

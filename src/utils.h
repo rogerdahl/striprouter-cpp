@@ -7,7 +7,7 @@
 
 bool save_screenshot(std::string filename, int w, int h);
 //double average(std::deque<double>& d);
-void showTexture(u32 window_w, u32 window_h, GLuint textureId);
+void showTexture(u32 windowW, u32 windowH, GLuint textureId);
 std::vector<u8> makeTestTextureVector(u32 w, u32 h, u32 border);
 
 class averageSec {

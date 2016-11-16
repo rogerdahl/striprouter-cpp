@@ -157,3 +157,14 @@ Copy `bin\Release\x64\glew32.dll` to `striprouter\bin`.
 `glew32.dll` is the 64-bit DLL despite the conflicting name.
 
 `lib\Release\x64\glew32.lib` is the corresponding 64-bit lib.
+
+#### NanoGUI
+
+git clone --recursive https://github.com/wjakob/nanogui.git
+
+* Open in cmake > Configure
+* Select only: NANOGUI_USE_GLAD, USE_MSVC_RUNTIME_LIBRARY_DLL
+* Generate
+* Open NanoGUI.sln
+* Solution Configurations (toolbar) > Release
+* Build > Build Solution

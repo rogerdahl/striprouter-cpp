@@ -71,7 +71,7 @@ bool save_screenshot(string filename, int w, int h)
   return true;
 }
 
-void showTexture(u32 window_w, u32 window_h, GLuint textureId)
+void showTexture(u32 windowW, u32 windowH, GLuint textureId)
 {
   GLuint programId = createProgram("show_texture.vert", "show_texture.frag");
   glUseProgram(programId);
@@ -81,7 +81,7 @@ void showTexture(u32 window_w, u32 window_h, GLuint textureId)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glActiveTexture(GL_TEXTURE0);
 
-  auto projection = glm::ortho(0.0f, static_cast<float>(window_w), static_cast<float>(window_h),
+  auto projection = glm::ortho(0.0f, static_cast<float>(windowW), static_cast<float>(windowH),
                                0.0f, 0.0f, 100.0f);
 //    auto projection = glm::ortho(0.0f, static_cast<float>(1024), static_cast<float>(1024),
 //                                       0.0f, 0.0f, 100.0f);
@@ -94,8 +94,8 @@ void showTexture(u32 window_w, u32 window_h, GLuint textureId)
   vector<GLfloat> triVec;
   vector<GLfloat> texVec;
 
-  float h = static_cast<float>(window_h);
-  float w = static_cast<float>(window_w);
+  float h = static_cast<float>(windowH);
+  float w = static_cast<float>(windowW);
 
   triVec.insert(triVec.end(), {0.0f, 0.0f, 0.0f});
   triVec.insert(triVec.end(), {0.0f, h, 0.0f});

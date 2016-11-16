@@ -6,6 +6,7 @@
 #include <boost/filesystem/path.hpp>
 #include <GL/glew.h>
 #include <fmt/format.h>
+#include <GLFW/glfw3.h>
 
 #include "shader.h"
 
@@ -26,6 +27,8 @@ GLuint createProgram(const char *vertexShaderFileName, const char *fragmentShade
 
 //	fmt::print("vertexShaderPath=\"{}\"\n", vertexShaderPath);
 //	fmt::print("fragmentShaderPath=\"{}\"\n", fragmentShaderPath);
+
+  GLFWwindow* window = glfwGetCurrentContext();
 
   GLuint vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
   compileAndCheckShader(vertexShaderPath.string().c_str(), vertexShaderId);
