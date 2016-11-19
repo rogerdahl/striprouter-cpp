@@ -14,7 +14,7 @@ public:
   PcbDraw();
   PcbDraw(u32 windowW, u32 windowH);
   ~PcbDraw();
-  void draw(Circuit& circuit);
+  void draw(Circuit& circuit, bool showInputBool);
   void setZoom(float);
 private:
   void drawFilledRectangle(float x1, float y1, float x2, float y2, float r, float g, float b, float alpha=1.0f);

@@ -26,7 +26,7 @@ using namespace nanogui;
 
 
 const u32 windowW = 1920 / 2;
-const u32 windowH = 1080 - 50;
+const u32 windowH = 1080 - 200;
 const char *FONT_PATH = "./fonts/LiberationMono-Regular.ttf";
 const u32 FONT_SIZE = 18;
 
@@ -35,17 +35,20 @@ Circuit circuit;
 void parseAndRoute();
 void runParseAndAutoroute();
 thread parseAndAutorouteThread;
+mutex stopThreadMutex;
 OglText* oglTextPtr;
 PcbDraw* pcbDrawPtr;
 averageSec averageRendering;
 std::time_t mtime_prev = 0;
+static bool showInputBool = false;
 
 
 class Application : public nanogui::Screen
 {
 public:
   Application()
-    : nanogui::Screen(Eigen::Vector2i(windowW, windowH), "Stripboard Autorouter", true, false, 8, 8, 24, 8, 4, 3, 3)
+    : nanogui::Screen(Eigen::Vector2i(windowW, windowH), "Stripboard Autorouter",
+                      true, false, 8, 8, 24, 8, 4, 3, 3)
   {
     GLuint mTextureId;
     glGenTextures(1, &mTextureId);
@@ -137,10 +140,13 @@ public:
       });
     }
     {
-      new Label(window, "Show connections:", "sans-bold");
+      new Label(window, "Show input:", "sans-bold");
       auto cb = new CheckBox(window, "");
       cb->setFontSize(18);
-      cb->setChecked(false);
+      cb->setChecked(showInputBool);
+      cb->setCallback([cb](bool value) {
+        showInputBool = value;
+      });
     }
     {
       new Label(window, "Zoom:", "sans-bold");
@@ -212,7 +218,7 @@ public:
 
     glfwSetTime(0.0);
 
-    pcbDrawPtr->draw(circuit);
+    pcbDrawPtr->draw(circuit, showInputBool);
 
     // Needed for timing but can be very bad for performance.
     glFinish();
@@ -260,12 +266,30 @@ int main(int argc, char **argv)
 }
 
 
+void runParseAndAutoroute()
+{
+  try {
+    lock_guard<mutex> stopThread(stopThreadMutex);
+    parseAndAutorouteThread.join();
+  }
+  catch (const std::system_error &e) {
+  }
+  parseAndAutorouteThread = thread(parseAndRoute);
+}
+
+
 void parseAndRoute()
 {
   auto parser = Parser();
   {
     lock_guard<mutex> lockCircuit(circuitMutex);
     circuit = parser.parse();
+  }
+  if (!stopThreadMutex.try_lock()) {
+    return;
+  }
+  else {
+    stopThreadMutex.unlock();
   }
   if (!circuit.getErrorBool()) {
     Dijkstra dijkstra;
@@ -283,24 +307,15 @@ void parseAndRoute()
     }
     for (auto startEndCoord : circuit.getConnectionCoordVec()) {
       dijkstra.findCheapestRoute(costs, circuit, startEndCoord);
-      if (circuit.getErrorBool()) {
-        break;
+      if (!stopThreadMutex.try_lock()) {
+        return;
+      }
+      else {
+        stopThreadMutex.unlock();
       }
     }
   }
-  if (!circuit.getErrorBool()) {
-    circuit.getCircuitInfoVec().push_back(fmt::format("Ok"));
-  }
-}
-
-
-void runParseAndAutoroute()
-{
-  circuit.setErrorBool(true);
-  try {
-    parseAndAutorouteThread.join();
-  }
-  catch (const std::system_error &e) {
-  }
-  parseAndAutorouteThread = thread(parseAndRoute);
+//  if (!circuit.getErrorBool()) {
+//    circuit.getCircuitInfoVec().push_back(fmt::format("Ok"));
+//  }
 }

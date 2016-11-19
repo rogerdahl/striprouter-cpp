@@ -50,11 +50,14 @@ void PcbDraw::setZoom(float zoom)
   zoom_ = zoom;
 }
 
-void PcbDraw::draw(Circuit& circuit)
+void PcbDraw::draw(Circuit& circuit, bool showInputBool)
 {
   lock_guard<mutex> lockCircuit(circuitMutex);
 
-  auto projection = glm::ortho(0.0f, static_cast<float>(windowW_), static_cast<float>(windowH_), 0.0f, 0.0f, 100.0f);
+  auto projection = glm::ortho(
+    0.0f, static_cast<float>(windowW_), static_cast<float>(windowH_),
+    0.0f, 0.0f, 100.0f
+  );
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glUseProgram(fillProgramId);
@@ -79,7 +82,8 @@ void PcbDraw::draw(Circuit& circuit)
   // Through holes
   for (int y = 0; y < H_HOLES; ++y) {
     for (int x = 0; x < W_HOLES; ++x) {
-      drawFilledCircle(x * hole_space_pixels, y * hole_space_pixels, hole_radius_pixels, 0.0f, 0.0f, 0.0f);
+      drawFilledCircle(x * hole_space_pixels, y * hole_space_pixels,
+                       hole_radius_pixels, 0.0f, 0.0f, 0.0f);
     }
   }
   // Draw components
@@ -97,7 +101,8 @@ void PcbDraw::draw(Circuit& circuit)
     for (auto pinAbsCoord :  ci.pinAbsCoordVec) {
       s32 x = pinAbsCoord.x;
       s32 y = pinAbsCoord.y;
-      drawFilledCircle(x * hole_space_pixels, y * hole_space_pixels, hole_radius_pixels, 200.0f, 0.0f, 0.0f);
+      drawFilledCircle(x * hole_space_pixels, y * hole_space_pixels,
+                       hole_radius_pixels, 200.0f, 0.0f, 0.0f);
     }
     // Component name
     u32 stringWidth = oglText_.calcStringWidth(ci.componentName);
@@ -108,7 +113,8 @@ void PcbDraw::draw(Circuit& circuit)
     u32 y2 = ci.footprint.end.y * hole_space_pixels;
     u32 centerX = x1 + (x2 - x1) / 2;
     u32 centerY = y1 + (y2 - y1) / 2;
-    oglText_.print(centerX - stringWidth / 2, centerY - stringHeight / 2, 0, ci.componentName);
+    oglText_.print(centerX - stringWidth / 2, centerY - stringHeight / 2,
+                   0, ci.componentName);
   }
   // Routes
   // Draw circles and lines separately so that lines are always on top.
@@ -116,7 +122,8 @@ void PcbDraw::draw(Circuit& circuit)
     HoleCoord prev;
     for (auto c : RouteStepVec) {
       if (prev.x == -1 || prev.x == c.x) {
-        drawFilledCircle(c.x * hole_space_pixels, c.y * hole_space_pixels, hole_radius_pixels, 200.0f, 200.0f, 0.0f);
+        drawFilledCircle(c.x * hole_space_pixels, c.y * hole_space_pixels,
+                         hole_radius_pixels, 200.0f, 200.0f, 0.0f);
       }
       prev.x = c.x;
       prev.y = c.y;
@@ -134,11 +141,18 @@ void PcbDraw::draw(Circuit& circuit)
       prev.y = c.y;
     }
   }
-//  // Draw connections
-//  for (auto startEndCoord : connectionCoordVec) {
-//    drawThickLine(startEndCoord.x1 * hole_space_pixels, startEndCoord.y1 * hole_space_pixels,
-//                  startEndCoord.x2 * hole_space_pixels, startEndCoord.y2 * hole_space_pixels, 1.0f * zoom_, 0, 100, 200);
-//  }
+  // Draw input connections
+  if (showInputBool) {
+    for (auto startEndCoord : circuit.getConnectionCoordVec()) {
+      drawThickLine(
+        startEndCoord.start.x * hole_space_pixels,
+        startEndCoord.start.y * hole_space_pixels,
+        startEndCoord.end.x * hole_space_pixels,
+        startEndCoord.end.y * hole_space_pixels,
+        1.0f * zoom_, 0, 100, 200
+      );
+    }
+  }
 }
 
 
@@ -167,7 +181,8 @@ void PcbDraw::drawFilledRectangle(float x1, float y1, float x2, float y2, float 
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
 }
 
-void PcbDraw::drawFilledCircle(float x, float y, float radius, float r, float g, float b, float alpha)
+void PcbDraw::drawFilledCircle(float x, float y, float radius,
+                               float r, float g, float b, float alpha)
 {
   glUseProgram(fillProgramId);
 
@@ -197,7 +212,8 @@ void PcbDraw::drawFilledCircle(float x, float y, float radius, float r, float g,
 }
 
 void
-PcbDraw::drawThickLine(float x1, float y1, float x2, float y2, float radius, float r, float g, float b, float alpha)
+PcbDraw::drawThickLine(float x1, float y1, float x2, float y2, float radius,
+                       float r, float g, float b, float alpha)
 {
   drawFilledCircle(x1, y1, radius, r, g, b, alpha);
   drawFilledCircle(x2, y2, radius, r, g, b, alpha);
