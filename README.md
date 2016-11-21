@@ -4,14 +4,13 @@
 
 **Note**: Not yet in a usable state.
 
-This is a cross-platform program that, given a description of a circuit, searches for the best layout for the connections on a [stripboard](https://en.wikipedia.org/wiki/Stripboard).
+This is a cross-platform program that, given a description of a circuit, searches for the best routes for the connections on a [stripboard](https://en.wikipedia.org/wiki/Stripboard).
 
-The output is a description of where to place and solder wires and where to cut the existing stripboard traces in order to create the connections described in the circuit.
+The output is a description of where to place and solder wires and where to cut the existing stripboard traces in order to create the routes required by the connections in the circuit.
 
-Costs can be assigned to resources in order to direct the autorouter towards preferred layouts. Resources include stripboard area, solder points, trace cuts and lengths of wire. E.g., setting the cost of solder points high in relation to other resources may generate designs that use fewer solder points at the expense of stripboard area.
+Costs can be assigned to resources in order to direct the autorouter towards preferred routes. Resources include stripboard area, solder points, trace cuts and lengths of wire. E.g., setting the cost of solder points high in relation to other resources will typically generate designs that use fewer solder points at the expense of stripboard area.
 
-The program searches only for solutions that use non-overlapping wires that cross the traces at 90 degree angles, which tends to give clean looking designs, and which allows using only uninsulated wires.   
-
+The program searches only for routes that use non-overlapping wires that cross the traces at 90 degree angles, which tends to give clean looking designs, and which allows using only uninsulated wires.   
 
 Currently somewhat working:
 
@@ -19,13 +18,50 @@ Currently somewhat working:
 * Visualization of circuit
 * Simple automatic routing of point-to-point connections
 * Visualization of discovered routes
-* A basic GUI window
+* Basic GUI controls
+
+Planned functionality:
+ 
+* Write layout to file
+* Print mirror image of layout in 1:1 size for use when soldering  
+* Optimize routes by considering routing to strip layer sections that are parts of existing routes connecting to the target
+* Use a genetic algorithm for exploring the search space. Even for very simple circuits, it's not possible to consider all possible layouts
+* Support components such as resistors and diodes that have variable length connectors
+* Automatic optimization of component locations
 
 ### Circuit description
 
 The circuit description is a text file that can be edited while the program is running. Open the description in a text editor side by side with the renderer and hit save to update the rendered version.
 
-This is the example circuit description that is rendered in the screenshot.
+### Tips and Tricks
+
+* If the router is unable to find routes for all the required connections, the unrouted connections are listed separately in the solution. These can then be added by creating regular point-to-point connections with insulated wire at solder time.
+  
+* Some designs, such as [Rasperry Pi "Hats"](https://shop.pimoroni.com/collections/hats) require a double row header on the edge of the board. In the case of the Raspberry Pi, this is a 2x20 pin header. In order to connect to the outer header pins, the router must go around the header and use board area on the outer side for wires and traces, which makes it impossible for the header to be at the edge of the board. The more connections are required for the outer row, the further in on the board the header must be located.
+
+  Depending on the physical requirements for the final board, this may be acceptable. If it's not, you can enable the double header to stay at the edge of the board by connecting the outer with insulated wire. To do this, you have several options:
+  
+  1) Leave the outer row connections out of the circuit description altogether and create direct point-to-point connections for them at solder time.
+  
+  2) Keep the outer row connections in the circuit description and use the resulting routes as hints on how to best create your connections.
+  
+  3) Represent the double header with two single headers in the circuit description. Put one single header at the actual location of the inner row of the double header and put the other in another location on the board. The opposite side may be best. The router can then route directly to each of the single row headers without using area outside the headers. At solder time, connect the outer row of the double header to the row of points that were used by the router. Using an insulated flat cable can be convenient. Old floppy and IDE cables work well for this.
+
+### Technologies
+
+* C++
+* Boost
+* fmt
+* FreeType2
+* GLEW
+* glm
+* NanoGUI
+* OpenGL
+
+
+### Example circuit description
+
+This is the circuit description used in the screenshot.
 
 ```
 # Package

@@ -11,19 +11,15 @@
 using namespace std;
 
 
-const int W = 60;
-const int H = 60;
-
-
 Costs::Costs()
   : wire(DEFAULT_WIRE_COST), strip(DEFAULT_STRIP_COST), via(DEFAULT_VIA_COST)
 {}
 
 
-Dijkstra::Dijkstra()
-: totalCost_(0), numCompletedRoutes(0), numFailedRoutes(0)
+Dijkstra::Dijkstra(u32 gridW, u32 gridH)
+: gridW_(gridW), gridH_(gridH), totalCost_(0), numCompletedRoutes(0), numFailedRoutes(0)
 {
-  viaTraceVec_ = ViaTraceVec(W * H);
+  viaTraceVec_ = ViaTraceVec(gridW_ * gridH_);
 }
 
 void Dijkstra::route(Solution& solution, Costs &costs, Circuit &circuit, std::mutex &stopThreadMutex)
@@ -62,7 +58,7 @@ void Dijkstra::routeAll(Solution& solution, Costs& costs, Circuit& circuit, std:
 void Dijkstra::findLowestCostRoute(Solution& solution, Costs &costs, Circuit &circuit,
                                     ViaStartEnd& viaStartEnd)
 {
-  viaCostVec_ = ViaCostVec(W * H);
+  viaCostVec_ = ViaCostVec(gridW_ * gridH_);
 
   bool success_bool = findCosts(costs, viaStartEnd);
   if (success_bool) {
@@ -151,15 +147,17 @@ bool Dijkstra::findCosts(Costs& costs, ViaStartEnd& viaStartEnd)
   frontierPri.push(node);
   frontierSet.insert(node.viaLayer);
 
+  bool success = false;
+
   while (true) {
     if (!frontierPri.size()) {
-      return false;
+      return success;
     }
     node = frontierPri.top();
     frontierPri.pop();
     frontierSet.erase(node.viaLayer);
     if (node.viaLayer.x == end.x && node.viaLayer.y == end.y && !node.viaLayer.isWireLayer) {
-      return true;
+      success = true;
     }
     exploredSet.insert(node.viaLayer);
     vector<ViaLayerCost> neighborVec;
@@ -169,7 +167,7 @@ bool Dijkstra::findCosts(Costs& costs, ViaStartEnd& viaStartEnd)
           ViaLayerCost(node.viaLayer.x - 1, node.viaLayer.y, true,
                        node.cost + costs.wire));
       }
-      if (node.viaLayer.x < W - 1) {
+      if (node.viaLayer.x < gridW_ - 1) {
         neighborVec.push_back(
           ViaLayerCost(node.viaLayer.x + 1, node.viaLayer.y, true,
                        node.cost + costs.wire));
@@ -184,7 +182,7 @@ bool Dijkstra::findCosts(Costs& costs, ViaStartEnd& viaStartEnd)
           ViaLayerCost(node.viaLayer.x, node.viaLayer.y - 1, false,
                        node.cost + costs.strip));
       }
-      if (node.viaLayer.y < H - 1) {
+      if (node.viaLayer.y < gridH_ - 1) {
         neighborVec.push_back(
           ViaLayerCost(node.viaLayer.x, node.viaLayer.y + 1, false,
                        node.cost + costs.strip));
@@ -199,17 +197,17 @@ bool Dijkstra::findCosts(Costs& costs, ViaStartEnd& viaStartEnd)
         continue;
       }
       if (!exploredSet.count(n.viaLayer)) {
-        if (!frontierSet.count(n.viaLayer)) {
+        auto frontier_n = frontierSet.find(n.viaLayer);
+        if (frontier_n == frontierSet.end()) {
+//        if (!frontierSet.count(n.viaLayer)) {
           frontierPri.push(n);
           frontierSet.insert(n.viaLayer);
           setCost(n);
         }
         else {
-          for (auto frontier_n : frontierSet) {
-            auto frontier_cost = getCost(frontier_n);
-            if (frontier_cost > n.cost) {
-              setCost(node.viaLayer, n.cost);
-            }
+          auto frontier_cost = getCost(*frontier_n);
+          if (frontier_cost > n.cost) {
+            setCost(node.viaLayer, n.cost);
           }
         }
       }
@@ -219,7 +217,7 @@ bool Dijkstra::findCosts(Costs& costs, ViaStartEnd& viaStartEnd)
 
 u32 Dijkstra::getCost(const ViaLayer& viaLayer)
 {
-  u32 idx = viaLayer.x + W * viaLayer.y;
+  u32 idx = viaLayer.x + gridW_ * viaLayer.y;
   if (viaLayer.isWireLayer) {
     return viaCostVec_[idx].wireCost;
   }
@@ -230,7 +228,7 @@ u32 Dijkstra::getCost(const ViaLayer& viaLayer)
 
 void Dijkstra::setCost(const ViaLayer& viaLayer, u32 cost)
 {
-  u32 idx = viaLayer.x + W * viaLayer.y;
+  u32 idx = viaLayer.x + gridW_ * viaLayer.y;
   if (viaLayer.isWireLayer) {
     viaCostVec_[idx].wireCost = cost;
   }
@@ -285,7 +283,7 @@ RouteStepVec Dijkstra::backtraceLowestCostRoute(ViaStartEnd& viaStartEnd)
       if (c.x > 0) {
         n = ViaLayer(c.x - 1, c.y, c.isWireLayer);
       }
-      if (c.x < W - 1 && viaCostVec_[idxRight(c)].wireCost <= viaCostVec_[idx(n)].wireCost) {
+      if (c.x < gridW_ - 1 && viaCostVec_[idxRight(c)].wireCost <= viaCostVec_[idx(n)].wireCost) {
         n = ViaLayer(c.x + 1, c.y, c.isWireLayer);
       }
       if (viaCostVec_[idx(c)].stripCost <= viaCostVec_[idx(n)].wireCost) {
@@ -296,7 +294,7 @@ RouteStepVec Dijkstra::backtraceLowestCostRoute(ViaStartEnd& viaStartEnd)
       if (c.y > 0) {
         n = ViaLayer(c.x, c.y - 1, c.isWireLayer);
       }
-      if (c.y < H - 1 && viaCostVec_[idxDown(c)].stripCost < viaCostVec_[idx(n)].stripCost) {
+      if (c.y < gridH_ - 1 && viaCostVec_[idxDown(c)].stripCost < viaCostVec_[idx(n)].stripCost) {
         n = ViaLayer(c.x, c.y + 1, c.isWireLayer);
       }
       if (viaCostVec_[idx(c)].wireCost < viaCostVec_[idx(n)].stripCost) {
@@ -328,14 +326,14 @@ void Dijkstra::dump()
 
 void Dijkstra::dumpLayer(bool wireLayer)
 {
-  for (u32 y = 0; y < H; ++y) {
-    for (u32 x = 0; x < W; ++x) {
+  for (u32 y = 0; y < gridH_; ++y) {
+    for (u32 x = 0; x < gridW_; ++x) {
       u32 v;
       if (wireLayer) {
-        v = viaCostVec_[x + y * W].wireCost;
+        v = viaCostVec_[x + y * gridW_].wireCost;
       }
       else {
-        v = viaCostVec_[x + y * W].stripCost;
+        v = viaCostVec_[x + y * gridW_].stripCost;
       }
       if (v == INT_MAX) {
         //fmt::print("   -", v);
@@ -352,7 +350,7 @@ void Dijkstra::dumpLayer(bool wireLayer)
 
 int Dijkstra::idx(const Via& v)
 {
-  return v.x + W * v.y;
+  return v.x + gridW_ * v.y;
 }
 
 int Dijkstra::idxLeft(const Via& v)
@@ -367,10 +365,10 @@ int Dijkstra::idxRight(const Via& v)
 
 int Dijkstra::idxUp(const Via& v)
 {
-  return idx(v) - W;
+  return idx(v) - gridW_;
 }
 
 int Dijkstra::idxDown(const Via& v)
 {
-  return idx(v) + W;
+  return idx(v) + gridW_;
 }

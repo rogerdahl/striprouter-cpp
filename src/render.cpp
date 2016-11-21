@@ -19,20 +19,18 @@ using namespace std;
 using namespace fmt;
 
 const float PI_F = static_cast<float>(M_PI);
-const int W_HOLES = 60;
-const int H_HOLES = 60;
-const int NUM_HOLE_TRIANGLES = 6;
+const int NUM_VIA_TRIANGLES = 6;
 const u32 FONT_SIZE2 = 10;
 const float STRIP_WIDTH_PIXELS = 10;
 const float STRIP_SPACE_PIXELS = 2;
-const float HOLE_RADIUS_PIXELS = 2.5f;
+const float VIA_RADIUS_PIXELS = 2.5f;
 const float ZOOM_DEFAULT = 1.5f;
 
 const char *FONT_PATH2 = "./fonts/LiberationMono-Regular.ttf";
 
 
-PcbDraw::PcbDraw(u32 windowW, u32 windowH)
-  : windowW_(windowW), windowH_(windowH),
+PcbDraw::PcbDraw(u32 windowW, u32 windowH, u32 gridW, u32 gridH)
+  : windowW_(windowW), windowH_(windowH), gridW_(gridW), gridH_(gridH),
   oglText_(OglText(windowW, windowH, FONT_PATH2, FONT_SIZE2 * ZOOM_DEFAULT)),
     zoom_(ZOOM_DEFAULT)
 {
@@ -70,21 +68,21 @@ void PcbDraw::drawCircuit(Circuit& circuit, bool showInputBool)
   assert(projectionId >= 0);
   glUniformMatrix4fv(projectionId, 1, GL_FALSE, glm::value_ptr(projection));
 
-  float via_radius_pixels = HOLE_RADIUS_PIXELS * zoom_;
+  float via_radius_pixels = VIA_RADIUS_PIXELS * zoom_;
   float strip_width_pixels = STRIP_WIDTH_PIXELS * zoom_;
   float strip_space_pixels = STRIP_SPACE_PIXELS * zoom_;
   float via_space_pixels = strip_width_pixels + strip_space_pixels;
   float half_via_space_pixels = via_space_pixels / 2.0f;
 
   // Copper strips
-  for (int x = 0; x < W_HOLES; ++x) {
+  for (u32 x = 0; x < gridW_; ++x) {
     drawFilledRectangle(x * via_space_pixels - (strip_width_pixels / 2), 0,
                         x * via_space_pixels + (strip_width_pixels / 2),
-                        H_HOLES * via_space_pixels, 217.0f, 144.0f, 88.0f);
+                        gridH_ * via_space_pixels, 217.0f, 144.0f, 88.0f);
   }
   // Vias
-  for (int y = 0; y < H_HOLES; ++y) {
-    for (int x = 0; x < W_HOLES; ++x) {
+  for (u32 y = 0; y < gridH_; ++y) {
+    for (u32 x = 0; x < gridW_; ++x) {
       drawFilledCircle(x * via_space_pixels, y * via_space_pixels,
                        via_radius_pixels, 0.0f, 0.0f, 0.0f);
     }
@@ -134,7 +132,7 @@ void PcbDraw::drawCircuit(Circuit& circuit, bool showInputBool)
 
 void PcbDraw::drawSolution(Solution& solution)
 {
-  float via_radius_pixels = HOLE_RADIUS_PIXELS * zoom_;
+  float via_radius_pixels = VIA_RADIUS_PIXELS * zoom_;
   float strip_width_pixels = STRIP_WIDTH_PIXELS * zoom_;
   float strip_space_pixels = STRIP_SPACE_PIXELS * zoom_;
   float via_space_pixels = strip_width_pixels + strip_space_pixels;
@@ -201,7 +199,7 @@ void PcbDraw::drawFilledCircle(float x, float y, float radius,
 
   vector<GLfloat> triVec;
 
-  int numViaTriangles = NUM_HOLE_TRIANGLES * zoom_;
+  int numViaTriangles = NUM_VIA_TRIANGLES * zoom_;
   for (int i = 0; i <= numViaTriangles; ++i) {
     float x1 = x + (radius * cosf(i * 2.0f * PI_F / numViaTriangles));
     float y1 = y + (radius * sinf(i * 2.0f * PI_F / numViaTriangles));

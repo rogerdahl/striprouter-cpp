@@ -24,7 +24,7 @@ public:
 
 class Dijkstra {
 public:
-  Dijkstra();
+  Dijkstra(u32 gridW, u32 gridH);
   void route(Solution&, Costs&, Circuit&, std::mutex&);
 private:
   void routeAll(Solution&, Costs&, Circuit&, std::mutex&);
@@ -41,12 +41,15 @@ private:
   void setCost(const ViaLayerCost&);
 //  Via minCost();
   RouteStepVec backtraceLowestCostRoute(ViaStartEnd&);
-
   int idx(const Via&);
   int idxLeft(const Via&);
   int idxRight(const Via&);
   int idxUp(const Via&);
   int idxDown(const Via&);
+
+  const u32 gridW_;
+  const u32 gridH_;
+
 
   ViaTraceVec viaTraceVec_;
   ViaCostVec viaCostVec_;
@@ -60,6 +63,6 @@ private:
 //  GridVec usedStripVec;
 
   u32 totalCost_;
-  u32 numCompletedRoutes = 0;
-  u32 numFailedRoutes = 0;
+  u32 numCompletedRoutes;
+  u32 numFailedRoutes;
 };

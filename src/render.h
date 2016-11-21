@@ -13,7 +13,7 @@
 class PcbDraw {
 public:
   PcbDraw();
-  PcbDraw(u32 windowW, u32 windowH);
+  PcbDraw(u32 windowW, u32 windowH, u32 gridW, u32 gridH);
   ~PcbDraw();
   void draw(Circuit& circuit, Solution& solution, bool showInputBool);
   void setZoom(float);
@@ -25,9 +25,11 @@ private:
   void drawThickLine(float x1, float y1, float x2, float y2, float radius, float r, float g, float b, float alpha=1.0f);
   u32 windowW_;
   u32 windowH_;
+  u32 gridW_;
+  u32 gridH_;
   OglText oglText_;
+  float zoom_;
   GLuint fillProgramId;
 //  GLuint textBackgroundProgramId;
   GLuint vertexBufId_;
-  float zoom_;
 };

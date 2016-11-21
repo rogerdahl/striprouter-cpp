@@ -25,13 +25,14 @@ using namespace boost::filesystem;
 using namespace nanogui;
 
 
-//const u32 windowW = 1920 / 2;
-//const u32 windowH = 1080 - 200;
-const u32 windowW = 700;
-const u32 windowH = 700;
+const u32 windowW = 1920 / 2;
+const u32 windowH = 1080 - 200;
+//const u32 windowW = 700;
+//const u32 windowH = 700;
 const char *FONT_PATH = "./fonts/LiberationMono-Regular.ttf";
 const u32 FONT_SIZE = 18;
-
+const u32 GRID_W = 60;
+const u32 GRID_H = 60;
 
 Costs costs;
 Circuit circuit;
@@ -80,7 +81,7 @@ public:
     glViewport(0, 0, windowW, windowH);
 
     oglTextPtr = new OglText(windowW, windowH, FONT_PATH, FONT_SIZE);
-    pcbDrawPtr = new PcbDraw(windowW, windowH);
+    pcbDrawPtr = new PcbDraw(windowW, windowH, GRID_W, GRID_H);
 
     // Main grid window
     auto window = new Window(this, "Router");
@@ -299,7 +300,7 @@ void route()
     stopThreadMutex.unlock();
   }
   if (!circuit.getErrorBool()) {
-    Dijkstra dijkstra;
+    Dijkstra dijkstra(GRID_W, GRID_H);
     dijkstra.route(solution, costs, circuit, stopThreadMutex);
   }
 }
