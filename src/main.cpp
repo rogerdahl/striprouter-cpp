@@ -227,7 +227,10 @@ public:
 
     glfwSetTime(0.0);
 
-    pcbDrawPtr->draw(circuit, solution, showInputBool);
+    {
+      lock_guard<mutex> lockSolution(solutionMutex);
+      pcbDrawPtr->draw(circuit, solution, showInputBool);
+    }
 
     // Needed for timing but can be very bad for performance.
     glFinish();
