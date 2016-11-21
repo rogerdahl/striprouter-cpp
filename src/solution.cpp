@@ -4,7 +4,9 @@
 std::mutex solutionMutex;
 
 
-Solution::Solution() {}
+Solution::Solution()
+: hasError_(false)
+{}
 
 RouteVec& Solution::getRouteVec()
 {

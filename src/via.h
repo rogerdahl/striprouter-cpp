@@ -66,7 +66,7 @@ bool operator<(const ViaLayer& l, const ViaLayer& r);
 class ViaStartEnd {
 public:
   ViaStartEnd();
-  ViaStartEnd(ViaLayer& startIn, ViaLayer& endIn);
+  ViaStartEnd(const ViaLayer& startIn, const ViaLayer& endIn);
   ViaLayer start;
   ViaLayer end;
 };

@@ -12,9 +12,24 @@
 
 extern std::mutex circuitMutex;
 
+class RelCoord {
+public:
+  RelCoord(s32 x, s32 y);
+  s32 x;
+  s32 y;
+};
 
-typedef std::vector<Via> ViaVec;
-typedef std::map<std::string, ViaVec> PackageToCoordMap;
+
+class RelCoordStartEnd {
+public:
+  RelCoordStartEnd(const RelCoord&, const RelCoord&);
+  RelCoord start;
+  RelCoord end;
+};
+
+
+typedef std::vector<RelCoord> RelCoordVec;
+typedef std::map<std::string, RelCoordVec> PackageToCoordMap;
 typedef std::map<std::string, std::string> ComponentName2PackageName;
 typedef std::map<std::string, Via> ComponentToCoordMap;
 typedef std::pair<std::string, u32> ComponentPinPair;
@@ -28,7 +43,7 @@ public:
   std::string componentName;
   ViaStartEnd footprint;
   Via pin0AbsCoord;
-  ViaVec pinAbsCoordVec;
+  RelCoordVec pinAbsCoordVec;
 };
 
 typedef std::map<std::string, ComponentInfo> ComponentName2ComponentInfo;

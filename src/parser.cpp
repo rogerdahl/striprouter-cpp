@@ -19,8 +19,8 @@ Parser::~Parser()
 {}
 
 
-Circuit Parser::parse() {
-  Circuit circuit;
+void Parser::parse(Circuit& circuit) {
+  circuit = Circuit();
   std::ifstream fin("./circuit.txt");
   std::string lineStr;
   u32 lineIdx = 0;
@@ -35,9 +35,9 @@ Circuit Parser::parse() {
       circuit.getCircuitInfoVec().push_back(fmt::format("Error: {}", s));
     }
   }
+  circuit.getCircuitInfoVec().push_back(fmt::format("Ok"));
   genComponentInfoMap(circuit);
   genConnectionCoordVec(circuit);
-  return circuit;
 }
 
 
@@ -83,49 +83,42 @@ ComponentInfo Parser::genComponentInfo(Circuit& circuit, string componentName)
   auto packageName = circuit.getComponentName2PackageName().find(componentName)->second;
   ci.componentName = componentName;
   auto componentAbsCoord = circuit.getComponentToCoordMap()[componentName];
-  ViaStartEnd fc = calcPackageExtents(circuit, packageName);
+  auto fc = calcPackageFootprint(circuit, packageName);
   fc.start.x += componentAbsCoord.x;
   fc.start.y += componentAbsCoord.y;
   fc.end.x += componentAbsCoord.x;
   fc.end.y += componentAbsCoord.y;
-  ci.footprint = fc;
+  ci.footprint = ViaStartEnd(ViaLayer(fc.start.x, fc.start.y, false), ViaLayer(fc.end.x, fc.end.y, false));
   ci.pin0AbsCoord.x = componentAbsCoord.x;
   ci.pin0AbsCoord.y = componentAbsCoord.y;
-
   auto packageCoordVec = circuit.getPackageToCoordMap().find(packageName)->second;
-
   for (auto pc : packageCoordVec) {
-    auto h = Via(componentAbsCoord.x + pc.x, componentAbsCoord.y + pc.y);
-    ci.pinAbsCoordVec.push_back(h);
+    ci.pinAbsCoordVec.push_back(
+      RelCoord(componentAbsCoord.x + pc.x, componentAbsCoord.y + pc.y)
+    );
   }
-
   return ci;
 }
 
 
-ViaStartEnd Parser::calcPackageExtents(Circuit& circuit, string package)
+RelCoordStartEnd Parser::calcPackageFootprint(Circuit &circuit, string package)
 {
-  ViaVec v = circuit.getPackageToCoordMap().find(package)->second;
-  ViaStartEnd fc;
-  fc.start.x = 0;
-  fc.start.y = 0;
-  fc.end.x = 0;
-  fc.end.y = 0;
-  for (auto c : v) {
-    if (c.x < fc.start.x) {
-      fc.start.x = c.x;
+  RelCoordStartEnd v(RelCoord(0, 0), RelCoord(0, 0));
+  for (auto c : circuit.getPackageToCoordMap().find(package)->second) {
+    if (c.x < v.start.x) {
+      v.start.x = c.x;
     }
-    if (c.x > fc.end.x) {
-      fc.end.x = c.x;
+    if (c.x > v.end.x) {
+      v.end.x = c.x;
     }
-    if (c.y < fc.start.y) {
-      fc.start.y = c.y;
+    if (c.y < v.start.y) {
+      v.start.y = c.y;
     }
-    if (c.y > fc.end.y) {
-      fc.end.y = c.y;
+    if (c.y > v.end.y) {
+      v.end.y = c.y;
     }
   }
-  return fc;
+  return v;
 }
 
 
@@ -145,11 +138,6 @@ void Parser::genConnectionCoordVec(Circuit& circuit)
     auto componentInfo2 = circuit.getComponentInfoMap().find(componentName2)->second;
 
     ViaStartEnd ft;
-
-//    ft.x1 = componentInfo1.pinAbsCoordVec[componentPinIdx1].first;
-//    ft.y1 = componentInfo1.pinAbsCoordVec[componentPinIdx1].second;
-//    ft.x2 = componentInfo2.pinAbsCoordVec[componentPinIdx2].first;
-//    ft.y2 = componentInfo2.pinAbsCoordVec[componentPinIdx2].second;
 
     ft.start.x = componentInfo1.pinAbsCoordVec[componentPinIdx1].x;
     ft.end.x = componentInfo2.pinAbsCoordVec[componentPinIdx2].x;
@@ -201,11 +189,11 @@ bool Parser::parsePackage(Circuit& circuit, string &lineStr)
     return false;
   }
   string pkgName = m[1];
-  ViaVec v;
+  RelCoordVec v;
   for (auto iter = sregex_token_iterator(lineStr.begin(), lineStr.end(), pkgRelativeCoordRx); iter != sregex_token_iterator(); ++iter) {
     string s(*iter);
     regex_match(s, m, pkgCoordValuesRx);
-    v.push_back(Via(stoi(m[1]), stoi(m[2])));
+    v.push_back(RelCoord(stoi(m[1]), stoi(m[2])));
   }
   circuit.getPackageToCoordMap()[pkgName] = v;
   return true;

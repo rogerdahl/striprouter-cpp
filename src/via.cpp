@@ -52,7 +52,7 @@ string ViaLayer::str()
 ViaStartEnd::ViaStartEnd()
 {}
 
-ViaStartEnd::ViaStartEnd(ViaLayer& startIn, ViaLayer& endIn)
+ViaStartEnd::ViaStartEnd(const ViaLayer& startIn, const ViaLayer& endIn)
 : start(startIn), end(endIn)
 {}
 

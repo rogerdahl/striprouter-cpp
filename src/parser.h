@@ -13,8 +13,7 @@ class Parser {
 public:
   Parser();
   ~Parser();
-  Circuit parse();
-
+  void parse(Circuit& circuit);
 private:
   void parseLine(Circuit&, std::string lineStr);
   bool parseCommentOrEmpty(Circuit&, std::string &lineStr);
@@ -25,6 +24,6 @@ private:
 
   void genComponentInfoMap(Circuit&);
   ComponentInfo genComponentInfo(Circuit&, std::string componentName);
-  ViaStartEnd calcPackageExtents(Circuit&, std::string package);
+  RelCoordStartEnd calcPackageFootprint(Circuit &, std::string package);
   void genConnectionCoordVec(Circuit&);
 };

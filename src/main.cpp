@@ -16,7 +16,7 @@
 #include "dijkstra.h"
 #include "gl_error.h"
 #include "ogl_text.h"
-#include "pcb.h"
+#include "render.h"
 #include "solution.h"
 #include "utils.h"
 
@@ -25,8 +25,10 @@ using namespace boost::filesystem;
 using namespace nanogui;
 
 
-const u32 windowW = 1920 / 2;
-const u32 windowH = 1080 - 200;
+//const u32 windowW = 1920 / 2;
+//const u32 windowH = 1080 - 200;
+const u32 windowW = 700;
+const u32 windowH = 700;
 const char *FONT_PATH = "./fonts/LiberationMono-Regular.ttf";
 const u32 FONT_SIZE = 18;
 
@@ -34,9 +36,9 @@ const u32 FONT_SIZE = 18;
 Costs costs;
 Circuit circuit;
 Solution solution;
-void parseAndRoute();
-void runParseAndRoute();
-thread parseAndRouteThread;
+void route();
+void runRoute();
+thread routeThread;
 mutex stopThreadMutex;
 OglText* oglTextPtr;
 PcbDraw* pcbDrawPtr;
@@ -104,7 +106,7 @@ public:
       intBox->setValueIncrement(1);
       intBox->setCallback([intBox](int value) {
         costs.wire = value;
-        runParseAndRoute();
+        runRoute();
       });
     }
     {
@@ -121,7 +123,7 @@ public:
       intBox->setValueIncrement(1);
       intBox->setCallback([intBox](int value) {
         costs.strip = value;
-        runParseAndRoute();
+        runRoute();
       });
     }
     {
@@ -138,7 +140,7 @@ public:
       intBox->setValueIncrement(1);
       intBox->setCallback([intBox](int value) {
         costs.via = value;
-        runParseAndRoute();
+        runRoute();
       });
     }
     {
@@ -215,7 +217,12 @@ public:
     std::time_t mtime_cur = boost::filesystem::last_write_time("./circuit.txt");
     if (mtime_cur != mtime_prev) {
       mtime_prev = mtime_cur;
-      runParseAndRoute();
+      auto parser = Parser();
+      {
+        lock_guard<mutex> lockCircuit(circuitMutex);
+        parser.parse(circuit);
+      }
+      runRoute();
     }
 
     glfwSetTime(0.0);
@@ -245,18 +252,6 @@ private:
 
 int main(int argc, char **argv)
 {
-
-//  Dijkstra dijkstra;
-//  ViaStartEnd c;
-//  Costs costs;
-//  costs.wire = 1;
-//  costs.strip = 1;
-//  costs.via = 1;
-//  bool success_bool = dijkstra.findCosts(costs, c);
-//  fmt::print("success: {}\n", success_bool);
-//  dijkstra.dump();
-//  return 0;
-
   try {
     nanogui::init();
     {
@@ -280,25 +275,20 @@ int main(int argc, char **argv)
 }
 
 
-void runParseAndRoute()
+void runRoute()
 {
   try {
     lock_guard<mutex> stopThread(stopThreadMutex);
-    parseAndRouteThread.join();
+    routeThread.join();
   }
   catch (const std::system_error &e) {
   }
-  parseAndRouteThread = thread(parseAndRoute);
+  routeThread = thread(route);
 }
 
 
-void parseAndRoute()
+void route()
 {
-  auto parser = Parser();
-  {
-    lock_guard<mutex> lockCircuit(circuitMutex);
-    circuit = parser.parse();
-  }
   if (!stopThreadMutex.try_lock()) {
     return;
   }
@@ -309,7 +299,4 @@ void parseAndRoute()
     Dijkstra dijkstra;
     dijkstra.route(solution, costs, circuit, stopThreadMutex);
   }
-//  if (!circuit.getErrorBool()) {
-//    circuit.getCircuitInfoVec().push_back(fmt::format("Ok"));
-//  }
 }

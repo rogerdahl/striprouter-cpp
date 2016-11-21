@@ -32,6 +32,7 @@ private:
   void findLowestCostRoute(Solution&, Costs&, Circuit&, ViaStartEnd&);
   void addRouteToUsed(RouteStepVec&);
   void setViaLayerUsed(const ViaLayer&);
+  bool getViaLayerUsed(const ViaLayer&);
   void dump();
   void dumpLayer(bool wireLayer);
   bool findCosts(Costs& costs, ViaStartEnd&);

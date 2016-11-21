@@ -7,6 +7,14 @@ std::mutex circuitMutex;
 using namespace std;
 
 
+RelCoord::RelCoord(s32 xIn, s32 yIn)
+  : x(xIn), y(yIn)
+{}
+
+RelCoordStartEnd::RelCoordStartEnd(const RelCoord& startIn, const RelCoord& endIn)
+  : start(startIn), end(endIn)
+{}
+
 Circuit::Circuit()
   : hasError_(false)
 {}

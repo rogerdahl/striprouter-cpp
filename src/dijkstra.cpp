@@ -11,8 +11,8 @@
 using namespace std;
 
 
-const int W = 1000;
-const int H = 1000;
+const int W = 60;
+const int H = 60;
 
 
 Costs::Costs()
@@ -28,6 +28,7 @@ Dijkstra::Dijkstra()
 
 void Dijkstra::route(Solution& solution, Costs &costs, Circuit &circuit, std::mutex &stopThreadMutex)
 {
+  solution = Solution();
   blockComponentFootprints(circuit);
   routeAll(solution, costs, circuit, stopThreadMutex);
 }
@@ -90,12 +91,23 @@ void Dijkstra::addRouteToUsed(RouteStepVec& routeStepVec) {
   }
 }
 
+
 void Dijkstra::setViaLayerUsed(const ViaLayer& viaLayer) {
   if (viaLayer.isWireLayer) {
     viaTraceVec_[idx(viaLayer)].setWireSideUsed();
   }
   else {
     viaTraceVec_[idx(viaLayer)].setStripSideUsed();
+  }
+}
+
+
+bool Dijkstra::getViaLayerUsed(const ViaLayer& viaLayer) {
+  if (viaLayer.isWireLayer) {
+    return viaTraceVec_[idx(viaLayer)].wireSideIsUsed();
+  }
+  else {
+    return viaTraceVec_[idx(viaLayer)].stripSideIsUsed();
   }
 }
 
@@ -183,6 +195,9 @@ bool Dijkstra::findCosts(Costs& costs, ViaStartEnd& viaStartEnd)
     }
 
     for (auto n : neighborVec) {
+      if (getViaLayerUsed(n.viaLayer)) {
+        continue;
+      }
       if (!exploredSet.count(n.viaLayer)) {
         if (!frontierSet.count(n.viaLayer)) {
           frontierPri.push(n);

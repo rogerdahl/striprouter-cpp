@@ -116,7 +116,7 @@ set(SOURCE_FILES
   ${SOURCE_DIR}/main.cpp
   ${SOURCE_DIR}/ogl_text.cpp
   ${SOURCE_DIR}/parser.cpp
-  ${SOURCE_DIR}/pcb.cpp
+  ${SOURCE_DIR}/render.cpp
   ${SOURCE_DIR}/shader.cpp
   ${SOURCE_DIR}/solution.cpp
   ${SOURCE_DIR}/utils.cpp

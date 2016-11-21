@@ -12,7 +12,7 @@
 #include <glm/gtx/string_cast.hpp>
 #include <fmt/format.h>
 
-#include "pcb.h"
+#include "render.h"
 #include "shader.h"
 
 using namespace std;
@@ -138,20 +138,23 @@ void PcbDraw::drawSolution(Solution& solution)
   float strip_width_pixels = STRIP_WIDTH_PIXELS * zoom_;
   float strip_space_pixels = STRIP_SPACE_PIXELS * zoom_;
   float via_space_pixels = strip_width_pixels + strip_space_pixels;
-  float half_via_space_pixels = via_space_pixels / 2.0f;
 
   // Routes
   // Draw circles and lines separately so that lines are always on top.
   for (auto RouteStepVec : solution.getRouteVec()) {
+    Via prev;
     for (auto c : RouteStepVec) {
+      if (prev.isValid && prev.x == c.x) {
         drawFilledCircle(c.x * via_space_pixels, c.y * via_space_pixels,
                          via_radius_pixels, 200.0f, 200.0f, 0.0f);
+      }
+      prev = Via(c.x, c.y);
     }
   }
   for (auto RouteStepVec : solution.getRouteVec()) {
     Via prev;
     for (auto c : RouteStepVec) {
-      if (prev.isValid) {
+      if (prev.isValid && prev.y == c.y) {
         drawThickLine(prev.x * via_space_pixels, prev.y * via_space_pixels,
                       c.x * via_space_pixels, c.y * via_space_pixels,
                       1.5f * zoom_, 0, 0, 0);
