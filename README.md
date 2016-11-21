@@ -1,5 +1,7 @@
 ## Stripboard Autorouter
 
+<img align="right" width="50%" src="./screenshot.png">
+
 **Note**: Not yet in a usable state.
 
 This is a cross-platform program that, given a description of a circuit, searches for the best layout for the connections on a [stripboard](https://en.wikipedia.org/wiki/Stripboard).
@@ -10,7 +12,6 @@ Costs can be assigned to resources in order to direct the autorouter towards pre
 
 The program searches only for solutions that use non-overlapping wires that cross the traces at 90 degree angles, which tends to give clean looking designs, and which allows using only uninsulated wires.   
 
-<img align="right" width="50%" src="./screenshot.png">
 
 Currently somewhat working:
 
