@@ -1,17 +1,18 @@
 #include <algorithm>
 #include <limits.h>
 #include <mutex>
+#include <queue>
+#include <set>
 
 #include <fmt/format.h>
 
 #include "dijkstra.h"
 
-
 using namespace std;
 
 
-const int W = 60;
-const int H = 60;
+const int W = 1000;
+const int H = 1000;
 
 
 Costs::Costs()
@@ -22,27 +23,55 @@ Costs::Costs()
 Dijkstra::Dijkstra()
 : totalCost_(0), numCompletedRoutes(0), numFailedRoutes(0)
 {
-  usedWireVec = GridVec(W * H, false);
-  usedStripVec = GridVec(W * H, false);
+  viaTraceVec_ = ViaTraceVec(W * H);
 }
 
-
-void Dijkstra::findCheapestRoute(Costs& costs, Circuit& circuit, StartEndCoord& startEndCoord)
+void Dijkstra::route(Solution& solution, Costs &costs, Circuit &circuit, std::mutex &stopThreadMutex)
 {
-  wireVec = GridVec(W * H, false);
-  stripVec = GridVec(W * H, false);
-  wireCostVec = CostVec(W * H, INT_MAX);
-  stripCostVec = CostVec(W * H, INT_MAX);
+  blockComponentFootprints(circuit);
+  routeAll(solution, costs, circuit, stopThreadMutex);
+}
 
-  bool success_bool = findCosts(costs, startEndCoord);
+void Dijkstra::blockComponentFootprints(Circuit &circuit)
+{
+  for (auto componentName : circuit.getComponentNameVec()) {
+    auto ci = circuit.getComponentInfoMap().find(componentName)->second;
+    for (u32 y = ci.footprint.start.y; y <= ci.footprint.end.y; ++y) {
+      for (u32 x = ci.footprint.start.x; x <= ci.footprint.end.x; ++x) {
+        setViaLayerUsed(ViaLayer(x, y, true));
+        setViaLayerUsed(ViaLayer(x, y, false));
+      }
+    }
+  }
+}
+
+void Dijkstra::routeAll(Solution& solution, Costs& costs, Circuit& circuit, std::mutex &stopThreadMutex)
+{
+  for (auto viaStartEnd : circuit.getConnectionCoordVec()) {
+    findLowestCostRoute(solution, costs, circuit, viaStartEnd);
+    if (!stopThreadMutex.try_lock()) {
+      return;
+    }
+    else {
+      stopThreadMutex.unlock();
+    }
+  }
+}
+
+void Dijkstra::findLowestCostRoute(Solution& solution, Costs &costs, Circuit &circuit,
+                                    ViaStartEnd& viaStartEnd)
+{
+  viaCostVec_ = ViaCostVec(W * H);
+
+  bool success_bool = findCosts(costs, viaStartEnd);
   if (success_bool) {
     ++numCompletedRoutes;
-    auto routeStepVec = walkCheapestPath(startEndCoord);
+    auto routeStepVec = backtraceLowestCostRoute(viaStartEnd);
     addRouteToUsed(routeStepVec);
     reverse(routeStepVec.begin(), routeStepVec.end());
     {
-      lock_guard<mutex> lockCircuit(circuitMutex);
-      circuit.getRouteVec().push_back(routeStepVec);
+      lock_guard<mutex> lockSolution(solutionMutex);
+      solution.getRouteVec().push_back(routeStepVec);
     }
   }
   else {
@@ -57,17 +86,16 @@ void Dijkstra::findCheapestRoute(Costs& costs, Circuit& circuit, StartEndCoord& 
 
 void Dijkstra::addRouteToUsed(RouteStepVec& routeStepVec) {
   for (auto c : routeStepVec) {
-    addCoordToUsed(c);
+    setViaLayerUsed(c);
   }
 }
 
-
-void Dijkstra::addCoordToUsed(HoleCoord& c) {
-  if (c.onWireSide) {
-    usedWireVec[idx(c)] = true;
+void Dijkstra::setViaLayerUsed(const ViaLayer& viaLayer) {
+  if (viaLayer.isWireLayer) {
+    viaTraceVec_[idx(viaLayer)].setWireSideUsed();
   }
   else {
-    usedStripVec[idx(c)] = true;
+    viaTraceVec_[idx(viaLayer)].setStripSideUsed();
   }
 }
 
@@ -75,145 +103,198 @@ void Dijkstra::addCoordToUsed(HoleCoord& c) {
 // Private
 //
 
-bool Dijkstra::findCosts(Costs& costs, StartEndCoord& startEndCoord)
-{
-  auto start = startEndCoord.start;
-  auto end = startEndCoord.end;
+// 'procedure' 'UniformCostSearch'(Graph, start, goal)
+//   node ← start
+//   cost ← 0
+//   frontier ← priority queue containing node only
+//   explored ← empty set
+//   'do'
+//     'if' frontier is empty
+//       'return' failure
+//     node ← frontier.pop()
+//     'if' node is goal
+//       'return' solution
+//     explored.add(node)
+//     'for each' of node's neighbors n
+//       'if' n is not in explored
+//         'if' n is not in frontier
+//           frontier.add(n)
+//         'else if' n is in frontier with higher cost
+//           replace existing node with n
 
-  if (start.onWireSide) {
-    wireCostVec[idx(start)] = 0;
-  }
-  else {
-    stripCostVec[idx(start)] = 0;
-  }
+bool Dijkstra::findCosts(Costs& costs, ViaStartEnd& viaStartEnd)
+{
+  auto startC = viaStartEnd.start;
+  auto endC = viaStartEnd.end;
+  assert(!startC.isWireLayer);
+  assert(!endC.isWireLayer);
+  Via start(startC.x, startC.y);
+  Via end(endC.x, endC.y);
+  ViaLayerCost node(start.x, start.y, false, 0);
+  priority_queue<ViaLayerCost> frontierPri;
+  set<ViaLayer> frontierSet;
+  set<ViaLayer> exploredSet;
+
+  setCost(node);
+  frontierPri.push(node);
+  frontierSet.insert(node.viaLayer);
 
   while (true) {
-    auto minCoord = minCost();
-    if (!minCoord.isValid) {
+    if (!frontierPri.size()) {
       return false;
     }
-    if (minCoord.x == end.x && minCoord.y == end.y && minCoord.onWireSide == end.onWireSide) {
-      if (minCoord.onWireSide && wireCostVec[idx(minCoord)] == INT_MAX) {
-        return false;
-      }
-      if (!minCoord.onWireSide && stripCostVec[idx(minCoord)] == INT_MAX) {
-        return false;
-      }
+    node = frontierPri.top();
+    frontierPri.pop();
+    frontierSet.erase(node.viaLayer);
+    if (node.viaLayer.x == end.x && node.viaLayer.y == end.y && !node.viaLayer.isWireLayer) {
       return true;
     }
-    // Wires run horizontally
-    if (minCoord.onWireSide) {
-      // Mark the picked vertex as processed
-      wireVec[idx(minCoord)] = true;
-      // Left
-      if (minCoord.x > 0 && !usedWireVec[idxLeft(minCoord)] && !wireVec[idxLeft(minCoord)] && wireCostVec[idx(minCoord)] != INT_MAX &&
-          wireCostVec[idx(minCoord)] + costs.wire < wireCostVec[idxLeft(minCoord)]) {
-        wireCostVec[idxLeft(minCoord)] = wireCostVec[idx(minCoord)] + costs.wire;
+    exploredSet.insert(node.viaLayer);
+    vector<ViaLayerCost> neighborVec;
+    if (node.viaLayer.isWireLayer) {
+      if (node.viaLayer.x > 0) {
+        neighborVec.push_back(
+          ViaLayerCost(node.viaLayer.x - 1, node.viaLayer.y, true,
+                       node.cost + costs.wire));
       }
-      // Right
-      if (minCoord.x < W - 1 && !usedWireVec[idxRight(minCoord)] && !wireVec[idxRight(minCoord)] && wireCostVec[idx(minCoord)] != INT_MAX &&
-          wireCostVec[idx(minCoord)] + costs.wire < wireCostVec[idxRight(minCoord)]) {
-        wireCostVec[idxRight(minCoord)] = wireCostVec[idx(minCoord)] + costs.wire;
+      if (node.viaLayer.x < W - 1) {
+        neighborVec.push_back(
+          ViaLayerCost(node.viaLayer.x + 1, node.viaLayer.y, true,
+                       node.cost + costs.wire));
       }
-      // Through to strip layer
-      if (!stripVec[idx(minCoord)] && !usedStripVec[idx(minCoord)] && wireCostVec[idx(minCoord)] != INT_MAX &&
-          wireCostVec[idx(minCoord)] + costs.via < stripCostVec[idx(minCoord)]) {
-        stripCostVec[idx(minCoord)] = wireCostVec[idx(minCoord)] + costs.via;
-      }
+      neighborVec.push_back(
+        ViaLayerCost(node.viaLayer.x, node.viaLayer.y, false,
+                     node.cost + costs.via));
     }
-    // Strips run vertically
     else {
-      // Mark the picked vertex as processed
-      stripVec[idx(minCoord)] = true;
-      // Up
-      if (minCoord.y > 0 && !usedStripVec[idxUp(minCoord)] && !stripVec[idxUp(minCoord)] && stripCostVec[idx(minCoord)] != INT_MAX &&
-          stripCostVec[idx(minCoord)] + costs.strip < stripCostVec[idxUp(minCoord)]) {
-        stripCostVec[idxUp(minCoord)] = stripCostVec[idx(minCoord)] + costs.strip;
+      if (node.viaLayer.y > 0) {
+        neighborVec.push_back(
+          ViaLayerCost(node.viaLayer.x, node.viaLayer.y - 1, false,
+                       node.cost + costs.strip));
       }
-      // Down
-      if (minCoord.y < H - 1 && !usedStripVec[idxDown(minCoord)]  && !stripVec[idxDown(minCoord)] && stripCostVec[idx(minCoord)] != INT_MAX &&
-          stripCostVec[idx(minCoord)] + costs.strip < stripCostVec[idxDown(minCoord)]) {
-        stripCostVec[idxDown(minCoord)] = stripCostVec[idx(minCoord)] + costs.strip;
+      if (node.viaLayer.y < H - 1) {
+        neighborVec.push_back(
+          ViaLayerCost(node.viaLayer.x, node.viaLayer.y + 1, false,
+                       node.cost + costs.strip));
       }
-      // Through to wire layer
-      if (!wireVec[idx(minCoord)] && !usedWireVec[idx(minCoord)] && stripCostVec[idx(minCoord)] != INT_MAX &&
-          stripCostVec[idx(minCoord)] + costs.via < wireCostVec[idx(minCoord)]) {
-        wireCostVec[idx(minCoord)] = stripCostVec[idx(minCoord)] + costs.via;
+      neighborVec.push_back(
+        ViaLayerCost(node.viaLayer.x, node.viaLayer.y, true,
+                     node.cost + costs.via));
+    }
+
+    for (auto n : neighborVec) {
+      if (!exploredSet.count(n.viaLayer)) {
+        if (!frontierSet.count(n.viaLayer)) {
+          frontierPri.push(n);
+          frontierSet.insert(n.viaLayer);
+          setCost(n);
+        }
+        else {
+          for (auto frontier_n : frontierSet) {
+            auto frontier_cost = getCost(frontier_n);
+            if (frontier_cost > n.cost) {
+              setCost(node.viaLayer, n.cost);
+            }
+          }
+        }
       }
     }
   }
 }
 
-
-HoleCoord Dijkstra::minCost()
+u32 Dijkstra::getCost(const ViaLayer& viaLayer)
 {
-  int min = INT_MAX;
-  HoleCoord minCoord;
-  minCoord.isValid = false;
-  for (int y = 0; y < H; ++y) {
-    for (int x = 0; x < W; ++x) {
-      // wire side
-      HoleCoord wireCoord(x, y, true);
-      if (!wireVec[idx(wireCoord)] && !usedWireVec[idx(wireCoord)] && wireCostVec[idx(wireCoord)] <= min) {
-//      if (!wireVec[idx(wireCoord)] && wireCostVec[idx(wireCoord)] <= min) {
-        min = wireCostVec[idx(wireCoord)];
-        minCoord = wireCoord;
-        minCoord.isValid = true;
-      }
-      // strip side
-      HoleCoord stripCoord(x, y, false);
-//      if (!stripVec[idx(stripCoord)] && !usedStripVec[idx(stripCoord)] && stripCostVec[idx(stripCoord)] <= min) {
-      if (!stripVec[idx(stripCoord)] && stripCostVec[idx(stripCoord)] <= min) {
-        min = stripCostVec[idx(stripCoord)];
-        minCoord = stripCoord;
-        minCoord.isValid = true;
-      }
-    }
+  u32 idx = viaLayer.x + W * viaLayer.y;
+  if (viaLayer.isWireLayer) {
+    return viaCostVec_[idx].wireCost;
   }
-  return minCoord;
+  else {
+    return viaCostVec_[idx].stripCost;
+  }
 }
 
-
-RouteStepVec Dijkstra::walkCheapestPath(StartEndCoord& startEndCoord)
+void Dijkstra::setCost(const ViaLayer& viaLayer, u32 cost)
 {
-  auto start = startEndCoord.start;
-  auto end = startEndCoord.end;
+  u32 idx = viaLayer.x + W * viaLayer.y;
+  if (viaLayer.isWireLayer) {
+    viaCostVec_[idx].wireCost = cost;
+  }
+  else {
+    viaCostVec_[idx].stripCost = cost;
+  }
+}
+
+void Dijkstra::setCost(const ViaLayerCost& viaLayerCost)
+{
+  setCost(viaLayerCost.viaLayer, viaLayerCost.cost);
+}
+
+//ViaCoord Dijkstra::minCost()
+//{
+//  u32 min = INT_MAX;
+//  ViaCoord minCoord;
+//  minCoord.isValid = false;
+//  for (u32 y = 0; y < H; ++y) {
+//    for (u32 x = 0; x < W; ++x) {
+//      // wire side
+//      ViaCoord wireCoord(x, y, true);
+//      if (viaCostVec_[idx(wireCoord)].wireCost <= min) {
+//        min = viaCostVec_[idx(wireCoord)].wireCost;
+//        minCoord = wireCoord;
+//        minCoord.isValid = true;
+//      }
+//      // strip side
+//      ViaCoord stripCoord(x, y, false);
+//      if (viaCostVec_[idx(stripCoord)].stripCost <= min) {
+//        min = viaCostVec_[idx(stripCoord)].stripCost;
+//        minCoord = stripCoord;
+//        minCoord.isValid = true;
+//      }
+//    }
+//  }
+//  return minCoord;
+//}
+
+
+RouteStepVec Dijkstra::backtraceLowestCostRoute(ViaStartEnd& viaStartEnd)
+{
+  auto start = viaStartEnd.start;
+  auto end = viaStartEnd.end;
 
   RouteStepVec routeStepVec;
   auto c = end;
-  HoleCoord n;
   routeStepVec.push_back(c);
-  while (c.x != start.x || c.y != start.y || c.onWireSide != start.onWireSide) {
-    n = c;
-    if (c.onWireSide) {
+  while (c.x != start.x || c.y != start.y || c.isWireLayer != start.isWireLayer) {
+    ViaLayer n = c;
+    if (c.isWireLayer) {
       if (c.x > 0) {
-        n = HoleCoord(c.x - 1, c.y, c.onWireSide);
+        n = ViaLayer(c.x - 1, c.y, c.isWireLayer);
       }
-      if (c.x < W - 1 && wireCostVec[idxRight(c)] <= wireCostVec[idx(n)]) {
-        n = HoleCoord(c.x + 1, c.y, c.onWireSide);
+      if (c.x < W - 1 && viaCostVec_[idxRight(c)].wireCost <= viaCostVec_[idx(n)].wireCost) {
+        n = ViaLayer(c.x + 1, c.y, c.isWireLayer);
       }
-      if (stripCostVec[idx(c)] <= wireCostVec[idx(n)]) {
-        n = HoleCoord(c.x, c.y, false);
+      if (viaCostVec_[idx(c)].stripCost <= viaCostVec_[idx(n)].wireCost) {
+        n = ViaLayer(c.x, c.y, false);
       }
     }
     else {
       if (c.y > 0) {
-        n = HoleCoord(c.x, c.y - 1, c.onWireSide);
+        n = ViaLayer(c.x, c.y - 1, c.isWireLayer);
       }
-      if (c.y < H - 1 && stripCostVec[idxDown(c)] < stripCostVec[idx(n)]) {
-        n = HoleCoord(c.x, c.y + 1, c.onWireSide);
+      if (c.y < H - 1 && viaCostVec_[idxDown(c)].stripCost < viaCostVec_[idx(n)].stripCost) {
+        n = ViaLayer(c.x, c.y + 1, c.isWireLayer);
       }
-      if (wireCostVec[idx(c)] < stripCostVec[idx(n)]) {
-        n = HoleCoord(c.x, c.y, true);
+      if (viaCostVec_[idx(c)].wireCost < viaCostVec_[idx(n)].stripCost) {
+        n = ViaLayer(c.x, c.y, true);
       }
     }
     c = n;
 
-    if (c.onWireSide) {
-      totalCost_ += wireCostVec[idx(c)];
+    if (c.isWireLayer) {
+      totalCost_ += viaCostVec_[idx(c)].wireCost;
     }
     else {
-      totalCost_ += stripCostVec[idx(c)];
+      totalCost_ += viaCostVec_[idx(c)].stripCost;
     }
 
     routeStepVec.push_back(c);
@@ -223,55 +304,58 @@ RouteStepVec Dijkstra::walkCheapestPath(StartEndCoord& startEndCoord)
 
 void Dijkstra::dump()
 {
-  fmt::print("Wire side\n");
-  for (int y = 0; y < H; ++y) {
-    for (int x = 0; x < W; ++x) {
-      int v = wireCostVec[x + y * W];
-      if (v == INT_MAX) {
-        v = -1;
+  //fmt::print("Wire layer\n");
+  dumpLayer(true);
+  //fmt::print("Strip layer\n");
+  dumpLayer(false);
+}
+
+
+void Dijkstra::dumpLayer(bool wireLayer)
+{
+  for (u32 y = 0; y < H; ++y) {
+    for (u32 x = 0; x < W; ++x) {
+      u32 v;
+      if (wireLayer) {
+        v = viaCostVec_[x + y * W].wireCost;
       }
-      fmt::print("{} ", v);
-    }
-    fmt::print("\n");
-  }
-  fmt::print("\n");
-
-  fmt::print("Strip side\n");
-  for (int y = 0; y < H; ++y) {
-    for (int x = 0; x < W; ++x) {
-      int v = stripCostVec[x + y * W];
-      if (v == INT_MAX) {
-        v = -1;
+      else {
+        v = viaCostVec_[x + y * W].stripCost;
       }
-      fmt::print("{} ", v);
+      if (v == INT_MAX) {
+        //fmt::print("   -", v);
+      }
+      else {
+        //fmt::print(" {:3d}", v);
+      }
     }
-    fmt::print("\n");
+    //fmt::print("\n");
   }
-  fmt::print("\n");
+  //fmt::print("\n");
 }
 
 
-int Dijkstra::idx(HoleCoord& c)
+int Dijkstra::idx(const Via& v)
 {
-  return c.x + W * c.y;
+  return v.x + W * v.y;
 }
 
-int Dijkstra::idxLeft(HoleCoord& c)
+int Dijkstra::idxLeft(const Via& v)
 {
-  return idx(c) - 1;
+  return idx(v) - 1;
 }
 
-int Dijkstra::idxRight(HoleCoord& c)
+int Dijkstra::idxRight(const Via& v)
 {
-  return idx(c) + 1;
+  return idx(v) + 1;
 }
 
-int Dijkstra::idxUp(HoleCoord& c)
+int Dijkstra::idxUp(const Via& v)
 {
-  return idx(c) - W;
+  return idx(v) - W;
 }
 
-int Dijkstra::idxDown(HoleCoord& c)
+int Dijkstra::idxDown(const Via& v)
 {
-  return idx(c) + W;
+  return idx(v) + W;
 }

@@ -17,8 +17,8 @@
 #include "gl_error.h"
 #include "ogl_text.h"
 #include "pcb.h"
+#include "solution.h"
 #include "utils.h"
-
 
 using namespace std;
 using namespace boost::filesystem;
@@ -30,11 +30,13 @@ const u32 windowH = 1080 - 200;
 const char *FONT_PATH = "./fonts/LiberationMono-Regular.ttf";
 const u32 FONT_SIZE = 18;
 
+
 Costs costs;
 Circuit circuit;
+Solution solution;
 void parseAndRoute();
-void runParseAndAutoroute();
-thread parseAndAutorouteThread;
+void runParseAndRoute();
+thread parseAndRouteThread;
 mutex stopThreadMutex;
 OglText* oglTextPtr;
 PcbDraw* pcbDrawPtr;
@@ -102,7 +104,7 @@ public:
       intBox->setValueIncrement(1);
       intBox->setCallback([intBox](int value) {
         costs.wire = value;
-        runParseAndAutoroute();
+        runParseAndRoute();
       });
     }
     {
@@ -119,7 +121,7 @@ public:
       intBox->setValueIncrement(1);
       intBox->setCallback([intBox](int value) {
         costs.strip = value;
-        runParseAndAutoroute();
+        runParseAndRoute();
       });
     }
     {
@@ -136,7 +138,7 @@ public:
       intBox->setValueIncrement(1);
       intBox->setCallback([intBox](int value) {
         costs.via = value;
-        runParseAndAutoroute();
+        runParseAndRoute();
       });
     }
     {
@@ -213,12 +215,12 @@ public:
     std::time_t mtime_cur = boost::filesystem::last_write_time("./circuit.txt");
     if (mtime_cur != mtime_prev) {
       mtime_prev = mtime_cur;
-      runParseAndAutoroute();
+      runParseAndRoute();
     }
 
     glfwSetTime(0.0);
 
-    pcbDrawPtr->draw(circuit, showInputBool);
+    pcbDrawPtr->draw(circuit, solution, showInputBool);
 
     // Needed for timing but can be very bad for performance.
     glFinish();
@@ -243,6 +245,18 @@ private:
 
 int main(int argc, char **argv)
 {
+
+//  Dijkstra dijkstra;
+//  ViaStartEnd c;
+//  Costs costs;
+//  costs.wire = 1;
+//  costs.strip = 1;
+//  costs.via = 1;
+//  bool success_bool = dijkstra.findCosts(costs, c);
+//  fmt::print("success: {}\n", success_bool);
+//  dijkstra.dump();
+//  return 0;
+
   try {
     nanogui::init();
     {
@@ -266,15 +280,15 @@ int main(int argc, char **argv)
 }
 
 
-void runParseAndAutoroute()
+void runParseAndRoute()
 {
   try {
     lock_guard<mutex> stopThread(stopThreadMutex);
-    parseAndAutorouteThread.join();
+    parseAndRouteThread.join();
   }
   catch (const std::system_error &e) {
   }
-  parseAndAutorouteThread = thread(parseAndRoute);
+  parseAndRouteThread = thread(parseAndRoute);
 }
 
 
@@ -293,27 +307,7 @@ void parseAndRoute()
   }
   if (!circuit.getErrorBool()) {
     Dijkstra dijkstra;
-    // Block the component footprints from being used by routes.
-    for (auto componentName : circuit.getComponentNameVec()) {
-      auto ci = circuit.getComponentInfoMap().find(componentName)->second;
-      for (int y = ci.footprint.start.y; y <= ci.footprint.end.y; ++y) {
-        for (int x = ci.footprint.start.x; x <= ci.footprint.end.x; ++x) {
-          HoleCoord wireSideCoord(x, y, true);
-          HoleCoord stripSideCoord(x, y, false);
-          dijkstra.addCoordToUsed(wireSideCoord);
-          dijkstra.addCoordToUsed(stripSideCoord);
-        }
-      }
-    }
-    for (auto startEndCoord : circuit.getConnectionCoordVec()) {
-      dijkstra.findCheapestRoute(costs, circuit, startEndCoord);
-      if (!stopThreadMutex.try_lock()) {
-        return;
-      }
-      else {
-        stopThreadMutex.unlock();
-      }
-    }
+    dijkstra.route(solution, costs, circuit, stopThreadMutex);
   }
 //  if (!circuit.getErrorBool()) {
 //    circuit.getCircuitInfoVec().push_back(fmt::format("Ok"));

@@ -50,14 +50,19 @@ void PcbDraw::setZoom(float zoom)
   zoom_ = zoom;
 }
 
-void PcbDraw::draw(Circuit& circuit, bool showInputBool)
+void PcbDraw::draw(Circuit& circuit, Solution& solution, bool showInputBool)
+{
+  drawCircuit(circuit, showInputBool);
+  drawSolution(solution);
+}
+
+void PcbDraw::drawCircuit(Circuit& circuit, bool showInputBool)
 {
   lock_guard<mutex> lockCircuit(circuitMutex);
 
-  auto projection = glm::ortho(
-    0.0f, static_cast<float>(windowW_), static_cast<float>(windowH_),
-    0.0f, 0.0f, 100.0f
-  );
+  auto projection = glm::ortho(0.0f, static_cast<float>(windowW_),
+                               static_cast<float>(windowH_), 0.0f, 0.0f,
+                               100.0f);
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glUseProgram(fillProgramId);
@@ -65,25 +70,23 @@ void PcbDraw::draw(Circuit& circuit, bool showInputBool)
   assert(projectionId >= 0);
   glUniformMatrix4fv(projectionId, 1, GL_FALSE, glm::value_ptr(projection));
 
-  float hole_radius_pixels = HOLE_RADIUS_PIXELS * zoom_;
+  float via_radius_pixels = HOLE_RADIUS_PIXELS * zoom_;
   float strip_width_pixels = STRIP_WIDTH_PIXELS * zoom_;
   float strip_space_pixels = STRIP_SPACE_PIXELS * zoom_;
-  float hole_space_pixels = strip_width_pixels + strip_space_pixels;
-  float half_hole_space_pixels = hole_space_pixels / 2.0f;
+  float via_space_pixels = strip_width_pixels + strip_space_pixels;
+  float half_via_space_pixels = via_space_pixels / 2.0f;
 
   // Copper strips
   for (int x = 0; x < W_HOLES; ++x) {
-    drawFilledRectangle(
-      x * hole_space_pixels - (strip_width_pixels / 2), 0,
-      x * hole_space_pixels + (strip_width_pixels / 2), H_HOLES * hole_space_pixels,
-      217.0f, 144.0f, 88.0f
-    );
+    drawFilledRectangle(x * via_space_pixels - (strip_width_pixels / 2), 0,
+                        x * via_space_pixels + (strip_width_pixels / 2),
+                        H_HOLES * via_space_pixels, 217.0f, 144.0f, 88.0f);
   }
-  // Through holes
+  // Vias
   for (int y = 0; y < H_HOLES; ++y) {
     for (int x = 0; x < W_HOLES; ++x) {
-      drawFilledCircle(x * hole_space_pixels, y * hole_space_pixels,
-                       hole_radius_pixels, 0.0f, 0.0f, 0.0f);
+      drawFilledCircle(x * via_space_pixels, y * via_space_pixels,
+                       via_radius_pixels, 0.0f, 0.0f, 0.0f);
     }
   }
   // Draw components
@@ -91,66 +94,69 @@ void PcbDraw::draw(Circuit& circuit, bool showInputBool)
     auto ci = circuit.getComponentInfoMap().find(componentName)->second;
     // Component outline
     drawFilledRectangle(
-      ci.footprint.start.x * hole_space_pixels - half_hole_space_pixels,
-      ci.footprint.start.y * hole_space_pixels - half_hole_space_pixels,
-      ci.footprint.end.x * hole_space_pixels + half_hole_space_pixels,
-      ci.footprint.end.y * hole_space_pixels + half_hole_space_pixels,
-      0, 0, 0, 0.5f
-    );
+      ci.footprint.start.x * via_space_pixels - half_via_space_pixels,
+      ci.footprint.start.y * via_space_pixels - half_via_space_pixels,
+      ci.footprint.end.x * via_space_pixels + half_via_space_pixels,
+      ci.footprint.end.y * via_space_pixels + half_via_space_pixels, 0, 0, 0,
+      0.5f);
     // Component pins
     for (auto pinAbsCoord :  ci.pinAbsCoordVec) {
       s32 x = pinAbsCoord.x;
       s32 y = pinAbsCoord.y;
-      drawFilledCircle(x * hole_space_pixels, y * hole_space_pixels,
-                       hole_radius_pixels, 200.0f, 0.0f, 0.0f);
+      drawFilledCircle(x * via_space_pixels, y * via_space_pixels,
+                       via_radius_pixels, 200.0f, 0.0f, 0.0f);
     }
     // Component name
     u32 stringWidth = oglText_.calcStringWidth(ci.componentName);
     u32 stringHeight = oglText_.getStringHeight();
-    u32 x1 = ci.footprint.start.x * hole_space_pixels;
-    u32 y1 = ci.footprint.start.y * hole_space_pixels;
-    u32 x2 = ci.footprint.end.x * hole_space_pixels;
-    u32 y2 = ci.footprint.end.y * hole_space_pixels;
+    u32 x1 = ci.footprint.start.x * via_space_pixels;
+    u32 y1 = ci.footprint.start.y * via_space_pixels;
+    u32 x2 = ci.footprint.end.x * via_space_pixels;
+    u32 y2 = ci.footprint.end.y * via_space_pixels;
     u32 centerX = x1 + (x2 - x1) / 2;
     u32 centerY = y1 + (y2 - y1) / 2;
-    oglText_.print(centerX - stringWidth / 2, centerY - stringHeight / 2,
-                   0, ci.componentName);
-  }
-  // Routes
-  // Draw circles and lines separately so that lines are always on top.
-  for (auto RouteStepVec : circuit.getRouteVec()) {
-    HoleCoord prev;
-    for (auto c : RouteStepVec) {
-      if (prev.x == -1 || prev.x == c.x) {
-        drawFilledCircle(c.x * hole_space_pixels, c.y * hole_space_pixels,
-                         hole_radius_pixels, 200.0f, 200.0f, 0.0f);
-      }
-      prev.x = c.x;
-      prev.y = c.y;
-    }
-  }
-  for (auto RouteStepVec : circuit.getRouteVec()) {
-    HoleCoord prev;
-    for (auto c : RouteStepVec) {
-      if (prev.y == c.y) {
-        drawThickLine(prev.x * hole_space_pixels, prev.y * hole_space_pixels,
-                      c.x * hole_space_pixels, c.y * hole_space_pixels,
-                      1.5f * zoom_, 0, 0, 0);
-      }
-      prev.x = c.x;
-      prev.y = c.y;
-    }
+    oglText_.print(centerX - stringWidth / 2, centerY - stringHeight / 2, 0,
+                   ci.componentName);
   }
   // Draw input connections
   if (showInputBool) {
-    for (auto startEndCoord : circuit.getConnectionCoordVec()) {
+    for (auto viaStartEnd : circuit.getConnectionCoordVec()) {
       drawThickLine(
-        startEndCoord.start.x * hole_space_pixels,
-        startEndCoord.start.y * hole_space_pixels,
-        startEndCoord.end.x * hole_space_pixels,
-        startEndCoord.end.y * hole_space_pixels,
+        viaStartEnd.start.x * via_space_pixels,
+        viaStartEnd.start.y * via_space_pixels,
+        viaStartEnd.end.x * via_space_pixels,
+        viaStartEnd.end.y * via_space_pixels,
         1.0f * zoom_, 0, 100, 200
       );
+    }
+  }
+}
+
+void PcbDraw::drawSolution(Solution& solution)
+{
+  float via_radius_pixels = HOLE_RADIUS_PIXELS * zoom_;
+  float strip_width_pixels = STRIP_WIDTH_PIXELS * zoom_;
+  float strip_space_pixels = STRIP_SPACE_PIXELS * zoom_;
+  float via_space_pixels = strip_width_pixels + strip_space_pixels;
+  float half_via_space_pixels = via_space_pixels / 2.0f;
+
+  // Routes
+  // Draw circles and lines separately so that lines are always on top.
+  for (auto RouteStepVec : solution.getRouteVec()) {
+    for (auto c : RouteStepVec) {
+        drawFilledCircle(c.x * via_space_pixels, c.y * via_space_pixels,
+                         via_radius_pixels, 200.0f, 200.0f, 0.0f);
+    }
+  }
+  for (auto RouteStepVec : solution.getRouteVec()) {
+    Via prev;
+    for (auto c : RouteStepVec) {
+      if (prev.isValid) {
+        drawThickLine(prev.x * via_space_pixels, prev.y * via_space_pixels,
+                      c.x * via_space_pixels, c.y * via_space_pixels,
+                      1.5f * zoom_, 0, 0, 0);
+      }
+      prev = Via(c.x, c.y);
     }
   }
 }
@@ -192,12 +198,12 @@ void PcbDraw::drawFilledCircle(float x, float y, float radius,
 
   vector<GLfloat> triVec;
 
-  int numHoleTriangles = NUM_HOLE_TRIANGLES * zoom_;
-  for (int i = 0; i <= numHoleTriangles; ++i) {
-    float x1 = x + (radius * cosf(i * 2.0f * PI_F / numHoleTriangles));
-    float y1 = y + (radius * sinf(i * 2.0f * PI_F / numHoleTriangles));
-    float x2 = x + (radius * cosf((i + 1) * 2.0f * PI_F / numHoleTriangles));
-    float y2 = y + (radius * sinf((i + 1) * 2.0f * PI_F / numHoleTriangles));
+  int numViaTriangles = NUM_HOLE_TRIANGLES * zoom_;
+  for (int i = 0; i <= numViaTriangles; ++i) {
+    float x1 = x + (radius * cosf(i * 2.0f * PI_F / numViaTriangles));
+    float y1 = y + (radius * sinf(i * 2.0f * PI_F / numViaTriangles));
+    float x2 = x + (radius * cosf((i + 1) * 2.0f * PI_F / numViaTriangles));
+    float y2 = y + (radius * sinf((i + 1) * 2.0f * PI_F / numViaTriangles));
 
     triVec.insert(triVec.end(), {x, y, 0.0f});
     triVec.insert(triVec.end(), {x1, y1, 0.0f});

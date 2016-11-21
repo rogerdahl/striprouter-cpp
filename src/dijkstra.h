@@ -2,12 +2,10 @@
 
 #include <vector>
 
-#include "int_types.h"
 #include "circuit.h"
-
-
-typedef std::vector<bool> GridVec;
-typedef std::vector<int> CostVec;
+#include "int_types.h"
+#include "solution.h"
+#include "via.h"
 
 
 const int DEFAULT_WIRE_COST = 5;
@@ -18,37 +16,47 @@ const int DEFAULT_VIA_COST = 50;
 class Costs {
 public:
   Costs();
-  int wire;
-  int strip;
-  int via;
+  u32 wire;
+  u32 strip;
+  u32 via;
 };
 
 
 class Dijkstra {
 public:
   Dijkstra();
-  void findCheapestRoute(Costs& costs, Circuit& circuit, StartEndCoord& startEndCoord);
-  void addRouteToUsed(RouteStepVec &);
-  void addCoordToUsed(HoleCoord&);
-  void dump();
+  void route(Solution&, Costs&, Circuit&, std::mutex&);
 private:
-  bool findCosts(Costs& costs, StartEndCoord&);
-  HoleCoord minCost();
-  RouteStepVec walkCheapestPath(StartEndCoord&);
+  void routeAll(Solution&, Costs&, Circuit&, std::mutex&);
+  void blockComponentFootprints(Circuit&);
+  void findLowestCostRoute(Solution&, Costs&, Circuit&, ViaStartEnd&);
+  void addRouteToUsed(RouteStepVec&);
+  void setViaLayerUsed(const ViaLayer&);
+  void dump();
+  void dumpLayer(bool wireLayer);
+  bool findCosts(Costs& costs, ViaStartEnd&);
+  u32 getCost(const ViaLayer&);
+  void setCost(const ViaLayer&, u32 cost);
+  void setCost(const ViaLayerCost&);
+//  Via minCost();
+  RouteStepVec backtraceLowestCostRoute(ViaStartEnd&);
 
-  int idx(HoleCoord&);
-  int idxLeft(HoleCoord&);
-  int idxRight(HoleCoord&);
-  int idxUp(HoleCoord&);
-  int idxDown(HoleCoord&);
+  int idx(const Via&);
+  int idxLeft(const Via&);
+  int idxRight(const Via&);
+  int idxUp(const Via&);
+  int idxDown(const Via&);
 
-  GridVec wireVec;
-  GridVec stripVec;
-  CostVec wireCostVec;
-  CostVec stripCostVec;
+  ViaTraceVec viaTraceVec_;
+  ViaCostVec viaCostVec_;
 
-  GridVec usedWireVec;
-  GridVec usedStripVec;
+//  GridVec wireVec;
+//  GridVec stripVec;
+//  CostVec wireCostVec;
+//  CostVec stripCostVec;
+//
+//  GridVec usedWireVec;
+//  GridVec usedStripVec;
 
   u32 totalCost_;
   u32 numCompletedRoutes = 0;

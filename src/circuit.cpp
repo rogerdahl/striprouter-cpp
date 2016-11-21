@@ -1,23 +1,11 @@
 #include "circuit.h"
 
+
 std::mutex circuitMutex;
+
 
 using namespace std;
 
-HoleCoord::HoleCoord()
-  : x(-1), y(-1), onWireSide(false), isValid(false)
-{}
-
-HoleCoord::HoleCoord(int x_in, int y_in, bool onWireSide_in, bool isValid_in)
-  : x(x_in), y(y_in), onWireSide(onWireSide_in), isValid(isValid_in)
-{}
-
-StartEndCoord::StartEndCoord()
-{}
-
-StartEndCoord::StartEndCoord(HoleCoord& start_in, HoleCoord& end_in)
-  : start(start_in), end(end_in)
-{}
 
 Circuit::Circuit()
   : hasError_(false)
@@ -83,11 +71,6 @@ ConnectionPairVec& Circuit::getConnectionPairVec()
 PackageToCoordMap& Circuit::getPackageToCoordMap()
 {
   return packageToCoordMap_;
-}
-
-RouteVec& Circuit::getRouteVec()
-{
-  return routeVec_;
 }
 
 void Circuit::dump()

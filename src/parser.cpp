@@ -1,21 +1,22 @@
-#include "parser.h"
-
+#include <fstream>
+#include <iostream>
 #include <regex>
 
 #include <boost/filesystem.hpp>
-#include <iostream>
-#include <fstream>
-#include <string>
-
 #include <fmt/format.h>
+
+#include "parser.h"
+
 
 using namespace std;
 using namespace boost;
 
 
-Parser::Parser() {}
+Parser::Parser()
+{}
 
-Parser::~Parser() {}
+Parser::~Parser()
+{}
 
 
 Circuit Parser::parse() {
@@ -82,7 +83,7 @@ ComponentInfo Parser::genComponentInfo(Circuit& circuit, string componentName)
   auto packageName = circuit.getComponentName2PackageName().find(componentName)->second;
   ci.componentName = componentName;
   auto componentAbsCoord = circuit.getComponentToCoordMap()[componentName];
-  StartEndCoord fc = calcPackageExtents(circuit, packageName);
+  ViaStartEnd fc = calcPackageExtents(circuit, packageName);
   fc.start.x += componentAbsCoord.x;
   fc.start.y += componentAbsCoord.y;
   fc.end.x += componentAbsCoord.x;
@@ -94,7 +95,7 @@ ComponentInfo Parser::genComponentInfo(Circuit& circuit, string componentName)
   auto packageCoordVec = circuit.getPackageToCoordMap().find(packageName)->second;
 
   for (auto pc : packageCoordVec) {
-    auto h = HoleCoord(componentAbsCoord.x + pc.x, componentAbsCoord.y + pc.y);
+    auto h = Via(componentAbsCoord.x + pc.x, componentAbsCoord.y + pc.y);
     ci.pinAbsCoordVec.push_back(h);
   }
 
@@ -102,10 +103,10 @@ ComponentInfo Parser::genComponentInfo(Circuit& circuit, string componentName)
 }
 
 
-StartEndCoord Parser::calcPackageExtents(Circuit& circuit, string package)
+ViaStartEnd Parser::calcPackageExtents(Circuit& circuit, string package)
 {
-  CoordVec v = circuit.getPackageToCoordMap().find(package)->second;
-  StartEndCoord fc;
+  ViaVec v = circuit.getPackageToCoordMap().find(package)->second;
+  ViaStartEnd fc;
   fc.start.x = 0;
   fc.start.y = 0;
   fc.end.x = 0;
@@ -143,7 +144,7 @@ void Parser::genConnectionCoordVec(Circuit& circuit)
     auto componentInfo1 = circuit.getComponentInfoMap().find(componentName1)->second;
     auto componentInfo2 = circuit.getComponentInfoMap().find(componentName2)->second;
 
-    StartEndCoord ft;
+    ViaStartEnd ft;
 
 //    ft.x1 = componentInfo1.pinAbsCoordVec[componentPinIdx1].first;
 //    ft.y1 = componentInfo1.pinAbsCoordVec[componentPinIdx1].second;
@@ -154,7 +155,7 @@ void Parser::genConnectionCoordVec(Circuit& circuit)
     ft.end.x = componentInfo2.pinAbsCoordVec[componentPinIdx2].x;
     
     // Move connections to the closest vertical point outside the package footprint.
-    
+
     ft.start.y = componentInfo1.pinAbsCoordVec[componentPinIdx1].y;
     float y_half = componentInfo1.footprint.start.y + (componentInfo1.footprint.end.y - componentInfo1.footprint.start.y) / 2.0f;
     if (ft.start.y < y_half) {
@@ -200,12 +201,11 @@ bool Parser::parsePackage(Circuit& circuit, string &lineStr)
     return false;
   }
   string pkgName = m[1];
-  CoordVec v;
+  ViaVec v;
   for (auto iter = sregex_token_iterator(lineStr.begin(), lineStr.end(), pkgRelativeCoordRx); iter != sregex_token_iterator(); ++iter) {
     string s(*iter);
     regex_match(s, m, pkgCoordValuesRx);
-    HoleCoord h(stoi(m[1]), stoi(m[2]));
-    v.push_back(h);
+    v.push_back(Via(stoi(m[1]), stoi(m[2])));
   }
   circuit.getPackageToCoordMap()[pkgName] = v;
   return true;
@@ -236,8 +236,8 @@ bool Parser::parsePosition(Circuit& circuit, string &lineStr)
   if (!regex_match(lineStr, m, comFull)) {
     return false;
   }
-  HoleCoord c(stoi(m[2]), stoi(m[3]));
-  if (c.x < 0 || c.x > 1000 || c.y < 0 || c.y > 1000) {
+  Via c(stoi(m[2]), stoi(m[3]));
+  if (c.x < 0 || c.x > 1000 || c.y < 0 || c.y > 1000) { // TODO: Fix constants
     throw fmt::format("Invalid coordinates: {},{}", c.x, c.y);
   }
   circuit.getComponentToCoordMap()[m[1]] = c;

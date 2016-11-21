@@ -25,6 +25,6 @@ private:
 
   void genComponentInfoMap(Circuit&);
   ComponentInfo genComponentInfo(Circuit&, std::string componentName);
-  StartEndCoord calcPackageExtents(Circuit&, std::string package);
+  ViaStartEnd calcPackageExtents(Circuit&, std::string package);
   void genConnectionCoordVec(Circuit&);
 };

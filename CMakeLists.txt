@@ -89,7 +89,7 @@ else ()
 endif ()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wfatal-errors")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wfatal-errors -Wno-deprecated-declarations")
 endif ()
 
 # NanoGUI
@@ -118,7 +118,9 @@ set(SOURCE_FILES
   ${SOURCE_DIR}/parser.cpp
   ${SOURCE_DIR}/pcb.cpp
   ${SOURCE_DIR}/shader.cpp
+  ${SOURCE_DIR}/solution.cpp
   ${SOURCE_DIR}/utils.cpp
+  ${SOURCE_DIR}/via.cpp
 )
 
 include_directories(

@@ -7,56 +7,34 @@
 #include <mutex>
 
 #include "int_types.h"
+#include "via.h"
 
 
 extern std::mutex circuitMutex;
 
 
-class HoleCoord {
-public:
-  HoleCoord();
-  HoleCoord(int x_in, int y_in, bool onWireSide_in = false, bool isValid_in = true);
-  s32 x;
-  s32 y;
-  bool onWireSide;
-  bool isValid;
-};
-
-class StartEndCoord {
-public:
-  StartEndCoord();
-  StartEndCoord(HoleCoord& start_in, HoleCoord& c2_in);
-  HoleCoord start;
-  HoleCoord end;
-};
-
-typedef std::vector<HoleCoord> CoordVec;
-typedef std::map<std::string, CoordVec> PackageToCoordMap;
+typedef std::vector<Via> ViaVec;
+typedef std::map<std::string, ViaVec> PackageToCoordMap;
 typedef std::map<std::string, std::string> ComponentName2PackageName;
-typedef std::map<std::string, HoleCoord> ComponentToCoordMap;
+typedef std::map<std::string, Via> ComponentToCoordMap;
 typedef std::pair<std::string, u32> ComponentPinPair;
 typedef std::pair<ComponentPinPair, ComponentPinPair> ConnectionPair;
 typedef std::vector<ConnectionPair> ConnectionPairVec;
 typedef std::vector<std::string> ComponentNameVec;
 
 
-struct ComponentInfo {
+class ComponentInfo {
+public:
   std::string componentName;
-  StartEndCoord footprint;
-  HoleCoord pin0AbsCoord;
-  CoordVec pinAbsCoordVec;
+  ViaStartEnd footprint;
+  Via pin0AbsCoord;
+  ViaVec pinAbsCoordVec;
 };
 
 typedef std::map<std::string, ComponentInfo> ComponentName2ComponentInfo;
-typedef std::vector<StartEndCoord> ConnectionCoordVec;
+typedef std::vector<ViaStartEnd> ConnectionCoordVec;
 
 typedef std::vector<std::string> CircuitInfoVec;
-
-// Autoroutes
-
-typedef std::vector<HoleCoord> RouteStepVec;
-typedef std::vector<RouteStepVec> RouteVec;
-
 
 class Circuit {
 public:
@@ -70,7 +48,6 @@ public:
   ConnectionCoordVec& getConnectionCoordVec();
   ConnectionPairVec& getConnectionPairVec();
   PackageToCoordMap& getPackageToCoordMap();
-  RouteVec& getRouteVec();
   void dump();
   void setErrorBool(bool errorBool);
   bool getErrorBool();
@@ -82,6 +59,5 @@ private:
   ConnectionCoordVec connectionCoordVec_;
   ConnectionPairVec connectionPairVec_;
   PackageToCoordMap packageToCoordMap_;
-  RouteVec routeVec_;
   bool hasError_;
 };
