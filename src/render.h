@@ -15,11 +15,12 @@ public:
   PcbDraw();
   PcbDraw(u32 windowW, u32 windowH, u32 gridW, u32 gridH);
   ~PcbDraw();
-  void draw(Circuit& circuit, Solution& solution, bool showInputBool);
+  void draw(const Circuit &circuit, const Solution &solution,
+            bool showInputBool);
   void setZoom(float);
 private:
-  void drawCircuit(Circuit&, bool showInputBool);
-  void drawSolution(Solution& solution);
+  void drawCircuit(const Circuit&, bool showInputBool);
+  void drawSolution(const Solution& solution);
   void drawFilledRectangle(float x1, float y1, float x2, float y2, float r, float g, float b, float alpha=1.0f);
   void drawFilledCircle(float x, float y, float radius, float r, float g, float b, float alpha=1.0f);
   void drawThickLine(float x1, float y1, float x2, float y2, float radius, float r, float g, float b, float alpha=1.0f);

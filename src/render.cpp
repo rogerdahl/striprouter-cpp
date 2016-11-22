@@ -48,13 +48,14 @@ void PcbDraw::setZoom(float zoom)
   zoom_ = zoom;
 }
 
-void PcbDraw::draw(Circuit& circuit, Solution& solution, bool showInputBool)
+void PcbDraw::draw(const Circuit &circuit, const Solution &solution,
+                   bool showInputBool)
 {
   drawCircuit(circuit, showInputBool);
   drawSolution(solution);
 }
 
-void PcbDraw::drawCircuit(Circuit& circuit, bool showInputBool)
+void PcbDraw::drawCircuit(const Circuit& circuit, bool showInputBool)
 {
   lock_guard<mutex> lockCircuit(circuitMutex);
 
@@ -130,13 +131,12 @@ void PcbDraw::drawCircuit(Circuit& circuit, bool showInputBool)
   }
 }
 
-void PcbDraw::drawSolution(Solution& solution)
+void PcbDraw::drawSolution(const Solution& solution)
 {
   float via_radius_pixels = VIA_RADIUS_PIXELS * zoom_;
   float strip_width_pixels = STRIP_WIDTH_PIXELS * zoom_;
   float strip_space_pixels = STRIP_SPACE_PIXELS * zoom_;
   float via_space_pixels = strip_width_pixels + strip_space_pixels;
-
   // Routes
   // Draw circles and lines separately so that lines are always on top.
   for (auto RouteStepVec : solution.getRouteVec()) {

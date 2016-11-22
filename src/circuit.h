@@ -56,16 +56,32 @@ public:
   Circuit();
 //  Circuit& operator=(const Circuit& other);
   CircuitInfoVec& getCircuitInfoVec();
+  const CircuitInfoVec& getCircuitInfoVec() const;
+
   ComponentName2ComponentInfo& getComponentInfoMap();
+  const ComponentName2ComponentInfo& getComponentInfoMap() const;
+
   ComponentName2PackageName& getComponentName2PackageName();
-  ComponentNameVec getComponentNameVec();
+  const ComponentName2PackageName& getComponentName2PackageName() const;
+
+  const ComponentNameVec getComponentNameVec() const;
+
   ComponentToCoordMap& getComponentToCoordMap();
+  const ComponentToCoordMap& getComponentToCoordMap() const;
+
   ConnectionCoordVec& getConnectionCoordVec();
+  const ConnectionCoordVec& getConnectionCoordVec() const;
+
   ConnectionPairVec& getConnectionPairVec();
+  const ConnectionPairVec& getConnectionPairVec() const;
+
   PackageToCoordMap& getPackageToCoordMap();
-  void dump();
+  const PackageToCoordMap& getPackageToCoordMap() const;
+
+  void dump() const;
+
   void setErrorBool(bool errorBool);
-  bool getErrorBool();
+  bool getErrorBool() const;
 private:
   CircuitInfoVec circuitInfoVec_;
   ComponentName2ComponentInfo componentName2ComponentInfo_;

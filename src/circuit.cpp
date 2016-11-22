@@ -42,17 +42,35 @@ CircuitInfoVec& Circuit::getCircuitInfoVec()
   return circuitInfoVec_;
 }
 
+const CircuitInfoVec& Circuit::getCircuitInfoVec() const
+{
+  return circuitInfoVec_;
+}
+
+
 ComponentName2ComponentInfo& Circuit::getComponentInfoMap()
 {
   return componentName2ComponentInfo_;
 }
+
+const ComponentName2ComponentInfo& Circuit::getComponentInfoMap() const
+{
+  return componentName2ComponentInfo_;
+}
+
 
 ComponentName2PackageName& Circuit::getComponentName2PackageName()
 {
   return componentName2PackageName_;
 }
 
-ComponentNameVec Circuit::getComponentNameVec()
+const ComponentName2PackageName& Circuit::getComponentName2PackageName() const
+{
+  return componentName2PackageName_;
+}
+
+
+const ComponentNameVec Circuit::getComponentNameVec() const
 {
   ComponentNameVec v;
   for (auto n : getComponentName2PackageName()) {
@@ -61,37 +79,63 @@ ComponentNameVec Circuit::getComponentNameVec()
   return v;
 }
 
+
 ComponentToCoordMap& Circuit::getComponentToCoordMap()
 {
   return componentToAbsCoordMap_;
 }
+
+const ComponentToCoordMap& Circuit::getComponentToCoordMap() const
+{
+  return componentToAbsCoordMap_;
+}
+
 
 ConnectionCoordVec& Circuit::getConnectionCoordVec()
 {
   return connectionCoordVec_;
 }
 
+const ConnectionCoordVec& Circuit::getConnectionCoordVec() const
+{
+  return connectionCoordVec_;
+}
+
+
 ConnectionPairVec& Circuit::getConnectionPairVec()
 {
   return connectionPairVec_;
 }
+
+const ConnectionPairVec& Circuit::getConnectionPairVec() const
+{
+  return connectionPairVec_;
+}
+
 
 PackageToCoordMap& Circuit::getPackageToCoordMap()
 {
   return packageToCoordMap_;
 }
 
-void Circuit::dump()
+const PackageToCoordMap& Circuit::getPackageToCoordMap() const
+{
+  return packageToCoordMap_;
+}
+
+
+void Circuit::dump() const
 {
 //  fmt::print("{},{} - {},{}\n", fc.x1, fc.y1, fc.x2, fc.y2);
 }
+
 
 void Circuit::setErrorBool(bool errorBool)
 {
   hasError_ = errorBool;
 }
 
-bool Circuit::getErrorBool()
+bool Circuit::getErrorBool() const
 {
   return hasError_;
 }

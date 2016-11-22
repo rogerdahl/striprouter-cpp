@@ -25,7 +25,7 @@ public:
 class Dijkstra {
 public:
   Dijkstra(u32 gridW, u32 gridH);
-  void route(Solution&, Costs&, Circuit&, std::mutex&);
+  void route(Solution&, Costs, Circuit, std::mutex&);
 private:
   void routeAll(Solution&, Costs&, Circuit&, std::mutex&);
   void blockComponentFootprints(Circuit&);

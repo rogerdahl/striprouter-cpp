@@ -18,11 +18,17 @@ class Solution
 {
 public:
   Solution();
+
   RouteVec& getRouteVec();
+  const RouteVec& getRouteVec() const;
+
   SolutionInfoVec& getSolutionInfoVec();
-  void dump();
+  const SolutionInfoVec& getSolutionInfoVec() const;
+
+  void dump() const;
+
   void setErrorBool(bool errorBool);
-  bool getErrorBool();
+  bool getErrorBool() const;
 private:
   SolutionInfoVec solutionInfoVec_;
   RouteVec routeVec_;

@@ -22,8 +22,10 @@ Dijkstra::Dijkstra(u32 gridW, u32 gridH)
   viaTraceVec_ = ViaTraceVec(gridW_ * gridH_);
 }
 
-void Dijkstra::route(Solution& solution, Costs &costs, Circuit &circuit, std::mutex &stopThreadMutex)
+void Dijkstra::route(Solution& solution, Costs costs, Circuit circuit, std::mutex &stopThreadMutex)
 {
+  auto& v = circuit.getConnectionCoordVec();
+  random_shuffle(v.begin(), v.end());
   solution = Solution();
   blockComponentFootprints(circuit);
   routeAll(solution, costs, circuit, stopThreadMutex);

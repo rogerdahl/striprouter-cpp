@@ -4,13 +4,13 @@
 
 **Note**: Not yet in a usable state.
 
-This is a cross-platform program that, given a description of a circuit, searches for the best routes for the connections on a [stripboard](https://en.wikipedia.org/wiki/Stripboard).
+This is a cross-platform program that, given a description of a circuit, searches for the best way to create the required connections on a [stripboard](https://en.wikipedia.org/wiki/Stripboard).
 
-The output is a description of where to place and solder wires and where to cut the existing stripboard traces in order to create the routes required by the connections in the circuit.
+The output is a description of where to place and solder wires and where to cut the existing stripboard traces in order to create the connections.
 
-Costs can be assigned to resources in order to direct the autorouter towards preferred routes. Resources include stripboard area, solder points, trace cuts and lengths of wire. E.g., setting the cost of solder points high in relation to other resources will typically generate designs that use fewer solder points at the expense of stripboard area.
+Costs can be assigned to resources such as stripboard area and solder points in order to direct the router towards preferred layouts. E.g., setting the cost of solder points high in relation to other resources will typically generate layouts that use fewer solder points at the expense of stripboard area.
 
-The program searches only for routes that use non-overlapping wires that cross the traces at 90 degree angles, which tends to give clean looking designs, and which allows using only uninsulated wires.   
+The program searches only for routes that use non-overlapping wires that cross the traces at right angles, which tends to give layouts that look clean, and which allows using only uninsulated wires.   
 
 Currently somewhat working:
 
@@ -31,7 +31,7 @@ Planned functionality:
 
 ### Circuit description
 
-The circuit description is a text file that can be edited while the program is running. Open the description in a text editor side by side with the renderer and hit save to update the rendered version.
+The circuit description is a text file that can be edited while the program is running. Open the description in a text editor side by side with the router and hit save to update the circuit and restart the routing.
 
 ### Tips and Tricks
 
@@ -39,13 +39,13 @@ The circuit description is a text file that can be edited while the program is r
   
 * Some designs, such as [Rasperry Pi "Hats"](https://shop.pimoroni.com/collections/hats) require a double row header on the edge of the board. In the case of the Raspberry Pi, this is a 2x20 pin header. In order to connect to the outer header pins, the router must go around the header and use board area on the outer side for wires and traces, which makes it impossible for the header to be at the edge of the board. The more connections are required for the outer row, the further in on the board the header must be located.
 
-  Depending on the physical requirements for the final board, this may be acceptable. If it's not, you can enable the double header to stay at the edge of the board by connecting the outer with insulated wire. To do this, you have several options:
+  Depending on the physical requirements for the final board, this may be acceptable. If it's not, you can enable the double header to stay at the edge of the board by connecting the outer pins with insulated wire. To do this, you have several options:
   
   1) Leave the outer row connections out of the circuit description altogether and create direct point-to-point connections for them at solder time.
   
   2) Keep the outer row connections in the circuit description and use the resulting routes as hints on how to best create your connections.
   
-  3) Represent the double header with two single headers in the circuit description. Put one single header at the actual location of the inner row of the double header and put the other in another location on the board. The opposite side may be best. The router can then route directly to each of the single row headers without using area outside the headers. At solder time, connect the outer row of the double header to the row of points that were used by the router. Using an insulated flat cable can be convenient. Old floppy and IDE cables work well for this.
+  3) Represent the double header with two single headers in the circuit description. Put one single header at the actual location of the inner row of the double header and put the other in another location on the board. The opposite side may be best. The router can then route directly to each of the single row headers without using area outside the headers. At solder time, connect the outer row of the double header to the row of points that were used by the router. Using an insulated flat cable can be convenient. Old IDE and floppy cables work well for this.
 
 ### Technologies
 
@@ -64,6 +64,8 @@ The circuit description is a text file that can be edited while the program is r
 This is the circuit description used in the screenshot.
 
 ```
+# Raspberry Pi WS2812B LED level shifter and multiplexer
+
 # Package
 # pkg <package name> <pin coordinates relative to pin 0>
 pkg dip14 0,0 1,0 2,0 3,0 4,0 5,0 6,0 6,-3 5,-3 4,-3 3,-3 2,-3 1,-3 0,-3
