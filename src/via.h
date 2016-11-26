@@ -3,7 +3,13 @@
 #include <string>
 #include <vector>
 
+#include <Eigen/Core>
+
 #include "int_types.h"
+
+
+// Hold floating point screen and board positions
+typedef Eigen::Array2f Pos;
 
 /*
  * We need to keep track of a bunch of types of vias:
@@ -14,8 +20,12 @@
  *
  * ViaLayer:
  * - Hold the coordinate for a layer of a via
- * - Derived from Via. Adds layer
  * - Has operator< on combination of all values, for use in std::set
+ *
+ * ViaLayerCost:
+ * - Hold the coordinates and cost for a layer of a via
+ * - Has operator< on cost for use in std::priority_queue
+ * - Has constructor for creating from ViaLayer + cost
  *
  * ViaTrace:
  * - Block off component footprints
@@ -29,62 +39,73 @@
  * - Always in a grid, so no need for coords
  * - Reset before starting each new route
  * - Default constructor resets wire and strip costs to INT_MAX
- *
- * ViaLayerCost:
- * - Hold the coordinates and cost for a layer of a via
- * - Has operator< on cost for use in std::priority_queue
- * - Implemented as ViaLayer + cost, so ViaLayer can be pulled out for use in set
- * - Has constructor for creating from ViaLayer + cost
  */
 
-class Via
-{
+typedef Eigen::Array2i Via;
+
+class ViaValid {
 public:
-  Via();
-  Via(u32 xIn, u32 yIn);
-  u32 x;
-  u32 y;
+  ViaValid();
+  ViaValid(const Via&);
+  ViaValid(const Via&, bool isValid);
+//  virtual std::string str();
+  Via via;
   bool isValid;
 };
 
-
 //
 
-class ViaLayer : public Via
-{
+class ViaLayerCost;
+
+class ViaLayer {
 public:
   ViaLayer();
-  ViaLayer(u32 xIn, u32 yIn, bool isWireLayerIn);
-  std::string str();
+  ViaLayer(const Via&, bool _isWireLayer);
+  ViaLayer(const ViaLayerCost&);
+//  std::string str();
+  Via via;
   bool isWireLayer;
 };
 
 bool operator<(const ViaLayer& l, const ViaLayer& r);
+bool operator==(const ViaLayer& l, const ViaLayerCost& r);
+bool operator!=(const ViaLayer& l, const ViaLayerCost& r);
+
+//
+
+class ViaLayerCost : public ViaLayer
+{
+public:
+  ViaLayerCost();
+  ViaLayerCost(const ViaLayer& viaLayerIn, u32 costIn);
+  ViaLayerCost(u32 xIn, u32 yIn, bool isWireLayerIn, u32 costIn);
+//  const bool operator < ( const ViaLayerCost& r ) const;
+//  std::string str();
+  u32 cost;
+};
+
+bool operator<(const ViaLayerCost& l, const ViaLayerCost& r);
 
 //
 
 class ViaStartEnd {
 public:
   ViaStartEnd();
-  ViaStartEnd(const ViaLayer& startIn, const ViaLayer& endIn);
-  ViaLayer start;
-  ViaLayer end;
+  ViaStartEnd(const Via& _start, const Via& _end);
+  Via start;
+  Via end;
 };
+
 
 //
 
-class ViaLayerCost
-{
+class ViaLayerStartEnd {
 public:
-  ViaLayerCost(const ViaLayer& viaLayerIn, u32 costIn);
-  ViaLayerCost(u32 xIn, u32 yIn, bool isWireLayerIn, u32 costIn);
-//  const bool operator < ( const ViaLayerCost& r ) const;
-  std::string str();
-  ViaLayer viaLayer;
-  u32 cost;
+  ViaLayerStartEnd();
+  ViaLayerStartEnd(const ViaLayer& startIn, const ViaLayer& endIn);
+  ViaLayer start;
+  ViaLayer end;
 };
-
-bool operator<(const ViaLayerCost& l, const ViaLayerCost& r);
 
 //
 

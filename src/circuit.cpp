@@ -1,141 +1,104 @@
 #include "circuit.h"
 
-
-std::mutex circuitMutex;
-
-
 using namespace std;
 
+mutex circuitMutex;
 
-RelCoord::RelCoord(s32 xIn, s32 yIn)
-  : x(xIn), y(yIn)
+
+Component::Component()
 {}
 
-RelCoordStartEnd::RelCoordStartEnd(const RelCoord& startIn, const RelCoord& endIn)
-  : start(startIn), end(endIn)
+
+Component::Component(const string& _packageName, const Via& _pin0AbsCoord)
+  : packageName(_packageName), pin0AbsCoord(_pin0AbsCoord)
 {}
+
+
+ConnectionPoint::ConnectionPoint(const string& _componentName, u32 _pinIdx)
+  : componentName(_componentName), pinIdx(_pinIdx)
+{}
+
+
+Connection::Connection(const ConnectionPoint& _start, const ConnectionPoint& _end)
+  : start(_start), end(_end)
+{}
+
 
 Circuit::Circuit()
-  : hasError_(false)
+  : hasError(false)
 {}
 
-//Circuit& Circuit::operator=(const Circuit& other)
-//{
-//  if(&other == this) {
-//    return *this;
-//  }
-//  lock_guard<mutex> _(mutex_);
-//  circuitInfoVec_ = other.circuitInfoVec_;
-//  componentName2ComponentInfo_ = other.componentName2ComponentInfo_;
-//  componentName2PackageName_ = other.componentName2PackageName_;
-//  componentToAbsCoordMap_ = other.componentToAbsCoordMap_;
-//  connectionCoordVec_ = other.connectionCoordVec_;
-//  connectionPairVec_ = other.connectionPairVec_;
-//  packageToCoordMap_ = other.packageToCoordMap_;
-//  routeVec_ = other.routeVec_;
-//  hasError_ = other.hasError_;
-//  return *this;
-//}
 
-CircuitInfoVec& Circuit::getCircuitInfoVec()
+ConnectionViaVec Circuit::genConnectionViaVec()
 {
-  return circuitInfoVec_;
+  ConnectionViaVec v;
+  for (auto c : connectionVec) {
+    auto startComponent = componentNameToInfoMap[c.start.componentName];
+    auto endComponent = componentNameToInfoMap[c.end.componentName];
+
+    auto startRelPin = packageToCoordMap[startComponent.packageName][c.start.pinIdx];
+    auto endRelPin = packageToCoordMap[endComponent.packageName][c.end.pinIdx];
+
+    Via startAbsPin = startRelPin + startComponent.pin0AbsCoord;
+    Via endAbsPin = endRelPin + endComponent.pin0AbsCoord;
+
+    startAbsPin = connectionFudge(c.start.componentName, startAbsPin);
+    endAbsPin = connectionFudge(c.end.componentName, endAbsPin);
+    
+    v.push_back(ViaStartEnd(startAbsPin, endAbsPin));
+  }
+  return v;
 }
 
-const CircuitInfoVec& Circuit::getCircuitInfoVec() const
+// Move connections to the closest vertical point outside the package
+// footprint.
+
+// This is just a fudge for now, making things during routing since we
+// block off the entire component footprint for traces.
+
+Via Circuit::connectionFudge(const string& componentName, const Via& absPin)
 {
-  return circuitInfoVec_;
-}
-
-
-ComponentName2ComponentInfo& Circuit::getComponentInfoMap()
-{
-  return componentName2ComponentInfo_;
-}
-
-const ComponentName2ComponentInfo& Circuit::getComponentInfoMap() const
-{
-  return componentName2ComponentInfo_;
-}
-
-
-ComponentName2PackageName& Circuit::getComponentName2PackageName()
-{
-  return componentName2PackageName_;
-}
-
-const ComponentName2PackageName& Circuit::getComponentName2PackageName() const
-{
-  return componentName2PackageName_;
+  auto footprint = calcComponentFootprint(componentName);
+  float halfY = footprint.start.y() + (footprint.end.y() - footprint.start.y()) / 2.0f;
+  if (absPin.y() < halfY) {
+    return Via(absPin - Via(0, 1));
+  }
+  else {
+    return Via(absPin + Via(0, 1));
+  }
 }
 
 
-const ComponentNameVec Circuit::getComponentNameVec() const
+PinViaVec Circuit::calcComponentPins(std::string componentName)
 {
-  ComponentNameVec v;
-  for (auto n : getComponentName2PackageName()) {
-    v.push_back(n.first);
+  PinViaVec v;
+  auto component = componentNameToInfoMap[componentName];
+  for (auto c : packageToCoordMap[component.packageName]) {
+    c += component.pin0AbsCoord;
+    v.push_back(c);
   }
   return v;
 }
 
 
-ComponentToCoordMap& Circuit::getComponentToCoordMap()
+ViaStartEnd Circuit::calcComponentFootprint(string componentName)
 {
-  return componentToAbsCoordMap_;
-}
-
-const ComponentToCoordMap& Circuit::getComponentToCoordMap() const
-{
-  return componentToAbsCoordMap_;
-}
-
-
-ConnectionCoordVec& Circuit::getConnectionCoordVec()
-{
-  return connectionCoordVec_;
-}
-
-const ConnectionCoordVec& Circuit::getConnectionCoordVec() const
-{
-  return connectionCoordVec_;
-}
-
-
-ConnectionPairVec& Circuit::getConnectionPairVec()
-{
-  return connectionPairVec_;
-}
-
-const ConnectionPairVec& Circuit::getConnectionPairVec() const
-{
-  return connectionPairVec_;
-}
-
-
-PackageToCoordMap& Circuit::getPackageToCoordMap()
-{
-  return packageToCoordMap_;
-}
-
-const PackageToCoordMap& Circuit::getPackageToCoordMap() const
-{
-  return packageToCoordMap_;
-}
-
-
-void Circuit::dump() const
-{
-//  fmt::print("{},{} - {},{}\n", fc.x1, fc.y1, fc.x2, fc.y2);
-}
-
-
-void Circuit::setErrorBool(bool errorBool)
-{
-  hasError_ = errorBool;
-}
-
-bool Circuit::getErrorBool() const
-{
-  return hasError_;
+  ViaStartEnd v(Via(INT_MAX, INT_MAX), Via(0,0));
+  auto component = componentNameToInfoMap[componentName];
+  for (auto c : packageToCoordMap[component.packageName]) {
+    c += component.pin0AbsCoord;
+    if (c.x() < v.start.x()) {
+      v.start.x() = c.x();
+    }
+    if (c.x() > v.end.x()) {
+      v.end.x() = c.x();
+    }
+    if (c.y() < v.start.y()) {
+      v.start.y() = c.y();
+    }
+    if (c.y() > v.end.y()) {
+      v.end.y() = c.y();
+    }
+  }
+  return v;
 }

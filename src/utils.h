@@ -19,3 +19,4 @@ public:
 private:
   std::deque<double> doubleDequer_;
 };
+

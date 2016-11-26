@@ -29,6 +29,11 @@ public:
 
   void setErrorBool(bool errorBool);
   bool getErrorBool() const;
+
+  u32 totalCost;
+  u32 numCompletedRoutes;
+  u32 numFailedRoutes;
+  u32 ready;
 private:
   SolutionInfoVec solutionInfoVec_;
   RouteVec routeVec_;

@@ -29,7 +29,6 @@ void _checkGlError(const char *file, int line)
         error = "INVALID_FRAMEBUFFER_OPERATION";
         break;
     }
-
     fmt::print(stderr, "{}: {}:{}\n", error, file, line);
     err = glGetError();
   }

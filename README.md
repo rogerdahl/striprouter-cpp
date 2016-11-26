@@ -2,7 +2,7 @@
 
 <img align="right" width="50%" src="./screenshot.png">
 
-**Note**: Not yet in a usable state.
+**Note**: Alpha / experimental state. Tested on Windows 10 64-bit and Linux Mint 18 64-bit. See [Releases](releases) for Windows and Linux binaries.
 
 This is a cross-platform program that, given a description of a circuit, searches for the best way to create the required connections on a [stripboard](https://en.wikipedia.org/wiki/Stripboard).
 
@@ -15,17 +15,28 @@ The program searches only for routes that use non-overlapping wires that cross t
 Currently somewhat working:
 
 * Parsing of circuit description file
-* Visualization of circuit
+* Visualization of circuit and discovered routes
 * Simple automatic routing of point-to-point connections
-* Visualization of discovered routes
 * Basic GUI controls
+* Move components with mouse
+* Zoom and pan with mouse wheel and drag
+
+Basic missing features:
+
+* Does not show where to cut the copper traces
+* Does not have any way to export the best discovered layout
+* Can only do point to point routes. You have to manually add pads to connect multiple wires. See the included circuit.txt file for example.
+
+Known bugs:
+
+* Crashes if components are dragged outside of grid
 
 Planned functionality:
  
+* Optimize routes by considering routes to strip layer sections that are parts of existing routes connecting to the target
+* Use a genetic algorithm for exploring the search space
 * Write layout to file
 * Print mirror image of layout in 1:1 size for use when soldering  
-* Optimize routes by considering routing to strip layer sections that are parts of existing routes connecting to the target
-* Use a genetic algorithm for exploring the search space. Even for very simple circuits, it's not possible to consider all possible layouts
 * Support components such as resistors and diodes that have variable length connectors
 * Automatic optimization of component locations
 
@@ -50,90 +61,123 @@ The circuit description is a text file that can be edited while the program is r
 ### Technologies
 
 * C++
+* NanoGUI
+* OpenGL
 * Boost
 * fmt
 * FreeType2
 * GLEW
 * glm
-* NanoGUI
-* OpenGL
-
 
 ### Example circuit description
 
 This is the circuit description used in the screenshot.
 
 ```
-# Raspberry Pi WS2812B LED level shifter and multiplexer
+# Raspberry Pi WS2812B NeoPixel LED level shifter and 8-channel multiplexer
+#
+# NOTE! This circuit has not been tested yet.
+#
+# RPi pins
+#
+# 5V   02
+# GND  06
+#
+# PWM0 32
+# GEN0 11
+# GEN1 12
+# GEN2 13
+# GEN3 15
+#
+# PWM1 33
+# GEN4 16
+# GEN5 18
+# GEN6 22
+# GP05 29
 
-# Package
+# Packages
 # pkg <package name> <pin coordinates relative to pin 0>
-pkg dip14 0,0 1,0 2,0 3,0 4,0 5,0 6,0 6,-3 5,-3 4,-3 3,-3 2,-3 1,-3 0,-3
-pkg header20 0,0 1,0 2,0 3,0 4,0 5,0 6,0 7,0 8,0 9,0 10,0 11,0 12,0 13,0 14,0 15,0 16,0 17,0 18,0 19,0
-
-pkg header2x20 0,0 0,-1 1,0 1,-1 2,0 2,-1 3,0 3,-1 4,0 4,-1 5,0 5,-1 6,0 6,-1 7,0 7,-1 8,0 8,-1 9,0 9,-1 10,0 10,-1 11,0 11,-1 12,0 12,-1 13,0 13,-1 14,0 14,-1 15,0 15,-1 16,0 16,-1 17,0 17,-1 18,0 18,-1 19,0 19,-1
-
-#pkg customFootprint 0,0 3,3 4,3 -2,1
-
-pkg vpad4 0,0 0,1 0,2 0,3
-pkg hpad4 0,0 1,0 2,0 3,0
-pkg hpad6 0,0 1,0 2,0 3,0 4,0 5,0
-
-pkg hpad2x4 0,0 1,0 2,0 3,0 0,-1 1,-1 2,-1 3,-1
+pkg dip14       0,0 1,0 2,0 3,0 4,0 5,0 6,0 6,-3 5,-3 4,-3 3,-3 2,-3 1,-3 0,-3
+pkg header20    0,0 1,0 2,0 3,0 4,0 5,0 6,0 7,0 8,0 9,0 10,0 11,0 12,0 13,0 14,0 15,0 16,0 17,0 18,0 19,0
+pkg header2x20  0,0 0,-1 1,0 1,-1 2,0 2,-1 3,0 3,-1 4,0 4,-1 5,0 5,-1 6,0 6,-1 7,0 7,-1 8,0 8,-1 9,0 9,-1 10,0 10,-1 11,0 11,-1 12,0 12,-1 13,0 13,-1 14,0 14,-1 15,0 15,-1 16,0 16,-1 17,0 17,-1 18,0 18,-1 19,0 19,-1
+pkg customFootprint 0,0 3,3 4,3 -2,1
+pkg vpad4       0,0 0,1 0,2 0,3
+pkg hpad4       0,0 1,0 2,0 3,0
+pkg hpad6       0,0 1,0 2,0 3,0 4,0 5,0
+pkg hpad2x4     0,0 1,0 2,0 3,0 0,-1 1,-1 2,-1 3,-1
 
 # Components
-# com <component name> <package name>
-com rpi header2x20
-com 7400 dip14
-#com 7402 dip14
+# com <component name> <package name> <absolute position of component pin 0>
 
-com vcc hpad2x4
-com gnd hpad2x4
-com chan1 hpad2x4
-com chan2 hpad2x4
-com chan3 hpad2x4
-com chan4 hpad2x4
-com pwm hpad2x4
+com rpi     header2x20  19,18
 
-# Positions (pin 0)
-# com <name of component> <absolute position of component pin 0>
-pos rpi 8,10
-pos 7400 15,20
-pos vcc 8,14
-pos gnd 8,17
-pos chan1 8,20
-pos chan2 8,24
-pos chan3 8,27
-pos chan4 8,30
-pos pwm 24,19
+com vcc     hpad2x4     22,47
+com gnd     hpad2x4     33,47
 
-# TODO: fix seg fault caused by leaving out pos by combining com and pos.
-#pos 7402 30,25
+com 7400A   dip14       25,28
+com pwm0    hpad2x4     14,27
+com chan1   hpad2x4     14,31
+com chan2   hpad2x4     14,35
+com chan3   hpad2x4     14,39
+com chan4   hpad2x4     14,43
+
+com 7400B   dip14       25,40
+com pwm1    hpad2x4     40,27
+com chan5   hpad2x4     40,31
+com chan6   hpad2x4     40,35
+com chan7   hpad2x4     40,39
+com chan8   hpad2x4     40,43
 
 # Connections
 # c <from component name>.<pin index> <to component name>.<pin index>
-#c rpi.2 rpi.4
-c vcc.5 rpi.2
-c gnd.5 rpi.6
-c vcc.6 7400.14
-c gnd.6 7400.7
 
-c rpi.33 pwm.1
+# 7400A
 
-c pwm.5 7400.1
-c pwm.6 7400.4
-c pwm.7 7400.13
-c pwm.8 7400.10
+c vcc.5     rpi.2
+c vcc.6     7400A.14
+c gnd.5     rpi.6
+c gnd.6     7400A.7
 
-c 7400.6 chan2.5
-c 7400.3 chan1.5
-c 7400.11 chan3.5
-c 7400.8 chan4.5
+c rpi.32    pwm0.1
 
-c 7400.12 rpi.11
-c 7400.9 rpi.16
-c 7400.2 rpi.18
-c 7400.5 rpi.22
+c pwm0.5    7400A.1
+c pwm0.6    7400A.4
+c pwm0.7    7400A.10
+c pwm0.8    7400A.13
+
+c rpi.11    7400A.2
+c rpi.12    7400A.5
+c rpi.13    7400A.9
+c rpi.15    7400A.12
+
+c 7400A.3   chan1.5
+c 7400A.6   chan2.5
+c 7400A.8   chan3.5
+c 7400A.11  chan4.5
+
+# 7400B
+
+c vcc.1     rpi.4
+c vcc.2     7400B.14
+c gnd.1     rpi.14
+c gnd.2     7400B.7
+
+c rpi.33    pwm1.1
+
+c pwm1.5    7400B.1
+c pwm1.6    7400B.4
+c pwm1.7    7400B.10
+c pwm1.8    7400B.13
+
+c rpi.16    7400B.2
+c rpi.18    7400B.5
+c rpi.22    7400B.9
+c rpi.29    7400B.12
+
+c 7400B.3   chan5.5
+c 7400B.6   chan6.5
+c 7400B.8   chan7.5
+c 7400B.11  chan8.5
 ```
 
 ### Compiling on Linux

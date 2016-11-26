@@ -25,8 +25,8 @@ endif ()
 # fmt
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(FMT_LIBRARIES fmt)
-  set(FMT_INCLUDE_DIR ${LIBRARIES}/fmt-3.0.0)
-  set(FMT_LINK_DIR ${LIBRARIES}/fmt-3.0.0/fmt)
+  set(FMT_INCLUDE_DIR ${LIBRARIES}/fmt-3.0.1)
+  set(FMT_LINK_DIR ${LIBRARIES}/fmt-3.0.1/fmt)
 else ()
   set(FMT_LIBRARIES fmt.lib)
   set(FMT_INCLUDE_DIR ${LIBRARIES}/fmt-3.0.1)
@@ -117,10 +117,13 @@ set(SOURCE_FILES
   ${SOURCE_DIR}/ogl_text.cpp
   ${SOURCE_DIR}/parser.cpp
   ${SOURCE_DIR}/render.cpp
+  ${SOURCE_DIR}/settings.cpp
   ${SOURCE_DIR}/shader.cpp
   ${SOURCE_DIR}/solution.cpp
+  ${SOURCE_DIR}/status.cpp
   ${SOURCE_DIR}/utils.cpp
   ${SOURCE_DIR}/via.cpp
+  ${SOURCE_DIR}/gui.cpp
 )
 
 include_directories(

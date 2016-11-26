@@ -21,23 +21,20 @@ Parser::~Parser()
 
 void Parser::parse(Circuit& circuit) {
   circuit = Circuit();
-  std::ifstream fin("./circuit.txt");
-  std::string lineStr;
+  ifstream fin("./circuit.txt");
+  string lineStr;
   u32 lineIdx = 0;
-  while(std::getline(fin, lineStr)) {
+  while(getline(fin, lineStr)) {
     ++lineIdx;
     try {
       parseLine(circuit, lineStr);
     }
     catch (string s) {
-      circuit.setErrorBool(true);
-      circuit.getCircuitInfoVec().push_back(fmt::format("Line {}: {}", lineIdx, lineStr));
-      circuit.getCircuitInfoVec().push_back(fmt::format("Error: {}", s));
+      circuit.hasError = true;
+      circuit.circuitInfoVec.push_back(fmt::format("Line {:n}: {}", lineIdx, lineStr));
+      circuit.circuitInfoVec.push_back(fmt::format("Error: {}", s));
     }
   }
-  circuit.getCircuitInfoVec().push_back(fmt::format("Ok"));
-  genComponentInfoMap(circuit);
-  genConnectionCoordVec(circuit);
 }
 
 
@@ -52,122 +49,16 @@ void Parser::parseLine(Circuit& circuit, string lineStr)
   else if (parseComponent(circuit, lineStr)) {
     return;
   }
-  else if (parsePosition(circuit, lineStr)) {
-    return;
-  }
   else if (parseConnection(circuit, lineStr)) {
     return;
   }
   else {
-    throw string("Could not parse");
+    throw string("Invalid");
   }
 }
-
 
 //
 // Private
-//
-
-
-void Parser::genComponentInfoMap(Circuit& circuit)
-{
-  for (auto componentName : circuit.getComponentNameVec()) {
-    circuit.getComponentInfoMap()[componentName] = genComponentInfo(circuit, componentName);
-  }
-}
-
-
-ComponentInfo Parser::genComponentInfo(Circuit& circuit, string componentName)
-{
-  ComponentInfo ci;
-  auto packageName = circuit.getComponentName2PackageName().find(componentName)->second;
-  ci.componentName = componentName;
-  auto componentAbsCoord = circuit.getComponentToCoordMap()[componentName];
-  auto fc = calcPackageFootprint(circuit, packageName);
-  fc.start.x += componentAbsCoord.x;
-  fc.start.y += componentAbsCoord.y;
-  fc.end.x += componentAbsCoord.x;
-  fc.end.y += componentAbsCoord.y;
-  ci.footprint = ViaStartEnd(ViaLayer(fc.start.x, fc.start.y, false), ViaLayer(fc.end.x, fc.end.y, false));
-  ci.pin0AbsCoord.x = componentAbsCoord.x;
-  ci.pin0AbsCoord.y = componentAbsCoord.y;
-  auto packageCoordVec = circuit.getPackageToCoordMap().find(packageName)->second;
-  for (auto pc : packageCoordVec) {
-    ci.pinAbsCoordVec.push_back(
-      RelCoord(componentAbsCoord.x + pc.x, componentAbsCoord.y + pc.y)
-    );
-  }
-  return ci;
-}
-
-
-RelCoordStartEnd Parser::calcPackageFootprint(Circuit &circuit, string package)
-{
-  RelCoordStartEnd v(RelCoord(0, 0), RelCoord(0, 0));
-  for (auto c : circuit.getPackageToCoordMap().find(package)->second) {
-    if (c.x < v.start.x) {
-      v.start.x = c.x;
-    }
-    if (c.x > v.end.x) {
-      v.end.x = c.x;
-    }
-    if (c.y < v.start.y) {
-      v.start.y = c.y;
-    }
-    if (c.y > v.end.y) {
-      v.end.y = c.y;
-    }
-  }
-  return v;
-}
-
-
-void Parser::genConnectionCoordVec(Circuit& circuit)
-{
-  for (auto c : circuit.getConnectionPairVec()) {
-    auto componentPinPair1 = c.first;
-    auto componentPinPair2 = c.second;
-
-    string componentName1 = componentPinPair1.first;
-    string componentName2 = componentPinPair2.first;
-
-    u32 componentPinIdx1 = componentPinPair1.second;
-    u32 componentPinIdx2 = componentPinPair2.second;
-
-    auto componentInfo1 = circuit.getComponentInfoMap().find(componentName1)->second;
-    auto componentInfo2 = circuit.getComponentInfoMap().find(componentName2)->second;
-
-    ViaStartEnd ft;
-
-    ft.start.x = componentInfo1.pinAbsCoordVec[componentPinIdx1].x;
-    ft.end.x = componentInfo2.pinAbsCoordVec[componentPinIdx2].x;
-    
-    // Move connections to the closest vertical point outside the package footprint.
-
-    ft.start.y = componentInfo1.pinAbsCoordVec[componentPinIdx1].y;
-    float y_half = componentInfo1.footprint.start.y + (componentInfo1.footprint.end.y - componentInfo1.footprint.start.y) / 2.0f;
-    if (ft.start.y < y_half) {
-      ft.start.y = componentInfo1.footprint.start.y - 1;
-    }
-    else {
-      ft.start.y = componentInfo1.footprint.end.y + 1;
-    }
-
-    ft.end.y = componentInfo2.pinAbsCoordVec[componentPinIdx2].y;
-    y_half = componentInfo2.footprint.start.y + (componentInfo2.footprint.end.y - componentInfo2.footprint.start.y) / 2.0f;
-    if (ft.end.y < y_half) {
-      ft.end.y = componentInfo2.footprint.start.y - 1;
-    }
-    else {
-      ft.end.y = componentInfo2.footprint.end.y + 1;
-    }
-
-    circuit.getConnectionCoordVec().push_back(ft);
-  }
-}
-
-//
-// Parse
 //
 
 // Comment or empty
@@ -189,46 +80,35 @@ bool Parser::parsePackage(Circuit& circuit, string &lineStr)
     return false;
   }
   string pkgName = m[1];
-  RelCoordVec v;
+  PackageRelCoordVec v;
   for (auto iter = sregex_token_iterator(lineStr.begin(), lineStr.end(), pkgRelativeCoordRx); iter != sregex_token_iterator(); ++iter) {
-    string s(*iter);
+    string s = *iter;
     regex_match(s, m, pkgCoordValuesRx);
-    v.push_back(RelCoord(stoi(m[1]), stoi(m[2])));
+    v.push_back(Via(stoi(m[1]), stoi(m[2])));
   }
-  circuit.getPackageToCoordMap()[pkgName] = v;
+  circuit.packageToCoordMap[pkgName] = v;
   return true;
 }
 
 // Component
-// com rpi header20
+// com <component name> <package name> <absolute position of component pin 0>
 bool Parser::parseComponent(Circuit& circuit, string &lineStr)
 {
-  regex comFull("^com\\s+(\\w+)\\s+(\\w+)\\s*$",  regex_constants::ECMAScript | regex_constants::icase);
+  regex comFull("^com\\s+(\\w+)\\s+(\\w+)\\s+(\\d+)\\s*,\\s*(\\d+)\\s*$",  regex_constants::ECMAScript | regex_constants::icase);
   smatch m;
   if (!regex_match(lineStr, m, comFull)) {
     return false;
   }
-  if (circuit.getPackageToCoordMap().find(m[2]) == circuit.getPackageToCoordMap().end()) {
+  if (circuit.packageToCoordMap.find(m[2]) == circuit.packageToCoordMap.end()) {
     throw fmt::format("Unknown package: {}", m[2].str());
   }
-  circuit.getComponentName2PackageName()[m[1]] = m[2];
-  return true;
-}
-
-// Position
-// pos rpi 4,4
-bool Parser::parsePosition(Circuit& circuit, string &lineStr)
-{
-  regex comFull("^pos\\s+(\\w+)\\s+(-?\\d+)\\s*,\\s*(-?\\d+)\\s*$",  regex_constants::ECMAScript | regex_constants::icase);
-  smatch m;
-  if (!regex_match(lineStr, m, comFull)) {
-    return false;
-  }
-  Via c(stoi(m[2]), stoi(m[3]));
-  if (c.x < 0 || c.x > 1000 || c.y < 0 || c.y > 1000) { // TODO: Fix constants
-    throw fmt::format("Invalid coordinates: {},{}", c.x, c.y);
-  }
-  circuit.getComponentToCoordMap()[m[1]] = c;
+//  TODO: add check for out of bounds coord.
+//    throw fmt::format("Invalid coordinates: {},{}", c.x, c.y);
+  Component component(
+    m[2],
+    Via(static_cast<u32>(stoi(m[3])), static_cast<u32>(stoi(m[4])))
+  );
+  circuit.componentNameToInfoMap[m[1]] = component;
   return true;
 }
 
@@ -241,28 +121,24 @@ bool Parser::parseConnection(Circuit& circuit, string &lineStr)
   if (!regex_match(lineStr, m, comFull)) {
     return false;
   }
-  ComponentPinPair p1(m[1], static_cast<u32>(stoi(m[2]) - 1));
-  ComponentPinPair p2(m[3], static_cast<u32>(stoi(m[4]) - 1));
-
-  if (circuit.getComponentName2PackageName().find(p1.first) == circuit.getComponentName2PackageName().end()) {
-    throw fmt::format("Unknown component: {}", p1.first);
+  ConnectionPoint start(m[1], static_cast<u32>(stoi(m[2]) - 1));
+  ConnectionPoint end(m[3], static_cast<u32>(stoi(m[4]) - 1));
+  auto startComponent = circuit.componentNameToInfoMap.find(start.componentName); 
+  if (startComponent == circuit.componentNameToInfoMap.end()) {
+    throw fmt::format("Unknown component: {}", start.componentName);
   }
-  if (circuit.getComponentName2PackageName().find(p2.first) == circuit.getComponentName2PackageName().end()) {
-    throw fmt::format("Unknown component: {}", p2.first);
+  auto endComponent = circuit.componentNameToInfoMap.find(end.componentName);
+  if (endComponent == circuit.componentNameToInfoMap.end()) {
+    throw fmt::format("Unknown component: {}", end.componentName);
   }
-
-  auto packageName1 = circuit.getComponentName2PackageName().find(p1.first)->second;
-  auto coordVec1 = circuit.getPackageToCoordMap().find(packageName1)->second;
-  if (p1.second >= coordVec1.size()) {
-    throw fmt::format("Invalid pin number for component {}: {}. Max: {}", p1.first, p1.second, coordVec1.size() - 1);
+  auto startCoordVec = circuit.packageToCoordMap.find(startComponent->second.packageName)->second;
+  if (start.pinIdx >= startCoordVec.size()) {
+    throw fmt::format("Invalid pin number for component {}: {}. Max: {}", start.componentName, start.pinIdx, startCoordVec.size() - 1);
   }
-  auto packageName2 = circuit.getComponentName2PackageName().find(p2.first)->second;
-  auto coordVec2 = circuit.getPackageToCoordMap().find(packageName2)->second;
-  if (p2.second >= coordVec2.size()) {
-    throw fmt::format("Invalid pin number for component {}: {}. Max: {}", p2.first, p2.second, coordVec2.size() - 1);
+  auto endCoordVec = circuit.packageToCoordMap.find(endComponent->second.packageName)->second;
+  if (end.pinIdx >= endCoordVec.size()) {
+    throw fmt::format("Invalid pin number for component {}: {}. Max: {}", end.componentName, end.pinIdx, endCoordVec.size() - 1);
   }
-
-  ConnectionPair c(p1, p2);
-  circuit.getConnectionPairVec().push_back(c);
+  circuit.connectionVec.push_back(Connection(start, end));
   return true;
 }

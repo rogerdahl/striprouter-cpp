@@ -9,7 +9,7 @@
 using namespace std;
 
 averageSec::averageSec()
-    : doubleDequer_(0.0)
+  : doubleDequer_(0.0)
 {
 }
 
@@ -34,7 +34,7 @@ double averageSec::calcAverage()
   return sumSec / doubleDequer_.size();
 }
 
-////
+//
 
 bool save_screenshot(string filename, int w, int h)
 {

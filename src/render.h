@@ -2,6 +2,8 @@
 
 #include <vector>
 
+//#include <Eigen/Core>
+
 #include "circuit.h"
 #include "dijkstra.h"
 #include "int_types.h"
@@ -10,27 +12,41 @@
 #include "solution.h"
 
 
-class PcbDraw {
+class Render {
 public:
-  PcbDraw();
-  PcbDraw(u32 windowW, u32 windowH, u32 gridW, u32 gridH);
-  ~PcbDraw();
-  void draw(const Circuit &circuit, const Solution &solution,
-            bool showInputBool);
-  void setZoom(float);
+  Render(float zoom);
+  ~Render();
+  void OpenGLInit();
+  void set(u32 windowW, u32 windowH, u32 gridW, u32 gridH, float zoom,
+                    const Pos& boardDragOffset);
+
+  void draw(
+    Circuit &circuit, const Solution &solution,
+    u32 windowW, u32 windowH, u32 gridW, u32 gridH, float zoom,
+    const Pos& boardDragOffset, bool showInputBool);
+  Pos boardToScreenCoord(const Pos &boardCoord) const;
+  Pos screenToBoardCoord(const Pos &screenCoord) const;
+  Pos centerOffsetScreenPixels() const;
+  float viaSpaceScreenPixels() const;
+
 private:
-  void drawCircuit(const Circuit&, bool showInputBool);
-  void drawSolution(const Solution& solution);
-  void drawFilledRectangle(float x1, float y1, float x2, float y2, float r, float g, float b, float alpha=1.0f);
-  void drawFilledCircle(float x, float y, float radius, float r, float g, float b, float alpha=1.0f);
-  void drawThickLine(float x1, float y1, float x2, float y2, float radius, float r, float g, float b, float alpha=1.0f);
+  void drawCircuit(Circuit &);
+  void drawSolution(const Solution &);
+  void drawInputConnections(Circuit &);
+  void drawFilledRectangle(const Pos& start, const Pos& end, float r, float g, float b, float alpha=1.0f);
+  void drawFilledCircle(const Pos& center, float radius, float r, float g, float b, float alpha=1.0f);
+  void drawThickLine(const Pos& start, const Pos& end, float radius, float r, float g, float b, float alpha=1.0f);
+  void setColor(float r, float g, float b, float alpha);
+
+  OglText oglText_;
+
   u32 windowW_;
   u32 windowH_;
   u32 gridW_;
   u32 gridH_;
-  OglText oglText_;
+  Pos boardDragOffset_;
   float zoom_;
-  GLuint fillProgramId;
-//  GLuint textBackgroundProgramId;
+
+  GLuint fillProgramId_;
   GLuint vertexBufId_;
 };

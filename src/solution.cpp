@@ -1,11 +1,12 @@
 #include "solution.h"
 
+using namespace std;
 
-std::mutex solutionMutex;
+mutex solutionMutex;
 
 
 Solution::Solution()
-: hasError_(false)
+: totalCost(0), numCompletedRoutes(0), numFailedRoutes(0), ready(false), hasError_(false)
 {}
 
 

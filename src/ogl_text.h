@@ -1,12 +1,17 @@
 #pragma once
 
+#include <string>
 #include <vector>
-#include <boost/filesystem.hpp>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include <GL/glew.h>
 
 #include "int_types.h"
+
+
+using namespace std;
+
 
 struct CharMeta {
   u32 tex_x;
@@ -20,31 +25,43 @@ struct CharMeta {
 
 class OglText {
 public:
-  OglText();
-  OglText(u32 windowW, u32 windowH, const boost::filesystem::path &fontPath, u32 font_h);
+  OglText(const string& fontPath, u32 fontH, u32 x=0, u32 y=0);
   ~OglText();
-  void print(u32 start_x, u32 start_y, u32 line, const std::string &str);
+  void OpenGLInit();
+  void reset(u32 windowW, u32 windowH, u32 x, u32 y, u32 fontH);
+  void print(u32 nLine, const std::string &str);
   u32 calcStringWidth(const std::string &str);
   u32 getStringHeight();
 private:
+  void createFreeType(const std::string& fontPath);
   void createFontTexture();
-  bool renderFont(std::vector<u8> &fontVec, FT_Face face);
-  void drawTextBackground(u32 start_x, u32 start_y, u32 line, const std::string &str);
+  bool renderFont(std::vector<u8> &fontVec);
+  void drawText(u32 nLine, const std::string &str);
+  void drawTextBackground(u32 nLine, const std::string &str);
+
+  bool oglInitialized_;
+
+  u32 texWH_;
+  u32 fontH_;
+
+  u32 x_;
+  u32 y_;
+
+  GLuint textProgramId_;
+  GLuint textBackgroundProgramId;
 
   u32 windowW_;
   u32 windowH_;
 
+  FT_Library freetypeLibraryHandle_;
+  FT_Face face_;
+
   GLuint textureId_;
-  GLuint textProgramId;
-  GLuint textBackgroundProgramId;
   GLuint vertexBufId_;
   GLuint texBufId_;
 
   u32 lineH_;
   u32 maxAscender_;
 
-  u32 tex_w_h_;
-  u32 font_h_;
   std::vector<CharMeta> charMeta_;
-  boost::filesystem::path fontPath_;
 };
