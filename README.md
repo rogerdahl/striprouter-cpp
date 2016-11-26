@@ -2,7 +2,7 @@
 
 <img align="right" width="50%" src="./screenshot.png">
 
-**Note**: Alpha / experimental state. Tested on Windows 10 64-bit and Linux Mint 18 64-bit. See [Releases](releases) for Windows and Linux binaries.
+**Note**: Alpha / experimental state. Tested on Windows 10 64-bit and Linux Mint 18 64-bit. See [Releases](https://github.com/rogerdahl/striprouter/releases) for Windows and Linux binaries.
 
 This is a cross-platform program that, given a description of a circuit, searches for the best way to create the required connections on a [stripboard](https://en.wikipedia.org/wiki/Stripboard).
 
@@ -25,7 +25,7 @@ Basic missing features:
 
 * Does not show where to cut the copper traces
 * Does not have any way to export the best discovered layout
-* Can only do point to point routes. You have to manually add pads to connect multiple wires. See the included circuit.txt file for example.
+* Can only do point to point routes. You have to manually add pads to connect multiple wires. See the included `circuit.txt` file for example.
 
 Known bugs:
 
@@ -40,11 +40,23 @@ Planned functionality:
 * Support components such as resistors and diodes that have variable length connectors
 * Automatic optimization of component locations
 
-### Circuit description
+### How to use
 
-The circuit description is a text file that can be edited while the program is running. Open the description in a text editor side by side with the router and hit save to update the circuit and restart the routing.
+1) Start the program. If things work, you will see it start searching for routes on the included circuit. A "no completed routes" message means that no layout has been found in which it was possible to route all connections.
+
+2) Move the program to one side of the screen and open the included `circuit.txt` file in a text editor on the other. Start creating your circuit there, using the simple pattern shown in the file. `Packages` are pin layouts. Each pin is designated by a coordinate relative to pin 1, so pins can be in any order and relationship to each other. `Components` are names and positions for packages and `Connections` are point-to-point connections required for the circuit. Packages, components and connections can be intermixed, however packages must be described before the components that use them, and components must be described before their connections.
+
+3) Whenever you want to see the current status of your `circuit.txt` file, just save it in the editor to display the new version in the router. If there are any problems in the file, a list of errors is shown in the router.
+
+4) Components can be moved with the mouse but the result can't be written back to the `circuit.txt` file (sorry). To see the coordinate for a component, hold it with the mouse.
+
+6) Wait while the program randomly searches for complete layouts. As long as the program is running, it is always searching for a better layout.
+
+7) See the best found layout so far with the "Show best" checkbox.
 
 ### Tips and Tricks
+
+* The costs can be adjusted by hovering over the numbers and spinning the mouse wheel.
 
 * If the router is unable to find routes for all the required connections, the unrouted connections are listed separately in the solution. These can then be added by creating regular point-to-point connections with insulated wire at solder time.
   
