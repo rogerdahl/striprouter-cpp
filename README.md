@@ -17,18 +17,12 @@ Currently somewhat working:
 
 * Parsing of circuit description file
 * Visualization of circuit and discovered routes
-* Simple automatic routing of point-to-point connections
+* Automatic routing that considers existing routes indirectly connected to target 
 * Basic GUI controls
 * Move components with mouse
 * Zoom and pan with mouse wheel and drag
-
-
-Basic missing features:
-
-* Does not show where to cut the copper traces
-* Does not have any way to export the best discovered layout
-* Can only do point to point routes. You have to manually add pads to connect multiple wires. See the included `circuit.txt` file for example.
-
+* Highlight connections with mouse hover
+* Gaps show where the copper traces need to be cut
 
 Known bugs:
 
@@ -37,7 +31,6 @@ Known bugs:
 
 Planned functionality:
  
-* Optimize routes by considering routes to strip layer sections that are parts of existing routes connecting to the target
 * Use a genetic algorithm for exploring the search space
 * Write layout to file
 * Print mirror image of layout in 1:1 size for use when soldering  
@@ -57,9 +50,11 @@ Planned functionality:
 
 6) Wait while the program randomly searches for complete layouts. As long as the program is running, it is always searching for a better layout.
 
-8) If no satisfactory layouts are found, enable "Show input" and try moving the components while observing the required connections. Blue and orange shows completed and failed routes respectively. A complete layout can always be found if there is enough room for routes between the components. So, in general, you want to try for more space between components, fewer crossed connections and less interference in problem areas with many failed routes.
+8) If no satisfactory layouts are found, click `Show input` and try moving the components while observing the required connections. Blue and orange shows completed and failed routes respectively. A complete layout can always be found if there is enough room for routes between the components. So, in general, you want to try for more space between components, fewer crossed connections and less interference in problem areas with many failed routes.
 
-7) See the best found layout so far with the "Show best" checkbox.
+7) See the best found layout so far, click `Show best`.
+
+8) If you find a layout that you wish to use, click `Pause` and then, ahem, use your OS Print Screen function. There's no other way to save or export layouts yet.
 
 
 ### Tips and Tricks
