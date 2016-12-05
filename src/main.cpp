@@ -7,6 +7,7 @@
 // Wrapping and Braces > After function return type > Wrap if long (all)
 // Wrapping and Braces > Keep when reformatting > Line breaks > off
 
+#include <chrono>
 #include <climits>
 #include <cstdio>
 #include <ctime>
@@ -535,7 +536,8 @@ void routerThread()
       auto lock = inputSolution.scope_lock();
       if (!inputSolution.circuit.isReady || inputSolution.settings.pause) {
         lock.unlock();
-        usleep(100 * 1000);
+        using namespace std::chrono_literals;
+        std::this_thread::sleep_for(100ms);
         continue;
       }
       threadSolution = inputSolution;
@@ -609,7 +611,8 @@ void parserThread()
       }
       resetBestSolution();
     }
-    usleep(1000 * 1000);
+    using namespace std::chrono_literals;
+    std::this_thread::sleep_for(1s);
     if (isParserStopRequested()) {
       break;
     }
