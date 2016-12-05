@@ -1,43 +1,64 @@
 #include "solution.h"
 
-using namespace std;
 
-mutex solutionMutex;
-
-
-Solution::Solution()
-: totalCost(0), numCompletedRoutes(0), numFailedRoutes(0), ready(false), hasError_(false)
-{}
-
-
-RouteVec& Solution::getRouteVec()
+Solution::Solution(int _gridW, int _gridH)
+  : gridW(_gridW),
+    gridH(_gridH),
+    totalCost(0),
+    numCompletedRoutes(0),
+    numFailedRoutes(0),
+    numShortcuts(0),
+    isReady(false),
+    hasError(false)
 {
-  return routeVec_;
 }
 
-const RouteVec& Solution::getRouteVec() const
+Solution::~Solution()
 {
-  return routeVec_;
 }
 
-
-SolutionInfoVec& Solution::getSolutionInfoVec()
+Solution::Solution(const Solution &s)
 {
-  return solutionInfoVec_;
+  copy(s);
 }
 
-const SolutionInfoVec& Solution::getSolutionInfoVec() const
+Solution &Solution::operator=(const Solution &s)
 {
-  return solutionInfoVec_;
+  copy(s);
+  return *this;
 }
 
-
-void Solution::setErrorBool(bool errorBool)
+void Solution::copy(const Solution &s)
 {
-  hasError_ = errorBool;
+  circuit = s.circuit;
+  settings = s.settings;
+  totalCost = s.totalCost;
+  numCompletedRoutes = s.numCompletedRoutes;
+  numFailedRoutes = s.numFailedRoutes;
+  numShortcuts = s.numShortcuts;
+  isReady = s.isReady;
+  solutionInfoVec = s.solutionInfoVec;
+  routeVec = s.routeVec;
+  routeStatusVec = s.routeStatusVec;
+  // Nets
+  viaSetVec = s.viaSetVec;
+  setIdxVec = s.setIdxVec;
+  // Debug
+  hasError = s.hasError;
+  diagStartVia = s.diagStartVia;
+  diagEndVia = s.diagEndVia;
+  diagCostVec = s.diagCostVec;
+  diagRouteStepVec = s.diagRouteStepVec;
+  diagTraceVec = s.diagTraceVec;
+  errorStringVec = s.errorStringVec;
 }
 
-bool Solution::getErrorBool() const
+std::unique_lock<std::mutex> Solution::scope_lock()
 {
-  return hasError_;
+  return std::unique_lock<std::mutex>(mutex_);
+}
+
+int Solution::idx(const Via &v)
+{
+  return v.x() + gridW * v.y();
 }

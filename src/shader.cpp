@@ -10,11 +10,8 @@
 
 #include "shader.h"
 
-using namespace std;
-using namespace fmt;
-using namespace boost::filesystem;
 
-const path SHADERS_DIR_PATH = "./shaders/";
+const boost::filesystem::path SHADERS_DIR_PATH = "./shaders/";
 
 void compileAndCheckShader(const char *path, GLuint shaderId);
 void printInfoLog(GLuint shaderId, bool isShader);
@@ -22,11 +19,8 @@ std::string loadFile(const char *path);
 
 GLuint createProgram(const char *vertexShaderFileName, const char *fragmentShaderFileName)
 {
-  path vertexShaderPath = SHADERS_DIR_PATH / vertexShaderFileName;
-  path fragmentShaderPath = SHADERS_DIR_PATH / fragmentShaderFileName;
-
-//	fmt::print("vertexShaderPath=\"{}\"\n", vertexShaderPath);
-//	fmt::print("fragmentShaderPath=\"{}\"\n", fragmentShaderPath);
+  boost::filesystem::path vertexShaderPath = SHADERS_DIR_PATH / vertexShaderFileName;
+  boost::filesystem::path fragmentShaderPath = SHADERS_DIR_PATH / fragmentShaderFileName;
 
 //  GLFWwindow* window = glfwGetCurrentContext();
 
@@ -73,7 +67,7 @@ void compileAndCheckShader(const char *path, GLuint shaderId)
 
   glGetShaderiv(shaderId, GL_COMPILE_STATUS, &isSuccessful);
   if (isSuccessful == GL_FALSE) {
-    cerr << "Compile failed for shader: " << path << endl;
+    std::cerr << "Compile failed for shader: " << path << std::endl;
   }
 
   printInfoLog(shaderId, true);
@@ -93,9 +87,9 @@ void printInfoLog(GLuint id, bool isShader)
     auto glGetInfoLog = isShader ? glGetShaderInfoLog : glGetProgramInfoLog;
     glGetInfoLog(id, logLen, NULL, &logVec[0]);
     for (auto const &c : logVec) {
-      cout << c;
+      std::cout << c;
     }
-    cout << endl;
+    std::cout << std::endl;
   }
 }
 
@@ -105,7 +99,7 @@ std::string loadFile(const char *path)
   if (inStream.fail()) {
     // raise
   }
-  stringstream ss;
+  std::stringstream ss;
   ss << inStream.rdbuf();
   return ss.str();
 }

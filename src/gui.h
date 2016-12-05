@@ -11,12 +11,7 @@
 using namespace Eigen;
 
 
-std::string
-getComponentAtMouseCoordinate(const Render& render,
-                              Circuit &circuit,
-                              const Pos &mouseCoord);
+std::string getComponentAtMouseCoordinate(const Render &render, Circuit &circuit, const Pos &mouseBoardPos);
 
-void setComponentPosition(const Render& render,
-                          Circuit &circuit,
-                          const Pos &mouseCoord,
-                          const std::string& componentName);
+void
+setComponentPosition(const Render &render, Circuit &circuit, const Pos &mouseBoardPos, const std::string &componentName);

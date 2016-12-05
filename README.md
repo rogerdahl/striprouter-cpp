@@ -12,6 +12,7 @@ Costs can be assigned to resources such as stripboard area and solder points in 
 
 The program searches only for routes that use non-overlapping wires that cross the traces at right angles, which tends to give layouts that look clean, and which allows using only uninsulated wires.   
 
+
 Currently somewhat working:
 
 * Parsing of circuit description file
@@ -21,15 +22,18 @@ Currently somewhat working:
 * Move components with mouse
 * Zoom and pan with mouse wheel and drag
 
+
 Basic missing features:
 
 * Does not show where to cut the copper traces
 * Does not have any way to export the best discovered layout
 * Can only do point to point routes. You have to manually add pads to connect multiple wires. See the included `circuit.txt` file for example.
 
+
 Known bugs:
 
 * Crashes if components are dragged outside of grid
+
 
 Planned functionality:
  
@@ -40,9 +44,10 @@ Planned functionality:
 * Support components such as resistors and diodes that have variable length connectors
 * Automatic optimization of component locations
 
+
 ### How to use
 
-1) Start the program. If things work, you will see it start searching for routes on the included circuit. A "no completed routes" message means that no layout has been found in which it was possible to route all connections.
+1) Start the program. If things work, you will see it start searching for routes on the included circuit. A "no completed layouts" message means that no layout has been found in which it was possible to route all connections.
 
 2) Move the program to one side of the screen and open the included `circuit.txt` file in a text editor on the other. Start creating your circuit there, using the simple pattern shown in the file. `Packages` are pin layouts. Each pin is designated by a coordinate relative to pin 1, so pins can be in any order and relationship to each other. `Components` are names and positions for packages and `Connections` are point-to-point connections required for the circuit. Packages, components and connections can be intermixed, however packages must be described before the components that use them, and components must be described before their connections.
 
@@ -52,7 +57,10 @@ Planned functionality:
 
 6) Wait while the program randomly searches for complete layouts. As long as the program is running, it is always searching for a better layout.
 
+8) If no satisfactory layouts are found, enable "Show input" and try moving the components while observing the required connections. Blue and orange shows completed and failed routes respectively. A complete layout can always be found if there is enough room for routes between the components. So, in general, you want to try for more space between components, fewer crossed connections and less interference in problem areas with many failed routes.
+
 7) See the best found layout so far with the "Show best" checkbox.
+
 
 ### Tips and Tricks
 
@@ -70,6 +78,9 @@ Planned functionality:
   
   3) Represent the double header with two single headers in the circuit description. Put one single header at the actual location of the inner row of the double header and put the other in another location on the board. The opposite side may be best. The router can then route directly to each of the single row headers without using area outside the headers. At solder time, connect the outer row of the double header to the row of points that were used by the router. Using an insulated flat cable can be convenient. Old IDE and floppy cables work well for this.
 
+* Bonus: If you zoom in far enough, you get free modern art, such as [this](./art.png) :)
+
+
 ### Technologies
 
 * C++
@@ -80,6 +91,7 @@ Planned functionality:
 * FreeType2
 * GLEW
 * glm
+
 
 ### Example circuit description
 
@@ -215,19 +227,16 @@ c 7400B.11  chan8.5
 * $ `cd ..`
 * $ `cp -r --parents fmt-3.0.0/fmt ../linux`
 
-### Build
+#### Build
 
 * $` cd striprouter/build`
 * $ `cmake -G 'Unix Makefiles' ..`
 * $ `make` 
 
-### Run
+#### Run
 
 * $` cd striprouter/bin`
 * $ `./striprouter`
-
-
----
 
 
 ### Compiling on Windows

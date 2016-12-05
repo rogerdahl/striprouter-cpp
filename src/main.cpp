@@ -1,11 +1,19 @@
 // Style: http://geosoft.no/development/cppstyle.html
+// Format: CLion. Config:
+// Settings > Editor > Code Style > C/C++ > Set from > Predefined Style > Qt
+// Blank Lines > Around global variable > 0
+// Tabs and indents > Set all that are 4 to 2
+// Wrapping and Braces > Simple functions in one line > off
+// Wrapping and Braces > After function return type > Wrap if long (all)
+// Wrapping and Braces > Keep when reformatting > Line breaks > off
 
+#include <climits>
 #include <cstdio>
 #include <ctime>
 #include <iostream>
 #include <mutex>
 #include <thread>
-#include <climits>
+#include <vector>
 
 #include <boost/filesystem.hpp>
 #include <fmt/format.h>
@@ -14,98 +22,95 @@
 
 #include <nanogui/nanogui.h>
 
-#include "dijkstra.h"
+#include "router.h"
 #include "gl_error.h"
 #include "gui.h"
-#include "ogl_text.h"
-#include "render.h"
 #include "status.h"
 #include "utils.h"
 
 
-using namespace std;
-using namespace boost::filesystem;
-using namespace nanogui;
+int windowW = 1920 / 2;
+int windowH = 1080 - 200;
+//int windowW = 500;
+//int windowH = 500;
 
+const int GRID_W = 60;
+const int GRID_H = 60;
 
-u32 windowW = 1920 / 2;
-u32 windowH = 1080 - 200;
-//const u32 windowW = 700;
-//const u32 windowH = 700;
-
-const u32 GRID_W = 60;
-const u32 GRID_H = 60;
-
-const char *DIAG_FONT_PATH = "./fonts/LiberationMono-Regular.ttf";
-const u32 DIAG_FONT_SIZE = 18;
-const u32 DRAG_FONT_SIZE = 14;
+//const char *DIAG_FONT_PATH = "./fonts/LiberationMono-Regular.ttf";
+const char *DIAG_FONT_PATH = "./fonts/Roboto-Black.ttf";
+const int DIAG_FONT_SIZE = 12;
+const int DRAG_FONT_SIZE = 12;
 
 const float ZOOM_MOUSE_WHEEL_STEP = 0.1f;
 const float ZOOM_MIN = -2.0f;
 const float ZOOM_MAX = 4.0f;
 const float ZOOM_DEF = 0.3f;
 
-
 averageSec averageRendering;
-mutex stopThreadMutex;
 static bool showInputBool = false;
 static bool showBestBool = false;
 std::time_t mtime_prev = 0;
-thread routeThread;
-float zoomLin = ZOOM_DEF;
-float zoom = expf(zoomLin);
-
-
-Circuit circuit;
+float zoomLinear = ZOOM_DEF;
+float zoom = expf(zoomLinear);
 OglText oglText(DIAG_FONT_PATH, DIAG_FONT_SIZE);
-Render pcbDraw(zoom);
-Settings settings;
-Solution solution;
-Status mystatus;
+Render render(zoom);
+std::string formatTotalCost(int totalCost);
 
-Circuit bestCircuit;
-Solution bestSolution;
-Status bestStatus;
+Solution inputSolution(GRID_W, GRID_H);
+Solution bestSolution(GRID_W, GRID_H);
+Solution currentSolution(GRID_W, GRID_H);
 
+Status status;
 
-void launchRouterThread();
-void stopRouterThread();
-bool isStopRequested(mutex& stopThreadMutex);
-void router();
-void resetStatus();
+// Threads
+// TODO: Consider https://github.com/vit-vit/ctpl
+#ifndef NDEBUG
+const int N_ROUTER_THREADS = 1;
+#else
+const int N_ROUTER_THREADS = std::thread::hardware_concurrency();
+#endif
 
+void resetBestSolution();
 
+// Router threads
+std::vector<std::thread> routerThreadVec(N_ROUTER_THREADS);
+std::mutex stopRouterThreadMutex;
+void stopRouterThreads();
+bool isRouterStopRequested();
+void routerThread();
+void launchRouterThreads();
+
+// Parser thread
+std::thread parserThreadObj;
+std::mutex stopParserThreadMutex;
+void stopParserThread();
+bool isParserStopRequested();
+void parserThread();
+void launchParserThread();
+
+// Drag / drop
 bool dragComponentIsActive = false;
 bool dragBoardIsActive = false;
 Pos dragStartCoord;
 Pos dragBoardOffset;
-Pos dragPin0Offset;
-string dragComponentName;
-Pos mouseScreenPos;
+Pos dragPin0BoardOffset;
+std::string dragComponentName;
 OglText dragText(DIAG_FONT_PATH, DRAG_FONT_SIZE);
 
+Pos mouseScreenPos;
+Pos mouseBoardPos;
 
-class Application : public nanogui::Screen
+class Application: public nanogui::Screen
 {
 public:
   Application()
-    : nanogui::Screen(
-    Eigen::Vector2i(windowW, windowH),
-    "Stripboard Autorouter",
-    true, // resizable
-    false, // fullscreen
-    8, // colorBits
-    8, // alphaBits
-    24, // depthBits
-    8, // stencilBits
-    4, // nSamples
-    3, // glMajor
-    3 // glMinor
-  )
-{
+    : nanogui::Screen(Eigen::Vector2i(windowW, windowH), "Stripboard Autorouter",
+    // resizable, fullscreen, colorBits, alphaBits, depthBits, stencilBits, nSamples, glMajor, glMinor
+                      true, false, 8, 8, 24, 8, 4, 3, 3)
+  {
     GLuint mTextureId;
     glGenTextures(1, &mTextureId);
-
     glfwMakeContextCurrent(glfwWindow());
 
     // Initialize GLEW.
@@ -127,156 +132,189 @@ public:
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, windowW, windowH);
 
-    oglText.OpenGLInit();
-    pcbDraw.OpenGLInit();
-    dragText.OpenGLInit();
+    oglText.openGLInit();
+    render.openGLInit();
+    dragText.openGLInit();
 
     // Main grid window
-    auto window = new Window(this, "Router");
+    auto window = new nanogui::Window(this, "Router");
     window->setPosition(Vector2i(windowW - 400, windowH - 300));
-    GridLayout *layout = new GridLayout(Orientation::Horizontal, 2, Alignment::Middle, 15, 5);
-    layout->setColAlignment({Alignment::Maximum, Alignment::Fill});
+    nanogui::GridLayout
+      *layout = new nanogui::GridLayout(nanogui::Orientation::Horizontal, 2, nanogui::Alignment::Middle, 15, 5);
+    layout->setColAlignment({nanogui::Alignment::Maximum, nanogui::Alignment::Fill});
     layout->setSpacing(0, 10);
     window->setLayout(layout);
 
 //    mProgress = new ProgressBar(window);
     {
-      new Label(window, "Wire cost:", "sans-bold");
-      auto intBox = new IntBox<int>(window);
+      new nanogui::Label(window, "Wire cost:", "sans-bold");
+      auto intBox = new nanogui::IntBox<int>(window);
       intBox->setEditable(true);
       intBox->setFixedSize(Vector2i(100, 20));
-      intBox->setValue(settings.wire_cost);
+      {
+        auto lock = inputSolution.scope_lock();
+        intBox->setValue(inputSolution.settings.wire_cost);
+      }
       intBox->setDefaultValue("0");
       intBox->setFontSize(18);
       intBox->setFormat("[1-9][0-9]*");
       intBox->setSpinnable(true);
       intBox->setMinValue(1);
       intBox->setValueIncrement(1);
-      intBox->setCallback([intBox](u32 value) {
-        {
-          lock_guard<mutex> lockSettings(settingsMutex);
-          settings.wire_cost = value;
-        }
-        resetStatus();
-      });
+      intBox->setCallback([intBox](int value)
+                          {
+                            {
+                              auto lock = inputSolution.scope_lock();
+                              inputSolution.settings.wire_cost = value;
+                            }
+                            resetBestSolution();
+                          });
     }
     {
-      new Label(window, "Strip cost:", "sans-bold");
-      auto intBox = new IntBox<int>(window);
+      new nanogui::Label(window, "Strip cost:", "sans-bold");
+      auto intBox = new nanogui::IntBox<int>(window);
       intBox->setEditable(true);
       intBox->setFixedSize(Vector2i(100, 20));
-      intBox->setValue(settings.strip_cost);
+      {
+        auto lock = inputSolution.scope_lock();
+        intBox->setValue(inputSolution.settings.strip_cost);
+      }
       intBox->setDefaultValue("0");
       intBox->setFontSize(18);
       intBox->setFormat("[1-9][0-9]*");
       intBox->setSpinnable(true);
       intBox->setMinValue(1);
       intBox->setValueIncrement(1);
-      intBox->setCallback([intBox](u32 value) {
-        {
-          lock_guard<mutex> lockSettings(settingsMutex);
-          settings.strip_cost = value;
-        }
-        resetStatus();
-      });
+      intBox->setCallback([intBox](int value)
+                          {
+                            {
+                              auto lock = inputSolution.scope_lock();
+                              inputSolution.settings.strip_cost = value;
+                            }
+                            resetBestSolution();
+                          });
     }
     {
-      new Label(window, "Via cost:", "sans-bold");
-      auto intBox = new IntBox<int>(window);
+      new nanogui::Label(window, "Via cost:", "sans-bold");
+      auto intBox = new nanogui::IntBox<int>(window);
       intBox->setEditable(true);
       intBox->setFixedSize(Vector2i(100, 20));
-      intBox->setValue(settings.via_cost);
+      {
+        auto lock = inputSolution.scope_lock();
+        intBox->setValue(inputSolution.settings.via_cost);
+      }
       intBox->setDefaultValue("0");
       intBox->setFontSize(18);
       intBox->setFormat("[1-9][0-9]*");
       intBox->setSpinnable(true);
       intBox->setMinValue(1);
       intBox->setValueIncrement(1);
-      intBox->setCallback([intBox](u32 value) {
-        {
-          lock_guard<mutex> lockSettings(settingsMutex);
-          settings.via_cost = value;
-        }
-        resetStatus();
-      });
+      intBox->setCallback([intBox](int value)
+                          {
+                            {
+                              auto lock = inputSolution.scope_lock();
+                              inputSolution.settings.via_cost = value;
+                            }
+                            resetBestSolution();
+                          });
     }
     {
-      new Label(window, "Show input:", "sans-bold");
-      auto cb = new CheckBox(window, "");
+      new nanogui::Label(window, "Show input:", "sans-bold");
+      auto cb = new nanogui::CheckBox(window, "");
       cb->setFontSize(18);
       cb->setChecked(showInputBool);
-      cb->setCallback([cb](bool value) {
-        showInputBool = value;
-      });
+      cb->setCallback([cb](bool value)
+                      {
+                        showInputBool = value;
+                      });
     }
     {
-      new Label(window, "Show best:", "sans-bold");
-      auto cb = new CheckBox(window, "");
+      new nanogui::Label(window, "Show best:", "sans-bold");
+      auto cb = new nanogui::CheckBox(window, "");
       cb->setFontSize(18);
       cb->setChecked(showBestBool);
-      cb->setCallback([cb](bool value) {
-        showBestBool = value;
-      });
+      cb->setCallback([cb](bool value)
+                      {
+                        showBestBool = value;
+                      });
     }
     {
-      new Label(window, "Zoom:", "sans-bold");
+      new nanogui::Label(window, "Pause:", "sans-bold");
+      auto cb = new nanogui::CheckBox(window, "");
+      cb->setFontSize(18);
+      {
+        auto lock = inputSolution.scope_lock();
+        cb->setChecked(inputSolution.settings.pause);
+      }
+      cb->setCallback([cb](bool value)
+                      {
+                        {
+                          auto lock = inputSolution.scope_lock();
+                          inputSolution.settings.pause = value;
+                        }
+                      });
+    }
+    {
+      new nanogui::Label(window, "Zoom:", "sans-bold");
 
-      Widget *panel = new Widget(window);
-      panel->setLayout(new BoxLayout(Orientation::Horizontal, Alignment::Middle, 0, 5));
+      nanogui::Widget *panel = new nanogui::Widget(window);
+      panel->setLayout(new nanogui::BoxLayout(nanogui::Orientation::Horizontal, nanogui::Alignment::Middle, 0, 5));
 
-      Slider *slider = new Slider(panel);
+      nanogui::Slider *slider = new nanogui::Slider(panel);
       slider->setValue(zoom / 4.0f);
       slider->setFixedWidth(100);
 
-      TextBox *textBox = new TextBox(panel);
+      nanogui::TextBox *textBox = new nanogui::TextBox(panel);
       textBox->setFixedSize(Vector2i(50, 20));
       textBox->setValue("50");
       textBox->setUnits("%");
-      slider->setCallback([textBox](float value) {
-        textBox->setValue(std::to_string((int)(value * 200)));
-        ::zoom = value * 4.0f;
-      });
+      slider->setCallback([textBox](float value)
+                          {
+                            textBox->setValue(std::to_string((int) (value * 200)));
+                            ::zoom = value * 4.0f;
+                          });
 //      slider->setFinalCallback([&](float value) {
 //        ::zoom = value * 4.0f;
 //      });
-      textBox->setFixedSize(Vector2i(60,25));
+      textBox->setFixedSize(Vector2i(60, 25));
       textBox->setFontSize(18);
-      textBox->setAlignment(TextBox::Alignment::Right);
+      textBox->setAlignment(nanogui::TextBox::Alignment::Right);
     }
     performLayout();
-    launchRouterThread();
+    launchRouterThreads();
+    launchParserThread();
   }
-
 
   ~Application()
   {
-    stopRouterThread();
+    stopRouterThreads();
+    stopParserThread();
   }
 
-  // Could not get NanoGUI mouseDragEvent to trigger.
+  // Could not get NanoGUI mouseDragEvent to trigger so rolling my own.
   // See NanoGUI src/window.cpp for example mouseDragEvent handler.
-  virtual bool
-  mouseButtonEvent(const Vector2i &p, int button, bool down, int modifiers)
+  virtual bool mouseButtonEvent(const Vector2i &p, int button, bool down, int modifiers)
   {
-    if (Widget::mouseButtonEvent(p, button, down, modifiers)) {
+    if (nanogui::Widget::mouseButtonEvent(p, button, down, modifiers)) {
       // Event was handled by NanoGUI.
       return true;
     }
     if (down) {
       dragStartCoord = mouseScreenPos - dragBoardOffset;
-      string componentName;
+      std::string componentName;
       {
-        lock_guard<mutex> lockCircuit(circuitMutex);
-        componentName = getComponentAtMouseCoordinate(pcbDraw, circuit, mouseScreenPos);
+        auto lock = inputSolution.scope_lock();
+        componentName = getComponentAtMouseCoordinate(render, inputSolution.circuit, mouseBoardPos);
       }
       if (componentName != "") {
         // Start component drag
         dragComponentIsActive = true;
         dragComponentName = componentName;
-        auto pin0ScreenCoord = pcbDraw.boardToScreenCoord(
-          circuit.componentNameToInfoMap[componentName].pin0AbsCoord.cast<float>()
-        );
-        dragPin0Offset = mouseScreenPos - pin0ScreenCoord;
+        {
+          auto lock = inputSolution.scope_lock();
+          auto pin0BoardPos = inputSolution.circuit.componentNameToInfoMap[componentName].pin0AbsCoord.cast<float>();
+          dragPin0BoardOffset = mouseBoardPos - pin0BoardPos;
+        }
       }
       else {
         // Start stripboard drag
@@ -293,21 +331,20 @@ public:
 
   virtual bool scrollEvent(const Vector2i &p, const Vector2f &rel)
   {
-    if (Widget::scrollEvent(p, rel)) {
+    if (nanogui::Widget::scrollEvent(p, rel)) {
       // Event was handled by NanoGUI.
       return true;
     }
-    zoomLin += rel.y() * ZOOM_MOUSE_WHEEL_STEP;
-    zoomLin = max(zoomLin, ZOOM_MIN);
-    zoomLin = min(zoomLin, ZOOM_MAX);
-    zoom = expf(zoomLin);
+    zoomLinear += rel.y() * ZOOM_MOUSE_WHEEL_STEP;
+    zoomLinear = std::max(zoomLinear, ZOOM_MIN);
+    zoomLinear = std::min(zoomLinear, ZOOM_MAX);
+    zoom = expf(zoomLinear);
     return true;
   }
 
-
   virtual bool keyboardEvent(int key, int scancode, int action, int modifiers)
   {
-    if (Screen::keyboardEvent(key, scancode, action, modifiers)) {
+    if (nanogui::Screen::keyboardEvent(key, scancode, action, modifiers)) {
       return true;
     }
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
@@ -317,43 +354,53 @@ public:
     return false;
   }
 
-
   virtual void draw(NVGcontext *ctx)
   {
     // Draw the user interface
-    Screen::draw(ctx);
+    nanogui::Screen::draw(ctx);
   }
-
 
   virtual void drawContents()
   {
     mouseScreenPos = mousePos().cast<float>();
-    glfwGetWindowSize(glfwWindow(), reinterpret_cast<int*>(&windowW), reinterpret_cast<int*>(&windowH));
+    glfwGetWindowSize(glfwWindow(), reinterpret_cast<int *>(&windowW), reinterpret_cast<int *>(&windowH));
+    double drawStartTime = glfwGetTime();
 
     glBindVertexArray(vertexArrayId);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, windowW, windowH);
 
-    std::time_t mtime_cur = boost::filesystem::last_write_time("./circuit.txt");
-    if (mtime_cur != mtime_prev) {
-      mtime_prev = mtime_cur;
-      {
-        lock_guard<mutex> lockCircuit(circuitMutex);
-        auto parser = Parser();
-        parser.parse(circuit);
+    // render.draw() first because it updates render's internal metrics, which are later used for resolving mouse
+    // pos, etc.
+    {
+      Solution solution(GRID_W, GRID_H);
+      if (dragComponentIsActive) {
+        auto lock = inputSolution.scope_lock();
+        solution = inputSolution;
       }
-      resetStatus();
+      else if (showBestBool) {
+        auto lock = bestSolution.scope_lock();
+        solution = bestSolution;
+      }
+      else {
+        auto lock = currentSolution.scope_lock();
+        solution = currentSolution;
+      }
+      render.draw(solution, windowW, windowH, zoom, dragBoardOffset, mouseScreenPos, showInputBool);
+      mouseBoardPos = render.screenToBoardCoord(mouseScreenPos);
     }
 
-    // Drag component
-    if (dragComponentIsActive) {
-      // Block component drag when showing best
-      if (!showBestBool) {
-        {
-          lock_guard<mutex> lockCircuit(circuitMutex);
-          setComponentPosition(pcbDraw, circuit, mouseScreenPos - dragPin0Offset, dragComponentName);
+    if (!showBestBool) {
+      // Drag component
+      if (dragComponentIsActive) {
+        // Block component drag when showing best
+        if (!showBestBool) {
+          {
+            auto lock = inputSolution.scope_lock();
+            setComponentPosition(render, inputSolution.circuit, mouseBoardPos - dragPin0BoardOffset, dragComponentName);
+          }
+          resetBestSolution();
         }
-        resetStatus();
       }
     }
     // Drag board
@@ -362,30 +409,18 @@ public:
       dragBoardOffset -= dragStartCoord;
     }
 
-    glfwSetTime(0.0);
-
-    {
-      lock_guard<mutex> lockSolution(solutionMutex);
-      if (showBestBool) {
-        pcbDraw.draw(bestCircuit, bestSolution, windowW, windowH, GRID_W,
-                     GRID_H, zoom, dragBoardOffset, showInputBool);
-      }
-      else {
-        pcbDraw.draw(circuit, solution, windowW, windowH, GRID_W, GRID_H, zoom,
-                     dragBoardOffset, showInputBool);
-      }
-    }
-
     if (dragComponentIsActive) {
-      dragText.reset(windowW, windowH,
-                    static_cast<u32>(mouseScreenPos.x()),
-                    static_cast<u32>(mouseScreenPos.y()) - DRAG_FONT_SIZE,
-                    DRAG_FONT_SIZE);
+      dragText.reset(windowW,
+                     windowH,
+                     static_cast<int>(mouseScreenPos.x()),
+                     static_cast<int>(mouseScreenPos.y()) - DRAG_FONT_SIZE,
+                     DRAG_FONT_SIZE);
       if (showBestBool) {
         dragText.print(0, fmt::format("Can't edit -- showing best"));
       }
       else {
-        auto via = circuit.componentNameToInfoMap[dragComponentName].pin0AbsCoord;
+        auto lock = currentSolution.scope_lock();
+        auto via = currentSolution.circuit.componentNameToInfoMap[dragComponentName].pin0AbsCoord;
         dragText.print(0, fmt::format("({},{})", via.x(), via.y()));
       }
     }
@@ -393,31 +428,49 @@ public:
     // Needed for timing but can be bad for performance.
     glFinish();
 
-    averageRendering.addSec(glfwGetTime());
-
+    double drawEndTime = glfwGetTime();
+    averageRendering.addSec(drawEndTime - drawStartTime);
     auto avgRenderingSec = averageRendering.calcAverage();
 
-    u32 nLine = 0;
+    // Diag
+
+    // Run status
+    int nLine = 0;
     oglText.reset(windowW, windowH, 0, 0, DIAG_FONT_SIZE);
     oglText.print(nLine++, fmt::format("Render: {:.1f}ms", avgRenderingSec * 1000));
-    for (auto s : circuit.circuitInfoVec) {
-      oglText.print(nLine++, s);
-    }
-    oglText.print(nLine++, fmt::format("Completed: {:n}", solution.numCompletedRoutes));
-    oglText.print(nLine++, fmt::format("Failed: {:n}", solution.numFailedRoutes));
-    oglText.print(nLine++, fmt::format("Total cost: {:n}", solution.totalCost));
-    if (showBestBool) {
-      oglText.print(nLine++, fmt::format("Showing best: {:n}", bestStatus.bestCost));
-    }
-    else {
-      if (mystatus.bestCost != INT_MAX) {
-        oglText.print(nLine++, fmt::format("Best Cost: {:n}", mystatus.bestCost));
-      }
-      else {
-        oglText.print(nLine++, fmt::format("Best Cost: <no complete routes>", mystatus.bestCost));
+    oglText.print(nLine++, fmt::format("Checked: {:n}", status.nunCombinationsChecked));
+    oglText.print(nLine++, fmt::format("Checked/s: {:.2f}", status.nunCombinationsChecked / drawEndTime));
+    ++nLine;
+    // List any errors from the parser
+    {
+      auto lock = inputSolution.scope_lock();
+      if (inputSolution.circuit.circuitInfoVec.size()) {
+        for (auto s : inputSolution.circuit.circuitInfoVec) {
+          oglText.print(nLine++, s);
+        }
+        ++nLine;
       }
     }
-    oglText.print(nLine++, fmt::format("Checked: {:n}", mystatus.nChecked));
+    // Current
+    {
+      auto lock = currentSolution.scope_lock();
+      oglText.print(nLine++, fmt::format("Current"));
+      oglText.print(nLine++, fmt::format("Completed: {:n}", currentSolution.numCompletedRoutes));
+      oglText.print(nLine++, fmt::format("Failed: {:n}", currentSolution.numFailedRoutes));
+//      oglText.print(nLine++, fmt::format("Shortcuts: {:n}", currentSolution.numShortcuts));
+      oglText.print(nLine++, fmt::format("Cost: {}", formatTotalCost(currentSolution.totalCost)));
+      ++nLine;
+    }
+    // Best
+    {
+      auto lock = bestSolution.scope_lock();
+      oglText.print(nLine++, fmt::format("Best"));
+      oglText.print(nLine++, fmt::format("Completed: {:n}", bestSolution.numCompletedRoutes));
+      oglText.print(nLine++, fmt::format("Failed: {:n}", bestSolution.numFailedRoutes));
+//      oglText.print(nLine++, fmt::format("Shortcuts: {:n}", bestSolution.numShortcuts));
+      oglText.print(nLine++, fmt::format("Cost: {}", formatTotalCost(bestSolution.totalCost)));
+      ++nLine;
+    }
 
     checkGlError();
   }
@@ -427,99 +480,141 @@ private:
   GLuint vertexArrayId;
 };
 
-
-void launchRouterThread()
+std::string formatTotalCost(int totalCost)
 {
-  routeThread = thread(router); // , std::ref(solution)
+  if (totalCost == INT_MAX) {
+    return "<no complete layouts>";
+  }
+  return fmt::format("{:n}", totalCost);
 }
 
+void resetBestSolution()
+{
+  auto lock = bestSolution.scope_lock();
+  bestSolution = Solution(GRID_W, GRID_H);
+}
 
-void stopRouterThread()
+//
+// Router thread
+//
+
+void launchRouterThreads()
+{
+  for (int i = 0; i < N_ROUTER_THREADS; ++i) {
+    routerThreadVec[i] = std::thread(routerThread);
+  }
+}
+
+void stopRouterThreads()
 {
   try {
-    lock_guard<mutex> stopThread(stopThreadMutex);
-    routeThread.join();
+    std::lock_guard<std::mutex> stopThread(stopRouterThreadMutex);
+    for (int i = 0; i < N_ROUTER_THREADS; ++i) {
+      routerThreadVec[i].join();
+    }
   }
   catch (const std::system_error &e) {
     fmt::print(stderr, "Attempted to stop thread that is not running\n");
   }
 }
 
-
-bool isStopRequested(mutex& stopThreadMutex)
+bool isRouterStopRequested()
 {
-  bool lockObtained = stopThreadMutex.try_lock();
+  bool lockObtained = stopRouterThreadMutex.try_lock();
   if (lockObtained) {
-    stopThreadMutex.unlock();
+    stopRouterThreadMutex.unlock();
   }
   return !lockObtained;
 }
 
-
-void router()
+void routerThread()
 {
   while (true) {
-    Circuit threadCircuit;
-    Settings threadSettings;
-    Solution threadSolution;
+    Solution threadSolution(GRID_W, GRID_H);
     {
-      lock_guard<mutex> lockCircuit(circuitMutex);
-      threadCircuit = ::circuit;
+      auto lock = inputSolution.scope_lock();
+      if (!inputSolution.circuit.isReady || inputSolution.settings.pause) {
+        lock.unlock();
+        usleep(100 * 1000);
+        continue;
+      }
+      threadSolution = inputSolution;
     }
     {
-      lock_guard<mutex> lockSettings(settingsMutex);
-      threadSettings = ::settings;
-    }
-    {
-      Dijkstra dijkstra(GRID_W, GRID_H);
-      dijkstra.route(threadSolution, threadSettings, threadCircuit, stopThreadMutex);
-      if (isStopRequested(stopThreadMutex)) {
+      Router dijkstra(threadSolution);
+      dijkstra.route(stopRouterThreadMutex);
+      if (isRouterStopRequested()) {
         break;
       }
     }
     {
-      lock_guard<mutex> lockSolution(solutionMutex);
-      ::solution = threadSolution;
+      std::lock_guard<std::mutex> lockStatus(statusMutex);
+      ++status.nunCombinationsChecked;
     }
     {
-      lock_guard<mutex> lockStatus(statusMutex);
-      ++mystatus.nChecked;
-      if (!threadSolution.numFailedRoutes) {
-        if (threadSolution.totalCost < mystatus.bestCost) {
-          mystatus.bestCost = threadSolution.totalCost;
-          bestStatus = mystatus;
-          {
-            lock_guard<mutex> lockCircuit(circuitMutex);
-            bestCircuit = threadCircuit;
-          }
-          {
-            lock_guard<mutex> lockSolution(solutionMutex);
-            bestSolution = threadSolution;
-          }
-        }
-      }
+      auto lock = currentSolution.scope_lock();
+      currentSolution = threadSolution;
+    }
+    if (threadSolution.numCompletedRoutes > bestSolution.numCompletedRoutes) {
+      auto lock = bestSolution.scope_lock();
+      bestSolution = threadSolution;
+    }
+    if (threadSolution.numCompletedRoutes == bestSolution.numCompletedRoutes && threadSolution.totalCost > bestSolution.totalCost) {
+      auto lock = bestSolution.scope_lock();
+      bestSolution = threadSolution;
     }
   }
 }
 
+//
+// Parser thread
+//
 
-void resetStatus()
+void launchParserThread()
 {
-  {
-    lock_guard<mutex> lockCircuit(circuitMutex);
-    bestCircuit = Circuit();
+  parserThreadObj = std::thread(parserThread);
+}
+
+void stopParserThread()
+{
+  try {
+    std::lock_guard<std::mutex> stopThread(stopParserThreadMutex);
+    parserThreadObj.join();
   }
-  {
-    lock_guard<mutex> lockStatus(statusMutex);
-    mystatus = Status();
-    bestStatus = Status();
-  }
-  {
-    lock_guard<mutex> lockSolution(solutionMutex);
-    bestSolution = Solution();
+  catch (const std::system_error &e) {
+    fmt::print(stderr, "Attempted to stop thread that is not running\n");
   }
 }
 
+bool isParserStopRequested()
+{
+  bool lockObtained = stopParserThreadMutex.try_lock();
+  if (lockObtained) {
+    stopParserThreadMutex.unlock();
+  }
+  return !lockObtained;
+}
+
+// Parse circuit.txt file if changed
+void parserThread()
+{
+  while (true) {
+    std::time_t mtime_cur = boost::filesystem::last_write_time("./circuit.txt");
+    if (mtime_cur != mtime_prev) {
+      mtime_prev = mtime_cur;
+      {
+        auto parser = Parser();
+        auto lock = inputSolution.scope_lock();
+        parser.parse(inputSolution.circuit);
+      }
+      resetBestSolution();
+    }
+    usleep(1000 * 1000);
+    if (isParserStopRequested()) {
+      break;
+    }
+  }
+}
 
 int main(int argc, char **argv)
 {
@@ -538,7 +633,7 @@ int main(int argc, char **argv)
 #if defined(_WIN32)
     //MessageBoxA(nullptr, error_msg.c_str(), NULL, MB_ICONERROR | MB_OK);
 #else
-    std::cerr << error_msg << endl;
+    std::cerr << error_msg << std::endl;
 #endif
     return -1;
   }

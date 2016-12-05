@@ -111,19 +111,21 @@ endif ()
 
 set(SOURCE_FILES
   ${SOURCE_DIR}/circuit.cpp
-  ${SOURCE_DIR}/dijkstra.cpp
   ${SOURCE_DIR}/gl_error.cpp
+  ${SOURCE_DIR}/gui.cpp
   ${SOURCE_DIR}/main.cpp
+  ${SOURCE_DIR}/nets.cpp
   ${SOURCE_DIR}/ogl_text.cpp
   ${SOURCE_DIR}/parser.cpp
   ${SOURCE_DIR}/render.cpp
+  ${SOURCE_DIR}/router.cpp
   ${SOURCE_DIR}/settings.cpp
   ${SOURCE_DIR}/shader.cpp
   ${SOURCE_DIR}/solution.cpp
   ${SOURCE_DIR}/status.cpp
+  ${SOURCE_DIR}/ucs.cpp
   ${SOURCE_DIR}/utils.cpp
   ${SOURCE_DIR}/via.cpp
-  ${SOURCE_DIR}/gui.cpp
 )
 
 include_directories(
