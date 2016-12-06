@@ -24,10 +24,6 @@ Currently somewhat working:
 * Highlight connections with mouse hover
 * Gaps show where the copper traces need to be cut
 
-Known bugs:
-
-* Crashes if components are dragged outside of grid
-
 
 Planned functionality:
  
