@@ -40,13 +40,13 @@ Planned functionality:
 
 2) Move the program to one side of the screen and open the included `circuit.txt` file in a text editor on the other. Start creating your circuit there, using the simple syntax shown in the file.
  
-    `Board`: The size of the stripboard, specified by number of vias (holes) horizontally and vertically, as seen when the copper strips run vertically. The board must be large enough that the circuit and rutes will fit but should not be larger than necessary, as search speed slows down when board size increases.
+    * `Board`: The size of the stripboard, specified by number of vias (holes) horizontally and vertically, as seen when the copper strips run vertically. The board must be large enough that the circuit and rutes will fit but should not be larger than necessary, as search speed slows down when board size increases.
  
-    `Package`: Reusable pin layouts. Each pin is designated by a coordinate relative to pin 1, so pins can be in any order and relationship to each other.
+    * `Package`: Reusable pin layouts. Each pin is designated by a coordinate relative to pin 1, so pins can be in any order and relationship to each other.
   
-    `Component`: Name, position and package for a component. The position specifies the location of pin 1 on the board.
+    * `Component`: Name, position and package for a component. The position specifies the location of pin 1 on the board.
      
-    `Connection`: Connections between component pins required for the circuit.
+    * `Connection`: Connections between component pins required for the circuit.
      
     Packages, components and connections can be intermixed, however packages must be described before the components in which they are used, and components must be described before connections in which they are used.
 
