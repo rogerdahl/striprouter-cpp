@@ -141,89 +141,84 @@ This is the circuit description used in the screenshot.
 # GEN6 22
 # GP05 29
 
+# Stripboard
+# board <width>,<height>
+
+board 60,60
+
 # Packages
-# pkg <package name> <pin coordinates relative to pin 0>
-pkg dip14       0,0 1,0 2,0 3,0 4,0 5,0 6,0 6,-3 5,-3 4,-3 3,-3 2,-3 1,-3 0,-3
-pkg header20    0,0 1,0 2,0 3,0 4,0 5,0 6,0 7,0 8,0 9,0 10,0 11,0 12,0 13,0 14,0 15,0 16,0 17,0 18,0 19,0
-pkg header2x20  0,0 0,-1 1,0 1,-1 2,0 2,-1 3,0 3,-1 4,0 4,-1 5,0 5,-1 6,0 6,-1 7,0 7,-1 8,0 8,-1 9,0 9,-1 10,0 10,-1 11,0 11,-1 12,0 12,-1 13,0 13,-1 14,0 14,-1 15,0 15,-1 16,0 16,-1 17,0 17,-1 18,0 18,-1 19,0 19,-1
-pkg customFootprint 0,0 3,3 4,3 -2,1
-pkg vpad4       0,0 0,1 0,2 0,3
-pkg hpad4       0,0 1,0 2,0 3,0
-pkg hpad6       0,0 1,0 2,0 3,0 4,0 5,0
-pkg hpad2x4     0,0 1,0 2,0 3,0 0,-1 1,-1 2,-1 3,-1
+# <package name> <pin coordinates relative to pin 0>
+
+dip14       0,0 1,0 2,0 3,0 4,0 5,0 6,0 6,-3 5,-3 4,-3 3,-3 2,-3 1,-3 0,-3
+header2x20  0,0 0,-1 1,0 1,-1 2,0 2,-1 3,0 3,-1 4,0 4,-1 5,0 5,-1 6,0 6,-1 7,0 7,-1 8,0 8,-1 9,0 9,-1 10,0 10,-1 11,0 11,-1 12,0 12,-1 13,0 13,-1 14,0 14,-1 15,0 15,-1 16,0 16,-1 17,0 17,-1 18,0 18,-1 19,0 19,-1
+hpad2x2     0,0 1,0 0,-1 1,-1
 
 # Components
-# com <component name> <package name> <absolute position of component pin 0>
+# <component name> <package name> <absolute position of component pin 0>
 
-com rpi     header2x20  19,18
+rpi     header2x20  19,18
 
-com vcc     hpad2x4     22,47
-com gnd     hpad2x4     33,47
+vcc     hpad2x2     17,37
+gnd     hpad2x2     37,37
 
-com 7400A   dip14       25,28
-com pwm0    hpad2x4     14,27
-com chan1   hpad2x4     14,31
-com chan2   hpad2x4     14,35
-com chan3   hpad2x4     14,39
-com chan4   hpad2x4     14,43
+7400A   dip14       25,27
+chan1   hpad2x2     17,25
+chan2   hpad2x2     17,28
+chan3   hpad2x2     17,31
+chan4   hpad2x2     17,34
 
-com 7400B   dip14       25,40
-com pwm1    hpad2x4     40,27
-com chan5   hpad2x4     40,31
-com chan6   hpad2x4     40,35
-com chan7   hpad2x4     40,39
-com chan8   hpad2x4     40,43
+7400B   dip14       25,35
+chan5   hpad2x2     37,25
+chan6   hpad2x2     37,28
+chan7   hpad2x2     37,31
+chan8   hpad2x2     37,34
 
 # Connections
-# c <from component name>.<pin index> <to component name>.<pin index>
+# <from component name>.<pin index> <to component name>.<pin index>
 
 # 7400A
 
-c vcc.5     rpi.2
-c vcc.6     7400A.14
-c gnd.5     rpi.6
-c gnd.6     7400A.7
+vcc.1     rpi.2
+vcc.1     7400A.14
+gnd.1     rpi.6
+gnd.1     7400A.7
 
-c rpi.32    pwm0.1
+rpi.32    7400A.1
+rpi.32    7400A.4
+rpi.32    7400A.10
+rpi.32    7400A.13
 
-c pwm0.5    7400A.1
-c pwm0.6    7400A.4
-c pwm0.7    7400A.10
-c pwm0.8    7400A.13
+rpi.11    7400A.2
+rpi.12    7400A.5
+rpi.13    7400A.9
+rpi.15    7400A.12
 
-c rpi.11    7400A.2
-c rpi.12    7400A.5
-c rpi.13    7400A.9
-c rpi.15    7400A.12
-
-c 7400A.3   chan1.5
-c 7400A.6   chan2.5
-c 7400A.8   chan3.5
-c 7400A.11  chan4.5
+7400A.3   chan1.1
+7400A.6   chan2.1
+7400A.8   chan3.1
+7400A.11  chan4.1
 
 # 7400B
 
-c vcc.1     rpi.4
-c vcc.2     7400B.14
-c gnd.1     rpi.14
-c gnd.2     7400B.7
+vcc.1     rpi.4
+vcc.1     7400B.14
+gnd.1     rpi.14
+gnd.1     7400B.7
 
-c rpi.33    pwm1.1
+rpi.33    7400B.1
+rpi.33    7400B.4
+rpi.33    7400B.10
+rpi.33    7400B.13
 
-c pwm1.5    7400B.1
-c pwm1.6    7400B.4
-c pwm1.7    7400B.10
-c pwm1.8    7400B.13
+rpi.16    7400B.2
+rpi.18    7400B.5
+rpi.22    7400B.9
+rpi.29    7400B.12
 
-c rpi.16    7400B.2
-c rpi.18    7400B.5
-c rpi.22    7400B.9
-c rpi.29    7400B.12
-
-c 7400B.3   chan5.5
-c 7400B.6   chan6.5
-c 7400B.8   chan7.5
-c 7400B.11  chan8.5
+7400B.3   chan5.1
+7400B.6   chan6.1
+7400B.8   chan7.1
+7400B.11  chan8.1
 ```
 
 ### Compiling on Linux
