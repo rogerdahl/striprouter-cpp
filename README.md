@@ -58,8 +58,6 @@ Packages, components and connections can be intermixed, however packages must be
 
 8) If no satisfactory layouts are found, click `Show input` to view the required connections and try moving the components to create more space between components, fewer crossed connections and less interference in problem areas with many failed routes. A complete layout can always be found if there is enough room for routes between the components.
 
-while observing the required connections. Blue and orange shows completed and failed routes respectively.  So, in general, you want to try for more .
-
 7) Click `Show best` to see the best layout found so far.
 
 8) If you find a layout that you wish to use, click `Pause` and then, ahem, use your OS Print Screen function. There's no other way to save or export layouts yet.
