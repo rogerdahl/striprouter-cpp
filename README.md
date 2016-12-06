@@ -38,7 +38,7 @@ Planned functionality:
 
 1) Start the program. If things work, you will see it start searching for routes on the included circuit. A "no completed layouts" message means that no layout has been found in which it was possible to route all connections.
 
-2) Move the program to one side of the screen and open the included `circuit.txt` file in a text editor on the other. Start creating your circuit there, using the simple syntax shown in the file:
+2) Move the program to one side of the screen and open the included `circuit.txt` file in a text editor on the other. Start creating your circuit there, using the simple syntax shown in the file.
  
     `Board`: The size of the stripboard, specified by number of vias (holes) horizontally and vertically, as seen when the copper strips run vertically. The board must be large enough that the circuit and rutes will fit but should not be larger than necessary, as search speed slows down when board size increases.
  
@@ -48,7 +48,7 @@ Planned functionality:
      
     `Connection`: Connections between component pins required for the circuit.
      
-     Packages, components and connections can be intermixed, however packages must be described before the components in which they are used, and components must be described before connections in which they are used.
+    Packages, components and connections can be intermixed, however packages must be described before the components in which they are used, and components must be described before connections in which they are used.
 
 3) Whenever you want to see the current status of your `circuit.txt` file, just save it in the editor to display the new version in the router. If there are any problems in the file, a list of errors is shown in the router.
 
@@ -66,25 +66,25 @@ while observing the required connections. Blue and orange shows completed and fa
 
 ### Overview of operation
 
-The program operates with objects called Solutions. Each Solution contains a Circuit object, a Settings object, potentially a set of discovered routes for the circuit, and misc other housekeeping and diagnostics information.
+* The program operates with objects called Solutions. Each Solution contains a Circuit object, a Settings object, potentially a set of discovered routes for the circuit, and misc other housekeeping and diagnostics information.
 
-A Circuit holds a description of the components and connections that make up a circuit, much like the information in the `circuit.txt` file. 
+* A Circuit holds a description of the components and connections that make up a circuit, much like the information in the `circuit.txt` file. 
 
-Settings holds various settings that are used when processing the Solution, such as the resource costs that are used by the router.
+* Settings holds various settings that are used when processing the Solution, such as the resource costs that are used by the router.
  
-When the program starts, it creates three Solutions called inputSolution, currentSolution and bestSolution. The main thread then launches a set of router threads and a parser thread.
+* When the program starts, it creates three Solutions called inputSolution, currentSolution and bestSolution. The main thread then launches a set of router threads and a parser thread.
 
-The parser thread gains exclusive access to the `circuit.txt` file, parses it to a thread local Circuit and releases the file. It then locks the inputSolution and writes the local Circuit to the inputSolution Circuit. Then monitors the modified time on the `circuit.txt` file and, if it changes, starts over with gaining exclusive access to the file.
+* The parser thread gains exclusive access to the `circuit.txt` file, parses it to a thread local Circuit and releases the file. It then locks the inputSolution and writes the local Circuit to the inputSolution Circuit. Then monitors the modified time on the `circuit.txt` file and, if it changes, starts over with gaining exclusive access to the file.
 
-The router threads compete for a lock on inputSolution. When a thread gets the lock, it creates a thread local copy of inputSolution, called threadSolution and releases the lock. Because the router always creates the shortest possible route for a given connection, only the order in which the routes are created affects the end result. So, as a temporary first approach, a random search is currently implemented by having the thread start by randomly shuffling the order of the connections in its threadSolution. It then creates, or attempts to create, the routes in the shuffled order. The number of ways the connections can be shuffled is the factorial of the number of connections, which makes it impossible to check all possible orderings even for fairly small circuits.
+* The router threads compete for a lock on inputSolution. When a thread gets the lock, it creates a thread local copy of inputSolution, called threadSolution and releases the lock. Because the router always creates the shortest possible route for a given connection, only the order in which the routes are created affects the end result. So, as a temporary first approach, a random search is currently implemented by having the thread start by randomly shuffling the order of the connections in its threadSolution. It then creates, or attempts to create, the routes in the shuffled order. The number of ways the connections can be shuffled is the factorial of the number of connections, which makes it impossible to check all possible orderings even for fairly small circuits.
 
-When the routing is done, the thread locks bestSolution and compares the threadSolution and bestSolution scores. If threadSolution has a better score, it copies threadSolution to bestSolution, overwriting the old bestSolution. The thread then locks currentSolution and writes threadSolution to it, and loops back to the start, where it again locks inputSolution.
+    When the routing is done, the thread locks bestSolution and compares the threadSolution and bestSolution scores. If threadSolution has a better score, it copies threadSolution to bestSolution, overwriting the old bestSolution. The thread then locks currentSolution and writes threadSolution to it, and loops back to the start, where it again locks inputSolution.
    
-The main thread runs the GUI and OpenGL rendering. When a setting is changed with the GUI or components are moved with the mouse, the main thread locks inputSolution and updates its settings or circuit. The main thread renders the inputSolution while a drag/drop operation is performed, bestSolution if the `Show best` checkbox is enabled, and currentSolution otherwise. To avoid locking the solution being rendered during the entire rendering process, the main thread briefly locks the solution it will render and creates a thread local copy, then renders the copy and discards it.
+    The main thread runs the GUI and OpenGL rendering. When a setting is changed with the GUI or components are moved with the mouse, the main thread locks inputSolution and updates its settings or circuit. The main thread renders the inputSolution while a drag/drop operation is performed, bestSolution if the `Show best` checkbox is enabled, and currentSolution otherwise. To avoid locking the solution being rendered during the entire rendering process, the main thread briefly locks the solution it will render and creates a thread local copy, then renders the copy and discards it.
    
-The router is based on the Dijkstra and Uniform Cost Search algorithms and uses a common optimization based on a set and a priority queue. The search is customized to only find paths that can be implemented on a stripboard, the most important limitation being that there are two layers, where one layer can have  only horizontal connections and the other can have only vertical connections.
+* The router is based on the Dijkstra and Uniform Cost Search algorithms and uses a common optimization based on a set and a priority queue. The search is customized to only find paths that can be implemented on a stripboard, the most important limitation being that there are two layers, where one layer can have  only horizontal connections and the other can have only vertical connections.
 
-The router also keeps tracks of the connections created by previous routes and searches them for shortcuts when creating new routes. E.g., if there is an existing route from A to B and another from C to D, the router knows that creating a route from A to C also connects B and D. If a later route connects to A, the router will also consider routes to B, C and D, and use the one that has the lowest cost.
+* The router also keeps tracks of the connections created by previous routes and searches them for shortcuts when creating new routes. E.g., if there is an existing route from A to B and another from C to D, the router knows that creating a route from A to C also connects B and D. If a later route connects to A, the router will also consider routes to B, C and D, and use the one that has the lowest cost.
 
 ### Tips and Tricks
 
