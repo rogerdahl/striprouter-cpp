@@ -1,16 +1,18 @@
 #include <algorithm>
-#include <mutex>
-#include <thread>
-#include <set>
 
 #include <fmt/format.h>
 
 #include "router.h"
 #include "ucs.h"
 
+// The nets and equivalents system is also what allows creating multiple routes
+// from a single pin by building out from that pin. Without the nets, one must
+// either specifically create pads and do one-to-one routes, or one must add a
+// function that specifically creates new one-to-one routes by selecting the
+// next available point next to the source and destination pins.
 
-Router::Router(Solution &_solution)
-  : solution_(_solution), nets_(_solution),
+Router::Router(Solution &_solution, ThreadStop &threadStop)
+  : solution_(_solution), nets_(_solution), threadStop_(threadStop),
 
     allPinSet(ViaSet([](const Via &a, const Via &b) -> bool
                      {
@@ -23,11 +25,11 @@ Router::Router(Solution &_solution)
   viaTraceVec_ = ViaTraceVec(solution_.gridW * solution_.gridH);
 }
 
-void Router::route(std::mutex &stopThreadMutex)
+void Router::route()
 {
   blockComponentFootprints();
   registerAllComponentPins();
-  routeAll(stopThreadMutex);
+  routeAll();
 #ifndef NDEBUG
   solution_.diagTraceVec = viaTraceVec_;
   // Enable rendering of diags
@@ -85,9 +87,10 @@ bool Router::isBlocked(const Via &via)
   return viaTraceVec_[solution_.idx(via)].isWireSideBlocked;
 }
 
-void Router::routeAll(std::mutex &stopThreadMutex)
+void Router::routeAll()
 {
-  random_shuffle(solution_.circuit.connectionVec.begin(), solution_.circuit.connectionVec.end());
+  random_shuffle(solution_.circuit.connectionVec.begin(),
+                 solution_.circuit.connectionVec.end());
 
 #ifndef NDEBUG
 //  int breakIdx = 0;
@@ -103,16 +106,15 @@ void Router::routeAll(std::mutex &stopThreadMutex)
 #endif
 
     if (solution_.hasError) {
-      solution_.errorStringVec.push_back(fmt::format("Detected in Router::routeAll()"));
+      solution_.errorStringVec
+        .push_back(fmt::format("Detected in Router::routeAll()"));
       break;
     }
 
-    if (isRouterStopRequested(stopThreadMutex)) {
+    if (threadStop_.isStopped()) {
       break;
     }
   }
-
-  solution_.isReady = true;
 }
 
 //
@@ -142,13 +144,14 @@ void Router::findCompleteRoute(const ViaStartEnd &viaStartEnd)
   }
 }
 
-bool Router::findRoute(Via& shortcutEndVia, const ViaStartEnd &viaStartEnd)
+bool Router::findRoute(Via &shortcutEndVia, const ViaStartEnd &viaStartEnd)
 {
   UniformCostSearch ucs(*this, solution_, nets_, shortcutEndVia, viaStartEnd);
   auto routeStepVec = ucs.findLowestCostRoute();
 
   if (solution_.hasError) {
-    solution_.errorStringVec.push_back(fmt::format("Detected in Router::findCompleteRoute()"));
+    solution_.errorStringVec
+      .push_back(fmt::format("Detected in Router::findCompleteRoute()"));
     return false;
   }
 
@@ -176,10 +179,12 @@ bool Router::findRoute(Via& shortcutEndVia, const ViaStartEnd &viaStartEnd)
   return true;
 }
 
-
-bool Router::isAvailable(const ViaLayer &via, const Via &startVia, const Via &targetVia)
+bool Router::isAvailable(const ViaLayer &via,
+                         const Via &startVia,
+                         const Via &targetVia)
 {
-  if (via.via.x() < 0 || via.via.y() < 0 || via.via.x() >= solution_.gridW || via.via.y() >= solution_.gridH) {
+  if (via.via.x() < 0 || via.via.y() < 0 || via.via.x() >= solution_.gridW
+    || via.via.y() >= solution_.gridH) {
     return false;
   }
 
@@ -190,7 +195,8 @@ bool Router::isAvailable(const ViaLayer &via, const Via &startVia, const Via &ta
   }
   else {
     // If it has an equivalent, it must be our equivalent
-    if (nets_.hasEquivalent(via.via) && !nets_.isEquivalentVia(via.via, startVia)) {
+    if (nets_.hasEquivalent(via.via)
+      && !nets_.isEquivalentVia(via.via, startVia)) {
       return false;
     }
 //    // Allow moving into route from starting pin before the starting pin has been set as equivalent to the new target pin.
@@ -249,7 +255,8 @@ RouteSectionVec Router::condenseRoute(const RouteStepVec &routeStepVec)
     }
   }
   if (startSection != routeStepVec.end() - 1) {
-    routeSectionVec.push_back(ViaLayerStartEnd(*startSection, *(routeStepVec.end() - 1)));
+    routeSectionVec
+      .push_back(ViaLayerStartEnd(*startSection, *(routeStepVec.end() - 1)));
   }
   return routeSectionVec;
 }
@@ -286,13 +293,4 @@ void Router::addHyperspaceWireJumps(const RouteSectionVec &routeSectionVec)
 ViaValid &Router::wireToViaRef(const Via &via)
 {
   return viaTraceVec_[solution_.idx(via)].wireToVia;
-}
-
-bool Router::isRouterStopRequested(std::mutex &stopThreadMutex)
-{
-  bool lockObtained = stopThreadMutex.try_lock();
-  if (lockObtained) {
-    stopThreadMutex.unlock();
-  }
-  return !lockObtained;
 }

@@ -19,8 +19,14 @@
 # GEN6 22
 # GP05 29
 
+# Stripboard
+# board <width>,<height>
+
+board 60,60
+
 # Packages
 # pkg <package name> <pin coordinates relative to pin 0>
+
 dip14       0,0 1,0 2,0 3,0 4,0 5,0 6,0 6,-3 5,-3 4,-3 3,-3 2,-3 1,-3 0,-3
 header20    0,0 1,0 2,0 3,0 4,0 5,0 6,0 7,0 8,0 9,0 10,0 11,0 12,0 13,0 14,0 15,0 16,0 17,0 18,0 19,0
 header2x20  0,0 0,-1 1,0 1,-1 2,0 2,-1 3,0 3,-1 4,0 4,-1 5,0 5,-1 6,0 6,-1 7,0 7,-1 8,0 8,-1 9,0 9,-1 10,0 10,-1 11,0 11,-1 12,0 12,-1 13,0 13,-1 14,0 14,-1 15,0 15,-1 16,0 16,-1 17,0 17,-1 18,0 18,-1 19,0 19,-1
@@ -29,26 +35,27 @@ vpad4       0,0 0,1 0,2 0,3
 hpad4       0,0 1,0 2,0 3,0
 hpad6       0,0 1,0 2,0 3,0 4,0 5,0
 hpad2x4     0,0 1,0 2,0 3,0 0,-1 1,-1 2,-1 3,-1
+hpad2x2     0,0 1,0 0,-1 1,-1
 
 # Components
 # com <component name> <package name> <absolute position of component pin 0>
 
 rpi     header2x20  19,18
 
-vcc     hpad2x4     22,47
-gnd     hpad2x4     33,47
+vcc     hpad2x2     17,37
+gnd     hpad2x2     37,37
 
-7400A   dip14       25,28
-chan1   hpad2x4     14,31
-chan2   hpad2x4     14,35
-chan3   hpad2x4     14,39
-chan4   hpad2x4     14,43
+7400A   dip14       25,27
+chan1   hpad2x2     17,25
+chan2   hpad2x2     17,28
+chan3   hpad2x2     17,31
+chan4   hpad2x2     17,34
 
-7400B   dip14       25,40
-chan5   hpad2x4     40,31
-chan6   hpad2x4     40,35
-chan7   hpad2x4     40,39
-chan8   hpad2x4     40,43
+7400B   dip14       25,35
+chan5   hpad2x2     37,25
+chan6   hpad2x2     37,28
+chan7   hpad2x2     37,31
+chan8   hpad2x2     37,34
 
 # Connections
 # c <from component name>.<pin index> <to component name>.<pin index>
@@ -70,10 +77,10 @@ rpi.12    7400A.5
 rpi.13    7400A.9
 rpi.15    7400A.12
 
-7400A.3   chan1.5
-7400A.6   chan2.5
-7400A.8   chan3.5
-7400A.11  chan4.5
+7400A.3   chan1.1
+7400A.6   chan2.1
+7400A.8   chan3.1
+7400A.11  chan4.1
 
 # 7400B
 
@@ -92,7 +99,7 @@ rpi.18    7400B.5
 rpi.22    7400B.9
 rpi.29    7400B.12
 
-7400B.3   chan5.5
-7400B.6   chan6.5
-7400B.8   chan7.5
-7400B.11  chan8.5
+7400B.3   chan5.1
+7400B.6   chan6.1
+7400B.8   chan7.1
+7400B.11  chan8.1

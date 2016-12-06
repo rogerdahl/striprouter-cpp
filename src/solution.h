@@ -11,13 +11,9 @@
 
 
 typedef std::vector<ViaLayer> RouteStepVec;
-
 typedef std::vector<ViaLayerStartEnd> RouteSectionVec;
-
 typedef std::vector<RouteSectionVec> RouteVec;
-
 typedef std::vector<std::string> StringVec;
-
 typedef std::vector<bool> RouteStatusVec;
 
 // Nets
@@ -25,19 +21,18 @@ typedef std::set<Via, std::function<bool(const Via &, const Via &)> > ViaSet;
 
 //typedef std::map<Via, int, std::function<bool(const Via&,const Via&)> > ViaToIdxMap;
 typedef std::vector<ViaSet> ViaSetVec;
-
 typedef std::vector<int> SetIdxVec;
 
 class Solution
 {
 public:
-  Solution(int gridW, int gridH);
+  Solution();
+//  Solution(int gridW, int gridH);
   ~Solution();
   Solution(const Solution &);
   Solution &operator=(const Solution &);
   std::unique_lock<std::mutex> scope_lock();
-
-  void dump() const;
+  int idx(const Via &);
 
   Circuit circuit;
   Settings settings;
@@ -54,8 +49,6 @@ public:
   StringVec solutionInfoVec;
   RouteVec routeVec;
   RouteStatusVec routeStatusVec;
-
-  int idx(const Via &);
 
   // Nets
   ViaSetVec viaSetVec;

@@ -35,7 +35,8 @@ OglText::OglText(const std::string &fontPath, int fontH, int x, int y)
 void OglText::openGLInit()
 {
   textProgramId_ = createProgram("text.vert", "text.frag");
-  textBackgroundProgramId = createProgram("text_background.vert", "text_background.frag");
+  textBackgroundProgramId =
+    createProgram("text_background.vert", "text_background.frag");
   glGenBuffers(1, &vertexBufId_);
   glGenBuffers(1, &texBufId_);
   glGenTextures(1, &textureId_);
@@ -109,7 +110,8 @@ void OglText::createFreeType(const std::string &fontPath)
     exit(0);
   }
   else if (error) {
-    fmt::print(stderr, "Error: The font file could not be opened, could not be read or is broken\n");
+    fmt::print(stderr,
+               "Error: The font file could not be opened, could not be read or is broken\n");
     exit(0);
   }
 }
@@ -122,7 +124,9 @@ void OglText::createFontTexture()
 {
   int error = FT_Set_Pixel_Sizes(face_, 0, fontH_);
   if (error) {
-    fmt::print(stderr, "Error: Could not set the pixel size. font_h={}\n", fontH_);
+    fmt::print(stderr,
+               "Error: Could not set the pixel size. font_h={}\n",
+               fontH_);
     exit(0);
   }
   std::vector<unsigned char> fontVec;
@@ -137,9 +141,10 @@ void OglText::createFontTexture()
     }
   }
   if (!fitOk) {
-    fmt::print("Error: Unable to fit font into texture. font_h={} MAX_TEXTURE_SIZE_W_H={}\n",
-               fontH_,
-               MAX_TEXTURE_SIZE_W_H);
+    fmt::print(
+      "Error: Unable to fit font into texture. font_h={} MAX_TEXTURE_SIZE_W_H={}\n",
+      fontH_,
+      MAX_TEXTURE_SIZE_W_H);
     exit(0);
   }
 
@@ -148,7 +153,15 @@ void OglText::createFontTexture()
 
   glBindTexture(GL_TEXTURE_2D, textureId_);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, texWH_, texWH_, 0, GL_RED, GL_UNSIGNED_BYTE, &fontVec[0]);
+  glTexImage2D(GL_TEXTURE_2D,
+               0,
+               GL_R8,
+               texWH_,
+               texWH_,
+               0,
+               GL_RED,
+               GL_UNSIGNED_BYTE,
+               &fontVec[0]);
 
 //  fmt::print("Info: New font texture size: {0}x{0}\n", texWH_);
 }
@@ -164,7 +177,9 @@ bool OglText::renderFont(std::vector<unsigned char> &fontVec)
   for (int i = 32; i <= 126; ++i) {
     int error = FT_Load_Char(face_, i, FT_LOAD_RENDER); //  | FT_LOAD_MONOCHROME
     if (error) {
-      fmt::print(stderr, "Warn: Skipping character that couldn't be rendered. ASCII={}\n", i);
+      fmt::print(stderr,
+                 "Warn: Skipping character that couldn't be rendered. ASCII={}\n",
+                 i);
       continue;
     }
 
@@ -186,12 +201,15 @@ bool OglText::renderFont(std::vector<unsigned char> &fontVec)
     // Copy character to font vector.
     for (unsigned int y = 0; y < glyph_bitmap.rows; ++y) {
       for (unsigned int x = 0; x < glyph_bitmap.width; ++x) {
-        fontVec[tex_x + x + (tex_y + y) * texWH_] = glyph_bitmap.buffer[x + y * glyph_bitmap.pitch];
+        fontVec[tex_x + x + (tex_y + y) * texWH_] =
+          glyph_bitmap.buffer[x + y * glyph_bitmap.pitch];
       }
     }
 
-    charMeta_.push_back({tex_x, tex_y, static_cast<int>(glyph_bitmap.width), static_cast<int>(glyph_bitmap.rows),
-                         -slot->bitmap_top, slot->bitmap_left, // Negate Y since FT uses cartesian coords.
+    charMeta_.push_back({tex_x, tex_y, static_cast<int>(glyph_bitmap.width),
+                         static_cast<int>(glyph_bitmap.rows), -slot->bitmap_top,
+                         slot
+                           ->bitmap_left, // Negate Y since FT uses cartesian coords.
                          static_cast<int>(slot->advance.x / FT_SIZE_FACTOR)});
 
     tex_x += glyph_bitmap.width;
@@ -205,7 +223,12 @@ void OglText::drawText(int nLine, const std::string &str)
   drawTextBackground(nLine, str);
   glBindTexture(GL_TEXTURE_2D, textureId_);
   glActiveTexture(GL_TEXTURE0);
-  auto projection = glm::ortho(0.0f, static_cast<float>(windowW_), static_cast<float>(windowH_), 0.0f, 0.0f, 100.0f);
+  auto projection = glm::ortho(0.0f,
+                               static_cast<float>(windowW_),
+                               static_cast<float>(windowH_),
+                               0.0f,
+                               0.0f,
+                               100.0f);
   glUseProgram(textProgramId_);
   GLint projectionId = glGetUniformLocation(textProgramId_, "projection");
   assert(projectionId >= 0);
@@ -251,7 +274,10 @@ void OglText::drawText(int nLine, const std::string &str)
 
   glEnableVertexAttribArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, vertexBufId_);
-  glBufferData(GL_ARRAY_BUFFER, triVec.size() * sizeof(GLfloat), &triVec[0], GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER,
+               triVec.size() * sizeof(GLfloat),
+               &triVec[0],
+               GL_STATIC_DRAW);
   glVertexAttribPointer(0,         // attribute
                         3,         // size
                         GL_FLOAT,  // type
@@ -262,7 +288,10 @@ void OglText::drawText(int nLine, const std::string &str)
 
   glEnableVertexAttribArray(1);
   glBindBuffer(GL_ARRAY_BUFFER, texBufId_);
-  glBufferData(GL_ARRAY_BUFFER, texVec.size() * sizeof(GLfloat), &texVec[0], GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER,
+               texVec.size() * sizeof(GLfloat),
+               &texVec[0],
+               GL_STATIC_DRAW);
   glVertexAttribPointer(1,         // attribute
                         2,         // size
                         GL_FLOAT,  // type
@@ -277,9 +306,15 @@ void OglText::drawText(int nLine, const std::string &str)
 void OglText::drawTextBackground(int nLine, const std::string &str)
 {
   auto strW = calcStringWidth(str);
-  auto projection = glm::ortho(0.0f, static_cast<float>(windowW_), static_cast<float>(windowH_), 0.0f, 0.0f, 100.0f);
+  auto projection = glm::ortho(0.0f,
+                               static_cast<float>(windowW_),
+                               static_cast<float>(windowH_),
+                               0.0f,
+                               0.0f,
+                               100.0f);
   glUseProgram(textBackgroundProgramId);
-  glUniformMatrix4fv(glGetUniformLocation(textBackgroundProgramId, "projection"),
+  glUniformMatrix4fv(glGetUniformLocation(textBackgroundProgramId,
+                                          "projection"),
                      1,
                      GL_FALSE,
                      glm::value_ptr(projection));
@@ -305,7 +340,10 @@ void OglText::drawTextBackground(int nLine, const std::string &str)
 
   glEnableVertexAttribArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, vertexBufId_);
-  glBufferData(GL_ARRAY_BUFFER, triVec.size() * sizeof(GLfloat), &triVec[0], GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER,
+               triVec.size() * sizeof(GLfloat),
+               &triVec[0],
+               GL_STATIC_DRAW);
   glVertexAttribPointer(0,         // attribute
                         3,         // size
                         GL_FLOAT,  // type

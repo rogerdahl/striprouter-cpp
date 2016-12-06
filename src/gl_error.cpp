@@ -20,7 +20,8 @@ void _checkGlError(const char *file, int line)
         break;
       case GL_OUT_OF_MEMORY:error = "OUT_OF_MEMORY";
         break;
-      case GL_INVALID_FRAMEBUFFER_OPERATION:error = "INVALID_FRAMEBUFFER_OPERATION";
+      case GL_INVALID_FRAMEBUFFER_OPERATION:
+        error = "INVALID_FRAMEBUFFER_OPERATION";
         break;
     }
     fmt::print(stderr, "{}: {}:{}\n", error, file, line);

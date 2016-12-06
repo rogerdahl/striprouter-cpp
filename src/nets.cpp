@@ -1,7 +1,9 @@
 #include "nets.h"
 
 Nets::Nets(Solution &_solution)
-  : solution_(_solution), setIdxVec_(_solution.setIdxVec), viaSetVec_(_solution.viaSetVec)
+  : solution_(_solution),
+    setIdxVec_(_solution.setIdxVec),
+    viaSetVec_(_solution.viaSetVec)
 {
   setIdxVec_ = SetIdxVec(solution_.gridW * solution_.gridH, -1);
 }
@@ -78,9 +80,11 @@ int Nets::createViaSet()
   viaSetVec_.push_back(ViaSet([](const Via &a, const Via &b) -> bool
                               {
                                 return std::lexicographical_compare(a.data(),
-                                                                    a.data() + a.size(),
+                                                                    a.data() + a
+                                                                      .size(),
                                                                     b.data(),
-                                                                    b.data() + b.size());
+                                                                    b.data() + b
+                                                                      .size());
                               }));
   return static_cast<int>(viaSetVec_.size()) - 1;
 }

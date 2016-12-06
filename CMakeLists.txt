@@ -123,6 +123,7 @@ set(SOURCE_FILES
   ${SOURCE_DIR}/shader.cpp
   ${SOURCE_DIR}/solution.cpp
   ${SOURCE_DIR}/status.cpp
+  ${SOURCE_DIR}/thread_stop.cpp
   ${SOURCE_DIR}/ucs.cpp
   ${SOURCE_DIR}/utils.cpp
   ${SOURCE_DIR}/via.cpp
@@ -181,5 +182,7 @@ set(FONT_SRC ${CMAKE_SOURCE_DIR}/fonts)
 set(FONT_DST ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/fonts)
 file(MAKE_DIRECTORY ${FONT_DST})
 configure_file(${FONT_SRC}/LiberationMono-Regular.ttf ${FONT_DST} COPYONLY)
+configure_file(${FONT_SRC}/Roboto-Black.ttf ${FONT_DST} COPYONLY)
+configure_file(${FONT_SRC}/Roboto-Regular.ttf ${FONT_DST} COPYONLY)
 
 add_executable(striprouter ${SOURCE_FILES})

@@ -56,8 +56,9 @@ bool save_screenshot(std::string filename, int w, int h)
   }
   unsigned char TGAheader[12] = {0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   unsigned char header[6] =
-    {static_cast<unsigned char>(w % 256), static_cast<unsigned char>(w / 256), static_cast<unsigned char>(h % 256),
-     static_cast<unsigned char>(h / 256), static_cast<unsigned char>(24), static_cast<unsigned char>(0)};
+    {static_cast<unsigned char>(w % 256), static_cast<unsigned char>(w / 256),
+     static_cast<unsigned char>(h % 256), static_cast<unsigned char>(h / 256),
+     static_cast<unsigned char>(24), static_cast<unsigned char>(0)};
   // We write the headers
   fwrite(TGAheader, sizeof(unsigned char), 12, filePtr);
   fwrite(header, sizeof(unsigned char), 6, filePtr);
@@ -78,7 +79,12 @@ void showTexture(int windowW, int windowH, GLuint textureId)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glActiveTexture(GL_TEXTURE0);
 
-  auto projection = glm::ortho(0.0f, static_cast<float>(windowW), static_cast<float>(windowH), 0.0f, 0.0f, 100.0f);
+  auto projection = glm::ortho(0.0f,
+                               static_cast<float>(windowW),
+                               static_cast<float>(windowH),
+                               0.0f,
+                               0.0f,
+                               100.0f);
 //    auto projection = glm::ortho(0.0f, static_cast<float>(1024), static_cast<float>(1024),
 //                                       0.0f, 0.0f, 100.0f);
 
@@ -114,7 +120,10 @@ void showTexture(int windowW, int windowH, GLuint textureId)
   GLuint vertexBufId;
   glGenBuffers(1, &vertexBufId);
   glBindBuffer(GL_ARRAY_BUFFER, vertexBufId);
-  glBufferData(GL_ARRAY_BUFFER, triVec.size() * sizeof(GLfloat), &triVec[0], GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER,
+               triVec.size() * sizeof(GLfloat),
+               &triVec[0],
+               GL_STATIC_DRAW);
   glVertexAttribPointer(0,         // attribute
                         3,         // size
                         GL_FLOAT,  // type
@@ -128,7 +137,10 @@ void showTexture(int windowW, int windowH, GLuint textureId)
   GLuint texBufId;
   glGenBuffers(1, &texBufId);
   glBindBuffer(GL_ARRAY_BUFFER, texBufId);
-  glBufferData(GL_ARRAY_BUFFER, texVec.size() * sizeof(GLfloat), &texVec[0], GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER,
+               texVec.size() * sizeof(GLfloat),
+               &texVec[0],
+               GL_STATIC_DRAW);
 
   glVertexAttribPointer(1,         // attribute
                         2,         // size

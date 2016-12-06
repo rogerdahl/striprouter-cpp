@@ -58,7 +58,8 @@ ViaLayer::ViaLayer(const ViaLayerCost &viaLayerCost)
 
 bool operator<(const ViaLayer &l, const ViaLayer &r)
 {
-  return std::tie(l.via.x(), l.via.y(), l.isWireLayer) < std::tie(r.via.x(), r.via.y(), r.isWireLayer);
+  return std::tie(l.via.x(), l.via.y(), l.isWireLayer)
+    < std::tie(r.via.x(), r.via.y(), r.isWireLayer);
 }
 
 bool operator>(const ViaLayer &l, const ViaLayer &r)
@@ -119,7 +120,8 @@ ViaLayerCost::ViaLayerCost(int xIn, int yIn, bool isWireLayerIn, int costIn)
 
 bool operator<(const ViaLayerCost &l, const ViaLayerCost &r)
 {
-  return std::tie(l.cost, l.via.x(), l.via.y(), l.isWireLayer) > std::tie(r.cost, r.via.x(), r.via.y(), r.isWireLayer);
+  return std::tie(l.cost, l.via.x(), l.via.y(), l.isWireLayer)
+    > std::tie(r.cost, r.via.x(), r.via.y(), r.isWireLayer);
 }
 
 //
@@ -144,7 +146,8 @@ ViaLayerStartEnd::ViaLayerStartEnd()
 {
 }
 
-ViaLayerStartEnd::ViaLayerStartEnd(const ViaLayer &startIn, const ViaLayer &endIn)
+ViaLayerStartEnd::ViaLayerStartEnd(const ViaLayer &startIn,
+                                   const ViaLayer &endIn)
   : start(startIn), end(endIn)
 {
 }

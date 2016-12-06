@@ -18,7 +18,8 @@
 const float PI_F = static_cast<float>(M_PI);
 const int NUM_VIA_TRIANGLES = 6;
 const int CIRCUIT_FONT_SIZE = 12;
-const char *CIRCUIT_FONT_PATH = "./fonts/Roboto-Black.ttf";
+//const char *CIRCUIT_FONT_PATH = "./fonts/Roboto-Black.ttf";
+const char *CIRCUIT_FONT_PATH = "./fonts/Roboto-Regular.ttf";
 const int NOTATION_FONT_SIZE = 10;
 const float STRIP_WIDTH_PIXELS = 10.0f;
 const float STRIP_GAP_PIXELS = 2.0f;
@@ -26,9 +27,9 @@ const float VIA_RADIUS_PIXELS = 2.5f;
 const float WIRE_WIDTH_PIXELS = 1.5f;
 const float SET_DIM = 0.3f;
 
-
 Render::Render(float zoom)
-  : oglText_(OglText(CIRCUIT_FONT_PATH, static_cast<int>(CIRCUIT_FONT_SIZE * zoom))),
+  : oglText_(OglText(CIRCUIT_FONT_PATH,
+                     static_cast<int>(CIRCUIT_FONT_SIZE * zoom))),
     notations_(OglText(CIRCUIT_FONT_PATH, NOTATION_FONT_SIZE)),
     zoom_(zoom),
     fillProgramId_(0),
@@ -63,7 +64,12 @@ void Render::draw(Solution &solution,
   boardDragOffset_ = boardDragOffset;
   mouseScreenPos_ = mouseScreenPos;
 
-  auto projection = glm::ortho(0.0f, static_cast<float>(windowW), static_cast<float>(windowH), 0.0f, 0.0f, 100.0f);
+  auto projection = glm::ortho(0.0f,
+                               static_cast<float>(windowW),
+                               static_cast<float>(windowH),
+                               0.0f,
+                               0.0f,
+                               100.0f);
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glUseProgram(fillProgramId_);
@@ -73,7 +79,11 @@ void Render::draw(Solution &solution,
 
   if (zoom != zoom_) {
     zoom_ = zoom;
-    oglText_.reset(windowW, windowH, 0, 0, static_cast<int>(CIRCUIT_FONT_SIZE * zoom));
+    oglText_.reset(windowW,
+                   windowH,
+                   0,
+                   0,
+                   static_cast<int>(CIRCUIT_FONT_SIZE * zoom));
   }
 
   drawSolutionUsedStripboard();
@@ -83,22 +93,27 @@ void Render::draw(Solution &solution,
   if (solution_->hasError) {
     drawDiag();
   }
+  drawBorder();
 }
 
-Pos Render::boardToScreenCoord(const Pos &boardCoord) const
+Pos Render::boardToScreenPos(const Pos &boardPos) const
 {
-  return boardCoord * viaSpaceScreenPixels() + centerOffsetScreenPixels();
+  return boardPos * viaSpaceScreenPixels() + centerOffsetScreenPixels();
 }
 
-Pos Render::screenToBoardCoord(const Pos &screenCoord) const
+Pos Render::screenToBoardPos(const Pos &screenPos) const
 {
-  return (screenCoord - centerOffsetScreenPixels()) / viaSpaceScreenPixels();
+  return (screenPos - centerOffsetScreenPixels()) / viaSpaceScreenPixels();
 }
 
 Pos Render::centerOffsetScreenPixels() const
 {
-  auto p = Pos(windowW_ / 2.0f - solution_->gridW * viaSpaceScreenPixels() / 2.0f + boardDragOffset_.x(),
-             windowH_ / 2.0f - solution_->gridH * viaSpaceScreenPixels() / 2.0f + boardDragOffset_.y());
+//  fmt::print("windowW_ {}  solution_->gridW  {}  viaSpaceScreenPixels()  {}  boardDragOffset_.x()  {}\n", windowW_, solution_->gridW, viaSpaceScreenPixels(), boardDragOffset_.x());
+  auto p = Pos(
+    windowW_ / 2.0f - solution_->gridW * viaSpaceScreenPixels() / 2.0f
+      + boardDragOffset_.x(),
+    windowH_ / 2.0f - solution_->gridH * viaSpaceScreenPixels() / 2.0f
+      + boardDragOffset_.y());
 //  fmt::print("centerOffsetScreenPixels() {},{}\n", p.x(), p.y());
   return p;
 }
@@ -116,9 +131,11 @@ float Render::viaSpaceScreenPixels() const
 
 ViaValid Render::getMouseVia()
 {
-  Pos mouseBoardPos = screenToBoardCoord(mouseScreenPos_);
-  Via v = Via(static_cast<int>(mouseBoardPos.x() + 0.5f), static_cast<int>(mouseBoardPos.y() + 0.5f));
-  if (v.x() >= 0 && v.y() >= 0 && v.x() < solution_->gridW && v.y() < solution_->gridH) {
+  Pos mouseBoardPos = screenToBoardPos(mouseScreenPos_);
+  Via v = Via(static_cast<int>(mouseBoardPos.x() + 0.5f),
+              static_cast<int>(mouseBoardPos.y() + 0.5f));
+  if (v.x() >= 0 && v.y() >= 0 && v.x() < solution_->gridW
+    && v.y() < solution_->gridH) {
     return ViaValid(v, true);
   }
   else {
@@ -170,7 +187,6 @@ void Render::drawStripboardSection(const ViaStartEnd &viaStartEnd)
   // Vias
   for (int y = y1; y <= y2; ++y) {
     addFilledCircle(Pos(viaStartEnd.start.x(), y), VIA_RADIUS_PIXELS);
-//      drawFilledCircle(center, VIA_RADIUS_PIXELS, RGBA(0, 0, 0, 1));
   }
   drawAllFilledCircle(RGBA(0, 0, 0, 1));
 }
@@ -181,14 +197,16 @@ void Render::drawCircuit()
   for (auto ci : solution_->circuit.componentNameToInfoMap) {
     auto &componentName = ci.first;
 //    auto& componentInfo = ci.second;
-    auto footprint = const_cast<Solution &>(*solution_).circuit.calcComponentFootprint(componentName);
+    auto footprint = const_cast<Solution &>(*solution_).circuit
+      .calcComponentFootprint(componentName);
     // Component outline
     auto start = footprint.start.cast<float>() - 0.5f;
     auto end = footprint.end.cast<float>() + 0.5f;
-    drawFilledRectangle(start, end, RGBA(0, 0, 0, 0.5f));
+    drawFilledRectangle(start, end, RGBA(0, 0, 0, 0.4f));
     // Component pins
     bool isPin0 = true;
-    for (auto pinVia : const_cast<Solution &>(*solution_).circuit.calcComponentPins(componentName)) {
+    for (auto pinVia : const_cast<Solution &>(*solution_).circuit
+      .calcComponentPins(componentName)) {
       if (isPin0) {
         isPin0 = false;
         auto start = pinVia.cast<float>() - .25f;
@@ -203,8 +221,9 @@ void Render::drawCircuit()
     // Component name
     int stringWidth = oglText_.calcStringWidth(componentName);
     int stringHeight = oglText_.getStringHeight();
-    Pos txtCenterB(start.x() + (end.x() - start.x()) / 2.0f, start.y() + (end.y() - start.y()) / 2.0f);
-    auto txtCenterS = boardToScreenCoord(txtCenterB);
+    Pos txtCenterB(start.x() + (end.x() - start.x()) / 2.0f,
+                   start.y() + (end.y() - start.y()) / 2.0f);
+    auto txtCenterS = boardToScreenPos(txtCenterB);
     oglText_.reset(windowW_,
                    windowH_,
                    txtCenterS.x() - stringWidth / 2.0f,
@@ -212,6 +231,18 @@ void Render::drawCircuit()
                    static_cast<int>(CIRCUIT_FONT_SIZE * zoom_));
     oglText_.print(0, componentName);
   }
+}
+
+void Render::drawBorder()
+{
+  Pos start = Pos(0, 0) - 0.5f;
+  Pos end = Pos(solution_->gridW - 1, solution_->gridH - 1) + 0.5f;
+  RGBA rgba(0, 0, 0, 1);
+  float radius = 1.2f;
+  drawThickLine(Pos(start.x(), start.y()), Pos(end.x(), start.y()), radius, rgba);
+  drawThickLine(Pos(start.x(), start.y()), Pos(start.x(), end.y()), radius, rgba);
+  drawThickLine(Pos(end.x(), start.y()), Pos(end.x(), end.y()), radius, rgba);
+  drawThickLine(Pos(start.x(), end.y()), Pos(end.x(), end.y()), radius, rgba);
 }
 
 void Render::drawInputConnections(bool onlyFailed)
@@ -224,17 +255,18 @@ void Render::drawInputConnections(bool onlyFailed)
     // If there is no routeStatusVec, the input solution is being rendered, and we draw all
     // lines in blue.
     if (!s.size()) {
-      rgba = RGBA(0, .392f, .784f, 1.0f); // blue
+      rgba = RGBA(0, .392f, .784f, 0.5f); // blue
     }
     else {
       if (s[i++]) {
         if (onlyFailed) {
           continue;
         }
-        rgba = RGBA(0, .196f, .392f, 1.0f); // dark blue
+//        rgba = RGBA(0, .196f, .392f, 0.5f); // dark blue
+        rgba = RGBA(0, .392f, .784f, 0.5f); // blue
       }
       else {
-        rgba = RGBA(.784f, .392f, 0, 1.0f); // orange
+        rgba = RGBA(.784f, .3f, 0, 0.5f); // orange
       }
     }
     drawThickLine(c.start.cast<float>(), c.end.cast<float>(), 1.0f, rgba);
@@ -258,7 +290,10 @@ void Render::drawSolutionUsedWires()
         if (mouseNet.size() && mouseNet.count(section.start.via)) {
           rgba = RGBA(0.5f, 0.5f, 0.5f, 0.7f);
         }
-        drawThickLine(section.start.via.cast<float>(), section.end.via.cast<float>(), WIRE_WIDTH_PIXELS, rgba);
+        drawThickLine(section.start.via.cast<float>(),
+                      section.end.via.cast<float>(),
+                      WIRE_WIDTH_PIXELS,
+                      rgba);
       }
     }
   }
@@ -318,17 +353,22 @@ void Render::drawDiag()
   }
   // Draw start and end positions if set.
   if (solution_->diagStartVia.isValid) {
-    drawFilledCircle(solution_->diagStartVia.via.cast<float>(), 1.5, RGBA(1, 1, 1, 1));
+    drawFilledCircle(solution_->diagStartVia.via.cast<float>(),
+                     1.5,
+                     RGBA(1, 1, 1, 1));
     printNotation(solution_->diagStartVia.via.cast<float>(), 0, "start");
   }
   if (solution_->diagEndVia.isValid) {
-    drawFilledCircle(solution_->diagEndVia.via.cast<float>(), 1.5, RGBA(1, 1, 1, 1));
+    drawFilledCircle(solution_->diagEndVia.via.cast<float>(),
+                     1.5,
+                     RGBA(1, 1, 1, 1));
     printNotation(solution_->diagEndVia.via.cast<float>(), 0, "end");
   }
   // Draw wire jump labels
   for (int y = 0; y < solution_->gridH; ++y) {
     for (int x = 0; x < solution_->gridW; ++x) {
-      auto &wireToVia = solution_->diagTraceVec[solution_->idx(Via(x, y))].wireToVia;
+      auto &wireToVia =
+        solution_->diagTraceVec[solution_->idx(Via(x, y))].wireToVia;
       if (wireToVia.isValid) {
         printNotation(Pos(x, y), 0, fmt::format("->{}", str(wireToVia.via)));
       }
@@ -350,18 +390,31 @@ void Render::drawDiag()
     auto idx = solution_->idx(v.via);
     printNotation(mouseScreenPos_, nLine++, fmt::format("{}", str(v.via)));
     const auto &viaCost = solution_->diagCostVec[idx];
-    printNotation(mouseScreenPos_, nLine++, fmt::format("wireCost: {}", viaCost.wireCost));
-    printNotation(mouseScreenPos_, nLine++, fmt::format("stripCost: {}", viaCost.stripCost));
+    printNotation(mouseScreenPos_,
+                  nLine++,
+                  fmt::format("wireCost: {}", viaCost.wireCost));
+    printNotation(mouseScreenPos_,
+                  nLine++,
+                  fmt::format("stripCost: {}", viaCost.stripCost));
     const auto &viaTrace = solution_->diagTraceVec[idx];
-    printNotation(mouseScreenPos_, nLine++, fmt::format("wireBlocked: {}", viaTrace.isWireSideBlocked));
+    printNotation(mouseScreenPos_,
+                  nLine++,
+                  fmt::format("wireBlocked: {}", viaTrace.isWireSideBlocked));
     // Nets
     printNotation(mouseScreenPos_, nLine++, fmt::format(""));
     auto setIdxSize = solution_->setIdxVec.size();
-    printNotation(mouseScreenPos_, nLine++, fmt::format("setIdxSize: {}", setIdxSize));
+    printNotation(mouseScreenPos_,
+                  nLine++,
+                  fmt::format("setIdxSize: {}", setIdxSize));
     if (setIdxSize) {
       auto setIdx = solution_->setIdxVec[idx];
-      printNotation(mouseScreenPos_, nLine++, fmt::format("setIdx: {}", setIdx));
-      printNotation(mouseScreenPos_, nLine++, fmt::format("setSize: {}", solution_->viaSetVec[setIdx].size()));
+      printNotation(mouseScreenPos_,
+                    nLine++,
+                    fmt::format("setIdx: {}", setIdx));
+      printNotation(mouseScreenPos_,
+                    nLine++,
+                    fmt::format("setSize: {}",
+                                solution_->viaSetVec[setIdx].size()));
     }
   }
 }
@@ -369,17 +422,22 @@ void Render::drawDiag()
 // Print small notations using board coordinates. Used for debugging.
 void Render::printNotation(Pos boardPos, int nLine, std::string msg)
 {
-  auto screenPos = boardToScreenCoord(boardPos);
-  notations_.reset(windowW_, windowH_, screenPos.x() + 5, screenPos.y() + 5, NOTATION_FONT_SIZE);
+  auto screenPos = boardToScreenPos(boardPos);
+  notations_.reset(windowW_,
+                   windowH_,
+                   screenPos.x() + 5,
+                   screenPos.y() + 5,
+                   NOTATION_FONT_SIZE);
   notations_.print(nLine, msg);
 }
 
-void Render::drawFilledRectangle(const Pos &start, const Pos &end, const RGBA &rgba)
+void
+Render::drawFilledRectangle(const Pos &start, const Pos &end, const RGBA &rgba)
 {
   setColor(rgba);
   std::vector<GLfloat> triVec;
-  auto startS = boardToScreenCoord(start);
-  auto endS = boardToScreenCoord(end);
+  auto startS = boardToScreenPos(start);
+  auto endS = boardToScreenPos(end);
   triVec.insert(triVec.end(), {startS.x(), startS.y(), 0.0f});
   triVec.insert(triVec.end(), {endS.x(), endS.y(), 0.0f});
   triVec.insert(triVec.end(), {startS.x(), endS.y(), 0.0f});
@@ -388,7 +446,10 @@ void Render::drawFilledRectangle(const Pos &start, const Pos &end, const RGBA &r
   triVec.insert(triVec.end(), {endS.x(), endS.y(), 0.0f});
   glEnableVertexAttribArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, vertexBufId_);
-  glBufferData(GL_ARRAY_BUFFER, triVec.size() * sizeof(GLfloat), &triVec[0], GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER,
+               triVec.size() * sizeof(GLfloat),
+               &triVec[0],
+               GL_DYNAMIC_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
 }
@@ -398,20 +459,25 @@ void Render::drawFilledCircle(const Pos &center, float radius, const RGBA &rgba)
   setColor(rgba);
   radius *= zoom_;
   int numViaTriangles = static_cast<int>(NUM_VIA_TRIANGLES * zoom_);
-  auto centerS = boardToScreenCoord(center);
+  auto centerS = boardToScreenPos(center);
   std::vector<GLfloat> triVec;
   for (int i = 0; i <= numViaTriangles; ++i) {
     float x1 = centerS.x() + (radius * cosf(i * 2.0f * PI_F / numViaTriangles));
     float y1 = centerS.y() + (radius * sinf(i * 2.0f * PI_F / numViaTriangles));
-    float x2 = centerS.x() + (radius * cosf((i + 1) * 2.0f * PI_F / numViaTriangles));
-    float y2 = centerS.y() + (radius * sinf((i + 1) * 2.0f * PI_F / numViaTriangles));
+    float x2 =
+      centerS.x() + (radius * cosf((i + 1) * 2.0f * PI_F / numViaTriangles));
+    float y2 =
+      centerS.y() + (radius * sinf((i + 1) * 2.0f * PI_F / numViaTriangles));
     triVec.insert(triVec.end(), {centerS.x(), centerS.y(), 0.0f});
     triVec.insert(triVec.end(), {x1, y1, 0.0f});
     triVec.insert(triVec.end(), {x2, y2, 0.0f});
   }
   glEnableVertexAttribArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, vertexBufId_);
-  glBufferData(GL_ARRAY_BUFFER, triVec.size() * sizeof(GLfloat), &triVec[0], GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER,
+               triVec.size() * sizeof(GLfloat),
+               &triVec[0],
+               GL_DYNAMIC_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
 }
@@ -420,12 +486,14 @@ void Render::addFilledCircle(const Pos &center, float radius)
 {
   radius *= zoom_;
   int numViaTriangles = static_cast<int>(NUM_VIA_TRIANGLES * zoom_);
-  auto centerS = boardToScreenCoord(center);
+  auto centerS = boardToScreenPos(center);
   for (int i = 0; i <= numViaTriangles; ++i) {
     float x1 = centerS.x() + (radius * cosf(i * 2.0f * PI_F / numViaTriangles));
     float y1 = centerS.y() + (radius * sinf(i * 2.0f * PI_F / numViaTriangles));
-    float x2 = centerS.x() + (radius * cosf((i + 1) * 2.0f * PI_F / numViaTriangles));
-    float y2 = centerS.y() + (radius * sinf((i + 1) * 2.0f * PI_F / numViaTriangles));
+    float x2 =
+      centerS.x() + (radius * cosf((i + 1) * 2.0f * PI_F / numViaTriangles));
+    float y2 =
+      centerS.y() + (radius * sinf((i + 1) * 2.0f * PI_F / numViaTriangles));
     triVec.insert(triVec.end(), {centerS.x(), centerS.y(), 0.0f});
     triVec.insert(triVec.end(), {x1, y1, 0.0f});
     triVec.insert(triVec.end(), {x2, y2, 0.0f});
@@ -437,36 +505,48 @@ void Render::drawAllFilledCircle(const RGBA &rgba)
   setColor(rgba);
   glEnableVertexAttribArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, vertexBufId_);
-  glBufferData(GL_ARRAY_BUFFER, triVec.size() * sizeof(GLfloat), &triVec[0], GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER,
+               triVec.size() * sizeof(GLfloat),
+               &triVec[0],
+               GL_DYNAMIC_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
   triVec.clear();
 }
 
-void Render::drawThickLine(const Pos &start, const Pos &end, float radius, const RGBA &rgba)
+void Render::drawThickLine(const Pos &start,
+                           const Pos &end,
+                           float radius,
+                           const RGBA &rgba)
 {
   drawFilledCircle(start, radius, rgba);
   drawFilledCircle(end, radius, rgba);
   radius *= zoom_;
   float t1 = radius * 2;
   float t2 = radius * 2;
-  auto startS = boardToScreenCoord(start);
-  auto endS = boardToScreenCoord(end);
+  auto startS = boardToScreenPos(start);
+  auto endS = boardToScreenPos(end);
   float angle = atan2(endS.y() - startS.y(), endS.x() - startS.x());
   float t2sina1 = t1 / 2 * sin(angle);
   float t2cosa1 = t1 / 2 * cos(angle);
   float t2sina2 = t2 / 2 * sin(angle);
   float t2cosa2 = t2 / 2 * cos(angle);
   std::vector<GLfloat> triVec;
-  triVec.insert(triVec.end(), {startS.x() + t2sina1, startS.y() - t2cosa1, 0.0f});
+  triVec
+    .insert(triVec.end(), {startS.x() + t2sina1, startS.y() - t2cosa1, 0.0f});
   triVec.insert(triVec.end(), {endS.x() + t2sina2, endS.y() - t2cosa2, 0.0f});
   triVec.insert(triVec.end(), {endS.x() - t2sina2, endS.y() + t2cosa2, 0.0f});
   triVec.insert(triVec.end(), {endS.x() - t2sina2, endS.y() + t2cosa2, 0.0f});
-  triVec.insert(triVec.end(), {startS.x() - t2sina1, startS.y() + t2cosa1, 0.0f});
-  triVec.insert(triVec.end(), {startS.x() + t2sina1, startS.y() - t2cosa1, 0.0f});
+  triVec
+    .insert(triVec.end(), {startS.x() - t2sina1, startS.y() + t2cosa1, 0.0f});
+  triVec
+    .insert(triVec.end(), {startS.x() + t2sina1, startS.y() - t2cosa1, 0.0f});
   glEnableVertexAttribArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, vertexBufId_);
-  glBufferData(GL_ARRAY_BUFFER, triVec.size() * sizeof(GLfloat), &triVec[0], GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER,
+               triVec.size() * sizeof(GLfloat),
+               &triVec[0],
+               GL_DYNAMIC_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
 }

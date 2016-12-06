@@ -26,8 +26,8 @@ public:
             const Pos &boardDragOffset,
             const Pos &mouseScreenPos,
             bool showInputBool);
-  Pos boardToScreenCoord(const Pos &boardCoord) const;
-  Pos screenToBoardCoord(const Pos &screenCoord) const;
+  Pos boardToScreenPos(const Pos &boardPos) const;
+  Pos screenToBoardPos(const Pos &screenPos) const;
   Pos centerOffsetScreenPixels() const;
   float viaSpaceScreenPixels() const;
 
@@ -39,6 +39,7 @@ private:
   void drawSolutionUsedWires();
   void drawStripboardSection(const ViaStartEnd &viaStartEnd);
   void drawCircuit();
+  void drawBorder();
   void drawInputConnections(bool onlyFailed);
   void drawDiag();
   void drawFilledRectangle(const Pos &start, const Pos &end, const RGBA &);
@@ -47,7 +48,8 @@ private:
   void addFilledCircle(const Pos &center, float radius);
   void drawAllFilledCircle(const RGBA &rgba);
 
-  void drawThickLine(const Pos &start, const Pos &end, float radius, const RGBA &);
+  void
+  drawThickLine(const Pos &start, const Pos &end, float radius, const RGBA &);
   void setColor(const RGBA &);
 
   void printNotation(Pos p, int nLine, std::string msg);

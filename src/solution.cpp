@@ -1,9 +1,8 @@
 #include "solution.h"
 
-
-Solution::Solution(int _gridW, int _gridH)
-  : gridW(_gridW),
-    gridH(_gridH),
+Solution::Solution()
+  : gridW(0),
+    gridH(0),
     totalCost(0),
     numCompletedRoutes(0),
     numFailedRoutes(0),
@@ -12,6 +11,18 @@ Solution::Solution(int _gridW, int _gridH)
     hasError(false)
 {
 }
+
+//Solution::Solution(int _gridW, int _gridH)
+//  : gridW(_gridW),
+//    gridH(_gridH),
+//    totalCost(0),
+//    numCompletedRoutes(0),
+//    numFailedRoutes(0),
+//    numShortcuts(0),
+//    isReady(false),
+//    hasError(false)
+//{
+//}
 
 Solution::~Solution()
 {
@@ -32,6 +43,8 @@ void Solution::copy(const Solution &s)
 {
   circuit = s.circuit;
   settings = s.settings;
+  gridW = s.gridW;
+  gridH = s.gridH;
   totalCost = s.totalCost;
   numCompletedRoutes = s.numCompletedRoutes;
   numFailedRoutes = s.numFailedRoutes;

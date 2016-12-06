@@ -17,10 +17,13 @@ void compileAndCheckShader(const char *path, GLuint shaderId);
 void printInfoLog(GLuint shaderId, bool isShader);
 std::string loadFile(const char *path);
 
-GLuint createProgram(const char *vertexShaderFileName, const char *fragmentShaderFileName)
+GLuint createProgram(const char *vertexShaderFileName,
+                     const char *fragmentShaderFileName)
 {
-  boost::filesystem::path vertexShaderPath = SHADERS_DIR_PATH / vertexShaderFileName;
-  boost::filesystem::path fragmentShaderPath = SHADERS_DIR_PATH / fragmentShaderFileName;
+  boost::filesystem::path
+    vertexShaderPath = SHADERS_DIR_PATH / vertexShaderFileName;
+  boost::filesystem::path
+    fragmentShaderPath = SHADERS_DIR_PATH / fragmentShaderFileName;
 
 //  GLFWwindow* window = glfwGetCurrentContext();
 

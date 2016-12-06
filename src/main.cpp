@@ -10,7 +10,6 @@
 #include <chrono>
 #include <climits>
 #include <cstdio>
-#include <ctime>
 #include <iostream>
 #include <mutex>
 #include <thread>
@@ -32,21 +31,21 @@
 
 int windowW = 1920 / 2;
 int windowH = 1080 - 200;
+//int windowW = 1920;
+//int windowH = 1080;
 //int windowW = 500;
 //int windowH = 500;
 
-const int GRID_W = 60;
-const int GRID_H = 60;
-
 //const char *DIAG_FONT_PATH = "./fonts/LiberationMono-Regular.ttf";
-const char *DIAG_FONT_PATH = "./fonts/Roboto-Black.ttf";
+//const char *DIAG_FONT_PATH = "./fonts/Roboto-Black.ttf";
+const char *DIAG_FONT_PATH = "./fonts/Roboto-Regular.ttf";
 const int DIAG_FONT_SIZE = 12;
 const int DRAG_FONT_SIZE = 12;
 
 const float ZOOM_MOUSE_WHEEL_STEP = 0.1f;
 const float ZOOM_MIN = -2.0f;
 const float ZOOM_MAX = 4.0f;
-const float ZOOM_DEF = 0.3f;
+const float ZOOM_DEF = 0.35f;
 
 averageSec averageRendering;
 static bool showInputBool = false;
@@ -58,9 +57,9 @@ OglText oglText(DIAG_FONT_PATH, DIAG_FONT_SIZE);
 Render render(zoom);
 std::string formatTotalCost(int totalCost);
 
-Solution inputSolution(GRID_W, GRID_H);
-Solution bestSolution(GRID_W, GRID_H);
-Solution currentSolution(GRID_W, GRID_H);
+Solution inputSolution;
+Solution bestSolution;
+Solution currentSolution;
 
 Status status;
 
@@ -76,24 +75,22 @@ void resetBestSolution();
 
 // Router threads
 std::vector<std::thread> routerThreadVec(N_ROUTER_THREADS);
-std::mutex stopRouterThreadMutex;
+ThreadStop threadStopRouter;
 void stopRouterThreads();
-bool isRouterStopRequested();
 void routerThread();
 void launchRouterThreads();
 
 // Parser thread
 std::thread parserThreadObj;
-std::mutex stopParserThreadMutex;
+ThreadStop threadStopParser;
 void stopParserThread();
-bool isParserStopRequested();
 void parserThread();
 void launchParserThread();
 
 // Drag / drop
 bool dragComponentIsActive = false;
 bool dragBoardIsActive = false;
-Pos dragStartCoord;
+Pos dragStartPos;
 Pos dragBoardOffset;
 Pos dragPin0BoardOffset;
 std::string dragComponentName;
@@ -106,9 +103,18 @@ class Application: public nanogui::Screen
 {
 public:
   Application()
-    : nanogui::Screen(Eigen::Vector2i(windowW, windowH), "Stripboard Autorouter",
+    : nanogui::Screen(Eigen::Vector2i(windowW, windowH),
+                      "Stripboard Autorouter",
     // resizable, fullscreen, colorBits, alphaBits, depthBits, stencilBits, nSamples, glMajor, glMinor
-                      true, false, 8, 8, 24, 8, 4, 3, 3)
+                      true,
+                      false,
+                      8,
+                      8,
+                      24,
+                      8,
+                      4,
+                      3,
+                      3)
   {
     GLuint mTextureId;
     glGenTextures(1, &mTextureId);
@@ -140,9 +146,14 @@ public:
     // Main grid window
     auto window = new nanogui::Window(this, "Router");
     window->setPosition(Vector2i(windowW - 400, windowH - 300));
-    nanogui::GridLayout
-      *layout = new nanogui::GridLayout(nanogui::Orientation::Horizontal, 2, nanogui::Alignment::Middle, 15, 5);
-    layout->setColAlignment({nanogui::Alignment::Maximum, nanogui::Alignment::Fill});
+    nanogui::GridLayout *layout =
+      new nanogui::GridLayout(nanogui::Orientation::Horizontal,
+                              2,
+                              nanogui::Alignment::Middle,
+                              15,
+                              5);
+    layout->setColAlignment({nanogui::Alignment::Maximum,
+                             nanogui::Alignment::Fill});
     layout->setSpacing(0, 10);
     window->setLayout(layout);
 
@@ -259,7 +270,10 @@ public:
       new nanogui::Label(window, "Zoom:", "sans-bold");
 
       nanogui::Widget *panel = new nanogui::Widget(window);
-      panel->setLayout(new nanogui::BoxLayout(nanogui::Orientation::Horizontal, nanogui::Alignment::Middle, 0, 5));
+      panel->setLayout(new nanogui::BoxLayout(nanogui::Orientation::Horizontal,
+                                              nanogui::Alignment::Middle,
+                                              0,
+                                              5));
 
       nanogui::Slider *slider = new nanogui::Slider(panel);
       slider->setValue(zoom / 4.0f);
@@ -271,7 +285,8 @@ public:
       textBox->setUnits("%");
       slider->setCallback([textBox](float value)
                           {
-                            textBox->setValue(std::to_string((int) (value * 200)));
+                            textBox
+                              ->setValue(std::to_string((int) (value * 200)));
                             ::zoom = value * 4.0f;
                           });
 //      slider->setFinalCallback([&](float value) {
@@ -294,18 +309,21 @@ public:
 
   // Could not get NanoGUI mouseDragEvent to trigger so rolling my own.
   // See NanoGUI src/window.cpp for example mouseDragEvent handler.
-  virtual bool mouseButtonEvent(const Vector2i &p, int button, bool down, int modifiers)
+  virtual bool
+  mouseButtonEvent(const Vector2i &p, int button, bool down, int modifiers)
   {
     if (nanogui::Widget::mouseButtonEvent(p, button, down, modifiers)) {
       // Event was handled by NanoGUI.
       return true;
     }
     if (down) {
-      dragStartCoord = mouseScreenPos - dragBoardOffset;
+      dragStartPos = mouseScreenPos - dragBoardOffset;
       std::string componentName;
       {
         auto lock = inputSolution.scope_lock();
-        componentName = getComponentAtMouseCoordinate(render, inputSolution.circuit, mouseBoardPos);
+        componentName = getComponentAtMouseCoordinate(render,
+                                                      inputSolution.circuit,
+                                                      mouseBoardPos);
       }
       if (componentName != "") {
         // Start component drag
@@ -313,7 +331,9 @@ public:
         dragComponentName = componentName;
         {
           auto lock = inputSolution.scope_lock();
-          auto pin0BoardPos = inputSolution.circuit.componentNameToInfoMap[componentName].pin0AbsCoord.cast<float>();
+          auto pin0BoardPos =
+            inputSolution.circuit.componentNameToInfoMap[componentName]
+              .pin0AbsPos.cast<float>();
           dragPin0BoardOffset = mouseBoardPos - pin0BoardPos;
         }
       }
@@ -364,17 +384,22 @@ public:
   virtual void drawContents()
   {
     mouseScreenPos = mousePos().cast<float>();
-    glfwGetWindowSize(glfwWindow(), reinterpret_cast<int *>(&windowW), reinterpret_cast<int *>(&windowH));
+    glfwGetWindowSize(glfwWindow(),
+                      reinterpret_cast<int *>(&windowW),
+                      reinterpret_cast<int *>(&windowH));
     double drawStartTime = glfwGetTime();
 
     glBindVertexArray(vertexArrayId);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, windowW, windowH);
 
-    // render.draw() first because it updates render's internal metrics, which are later used for resolving mouse
-    // pos, etc.
+    // render.draw() first because it updates render's internal metrics, which
+    // are later used for translating between board and screen positions.
+
+    // We render a copy of the solution to avoid locking the solution during
+    // the render time, which could hold up the router threads.
     {
-      Solution solution(GRID_W, GRID_H);
+      Solution solution;
       if (dragComponentIsActive) {
         auto lock = inputSolution.scope_lock();
         solution = inputSolution;
@@ -387,8 +412,16 @@ public:
         auto lock = currentSolution.scope_lock();
         solution = currentSolution;
       }
-      render.draw(solution, windowW, windowH, zoom, dragBoardOffset, mouseScreenPos, showInputBool);
-      mouseBoardPos = render.screenToBoardCoord(mouseScreenPos);
+      if (solution.isReady) {
+        render.draw(solution,
+                    windowW,
+                    windowH,
+                    zoom,
+                    dragBoardOffset,
+                    mouseScreenPos,
+                    showInputBool);
+        mouseBoardPos = render.screenToBoardPos(mouseScreenPos);
+      }
     }
 
     if (!showBestBool) {
@@ -398,7 +431,28 @@ public:
         if (!showBestBool) {
           {
             auto lock = inputSolution.scope_lock();
-            setComponentPosition(render, inputSolution.circuit, mouseBoardPos - dragPin0BoardOffset, dragComponentName);
+            // Prevent dragging outside of grid
+            Via v = (mouseBoardPos - dragPin0BoardOffset + 0.5f).cast<int>();
+            auto component = inputSolution.circuit.componentNameToInfoMap[dragComponentName];
+            auto footprint = inputSolution.circuit.calcComponentFootprint(dragComponentName);
+            auto startPin0Offset = component.pin0AbsPos - footprint.start;
+            auto endPin0Offset = footprint.end - component.pin0AbsPos;
+            if (v.x() + footprint.start.x() - startPin0Offset.x() < 0) {
+              v.x() = startPin0Offset.x();
+            }
+            if (v.y() + footprint.start.y() - startPin0Offset.y() < 0) {
+              v.y() = startPin0Offset.y();
+            }
+            if (v.x() + endPin0Offset.x() >= inputSolution.gridW) {
+              v.x() = inputSolution.gridH - endPin0Offset.x() - 1;
+            }
+            if (v.y() + endPin0Offset.y() >= inputSolution.gridH) {
+              v.y() = inputSolution.gridH - endPin0Offset.y() - 1;
+            }
+            setComponentPosition(render,
+                                 inputSolution.circuit,
+                                 v,
+                                 dragComponentName);
           }
           resetBestSolution();
         }
@@ -406,10 +460,8 @@ public:
     }
     // Drag board
     if (dragBoardIsActive) {
-      dragBoardOffset = mouseScreenPos;
-      dragBoardOffset -= dragStartCoord;
+      dragBoardOffset = mouseScreenPos - dragStartPos;
     }
-
     if (dragComponentIsActive) {
       dragText.reset(windowW,
                      windowH,
@@ -421,7 +473,9 @@ public:
       }
       else {
         auto lock = currentSolution.scope_lock();
-        auto via = currentSolution.circuit.componentNameToInfoMap[dragComponentName].pin0AbsCoord;
+        auto via =
+          currentSolution.circuit.componentNameToInfoMap[dragComponentName]
+            .pin0AbsPos;
         dragText.print(0, fmt::format("({},{})", via.x(), via.y()));
       }
     }
@@ -438,9 +492,13 @@ public:
     // Run status
     int nLine = 0;
     oglText.reset(windowW, windowH, 0, 0, DIAG_FONT_SIZE);
-    oglText.print(nLine++, fmt::format("Render: {:.1f}ms", avgRenderingSec * 1000));
-    oglText.print(nLine++, fmt::format("Checked: {:n}", status.nunCombinationsChecked));
-    oglText.print(nLine++, fmt::format("Checked/s: {:.2f}", status.nunCombinationsChecked / drawEndTime));
+    oglText
+      .print(nLine++, fmt::format("Render: {:.1f}ms", avgRenderingSec * 1000));
+    oglText.print(nLine++,
+                  fmt::format("Checked: {:n}", status.nunCombinationsChecked));
+    oglText.print(nLine++,
+                  fmt::format("Checked/s: {:.2f}",
+                              status.nunCombinationsChecked / drawEndTime));
     ++nLine;
     // List any errors from the parser
     {
@@ -456,20 +514,31 @@ public:
     {
       auto lock = currentSolution.scope_lock();
       oglText.print(nLine++, fmt::format("Current"));
-      oglText.print(nLine++, fmt::format("Completed: {:n}", currentSolution.numCompletedRoutes));
-      oglText.print(nLine++, fmt::format("Failed: {:n}", currentSolution.numFailedRoutes));
+      oglText.print(nLine++,
+                    fmt::format("Completed: {:n}",
+                                currentSolution.numCompletedRoutes));
+      oglText.print(nLine++,
+                    fmt::format("Failed: {:n}",
+                                currentSolution.numFailedRoutes));
 //      oglText.print(nLine++, fmt::format("Shortcuts: {:n}", currentSolution.numShortcuts));
-      oglText.print(nLine++, fmt::format("Cost: {}", formatTotalCost(currentSolution.totalCost)));
+      oglText.print(nLine++,
+                    fmt::format("Cost: {}",
+                                formatTotalCost(currentSolution.totalCost)));
       ++nLine;
     }
     // Best
     {
       auto lock = bestSolution.scope_lock();
       oglText.print(nLine++, fmt::format("Best"));
-      oglText.print(nLine++, fmt::format("Completed: {:n}", bestSolution.numCompletedRoutes));
-      oglText.print(nLine++, fmt::format("Failed: {:n}", bestSolution.numFailedRoutes));
+      oglText.print(nLine++,
+                    fmt::format("Completed: {:n}",
+                                bestSolution.numCompletedRoutes));
+      oglText.print(nLine++,
+                    fmt::format("Failed: {:n}", bestSolution.numFailedRoutes));
 //      oglText.print(nLine++, fmt::format("Shortcuts: {:n}", bestSolution.numShortcuts));
-      oglText.print(nLine++, fmt::format("Cost: {}", formatTotalCost(bestSolution.totalCost)));
+      oglText.print(nLine++,
+                    fmt::format("Cost: {}",
+                                formatTotalCost(bestSolution.totalCost)));
       ++nLine;
     }
 
@@ -492,7 +561,7 @@ std::string formatTotalCost(int totalCost)
 void resetBestSolution()
 {
   auto lock = bestSolution.scope_lock();
-  bestSolution = Solution(GRID_W, GRID_H);
+  bestSolution = Solution();
 }
 
 //
@@ -508,44 +577,30 @@ void launchRouterThreads()
 
 void stopRouterThreads()
 {
-  try {
-    std::lock_guard<std::mutex> stopThread(stopRouterThreadMutex);
-    for (int i = 0; i < N_ROUTER_THREADS; ++i) {
-      routerThreadVec[i].join();
-    }
+  threadStopRouter.stop();
+  for (int i = 0; i < N_ROUTER_THREADS; ++i) {
+    routerThreadVec[i].join();
   }
-  catch (const std::system_error &e) {
-    fmt::print(stderr, "Attempted to stop thread that is not running\n");
-  }
-}
-
-bool isRouterStopRequested()
-{
-  bool lockObtained = stopRouterThreadMutex.try_lock();
-  if (lockObtained) {
-    stopRouterThreadMutex.unlock();
-  }
-  return !lockObtained;
 }
 
 void routerThread()
 {
   while (true) {
-    Solution threadSolution(GRID_W, GRID_H);
+    Solution threadSolution;
     {
       auto lock = inputSolution.scope_lock();
-      if (!inputSolution.circuit.isReady || inputSolution.settings.pause) {
+      if (!inputSolution.isReady || inputSolution.settings.pause) {
         lock.unlock();
         using namespace std::chrono_literals;
-        std::this_thread::sleep_for(100ms);
+        std::this_thread::sleep_for(10ms);
         continue;
       }
       threadSolution = inputSolution;
     }
     {
-      Router dijkstra(threadSolution);
-      dijkstra.route(stopRouterThreadMutex);
-      if (isRouterStopRequested()) {
+      Router dijkstra(threadSolution, threadStopRouter);
+      dijkstra.route();
+      if (threadStopRouter.isStopped()) {
         break;
       }
     }
@@ -561,7 +616,8 @@ void routerThread()
       auto lock = bestSolution.scope_lock();
       bestSolution = threadSolution;
     }
-    if (threadSolution.numCompletedRoutes == bestSolution.numCompletedRoutes && threadSolution.totalCost > bestSolution.totalCost) {
+    if (threadSolution.numCompletedRoutes == bestSolution.numCompletedRoutes
+      && threadSolution.totalCost > bestSolution.totalCost) {
       auto lock = bestSolution.scope_lock();
       bestSolution = threadSolution;
     }
@@ -579,22 +635,8 @@ void launchParserThread()
 
 void stopParserThread()
 {
-  try {
-    std::lock_guard<std::mutex> stopThread(stopParserThreadMutex);
-    parserThreadObj.join();
-  }
-  catch (const std::system_error &e) {
-    fmt::print(stderr, "Attempted to stop thread that is not running\n");
-  }
-}
-
-bool isParserStopRequested()
-{
-  bool lockObtained = stopParserThreadMutex.try_lock();
-  if (lockObtained) {
-    stopParserThreadMutex.unlock();
-  }
-  return !lockObtained;
+  threadStopParser.stop();
+  parserThreadObj.join();
 }
 
 // Parse circuit.txt file if changed
@@ -604,16 +646,18 @@ void parserThread()
     std::time_t mtime_cur = boost::filesystem::last_write_time("./circuit.txt");
     if (mtime_cur != mtime_prev) {
       mtime_prev = mtime_cur;
+      Solution threadSolution;
+      auto parser = Parser(threadSolution);
+      parser.parse();
       {
-        auto parser = Parser();
         auto lock = inputSolution.scope_lock();
-        parser.parse(inputSolution.circuit);
+        inputSolution = threadSolution;
       }
       resetBestSolution();
     }
     using namespace std::chrono_literals;
     std::this_thread::sleep_for(1s);
-    if (isParserStopRequested()) {
+    if (threadStopRouter.isStopped()) {
       break;
     }
   }
@@ -632,7 +676,8 @@ int main(int argc, char **argv)
     nanogui::shutdown();
   }
   catch (const std::runtime_error &e) {
-    std::string error_msg = std::string("Fatal error: ") + std::string(e.what());
+    std::string
+      error_msg = std::string("Fatal error: ") + std::string(e.what());
 #if defined(_WIN32)
     //MessageBoxA(nullptr, error_msg.c_str(), NULL, MB_ICONERROR | MB_OK);
 #else

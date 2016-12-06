@@ -13,8 +13,8 @@
 
 // Packages
 
-typedef std::vector<Via> PackageRelCoordVec;
-typedef std::map<std::string, PackageRelCoordVec> PackageToCoordMap;
+typedef std::vector<Via> PackageRelPosVec;
+typedef std::map<std::string, PackageRelPosVec> PackageToPosMap;
 
 // Components
 
@@ -24,7 +24,7 @@ public:
   Component();
   Component(const std::string &, const Via &);
   std::string packageName;
-  Via pin0AbsCoord;
+  Via pin0AbsPos;
 };
 
 typedef std::map<std::string, Component> ComponentNameToInfoMap;
@@ -63,10 +63,9 @@ public:
   ViaStartEnd calcComponentFootprint(std::string componentName) const;
   PinViaVec calcComponentPins(std::string componentName);
 
-  PackageToCoordMap packageToCoordMap;
+  PackageToPosMap packageToPosMap;
   ComponentNameToInfoMap componentNameToInfoMap;
   ConnectionVec connectionVec;
   CircuitInfoVec circuitInfoVec;
   bool hasError;
-  bool isReady;
 };
