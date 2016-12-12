@@ -1,4 +1,6 @@
-/libraries/*
+/cmake-build-*
+/libraries
+/releases
 
 # Compiled Object files
 *.slo
