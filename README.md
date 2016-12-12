@@ -42,29 +42,29 @@ Planned functionality:
 
     Alternately, the path to another `.circuit` file can be given as a command line argument when starting the program.
  
-* `Board` The size of the stripboard, specified by number of vias (through holes) horizontally and vertically, as seen when the copper strips run vertically. The board must be large enough that the circuit and routes will fit but should not be larger than necessary, as search speed slows down when board size increases.
+    * `Board` The size of the stripboard, specified by number of vias (through holes) horizontally and vertically, as seen when the copper strips run vertically. The board must be large enough that the circuit and routes will fit but should not be larger than necessary, as search speed slows down when board size increases.
 
-* `Package` Reusable pin layouts. Each pin is designated by a coordinate relative to pin 1, so pins can be in any order and relationship to each other.
+    * `Package` Reusable pin layouts. Each pin is designated by a coordinate relative to pin 1, so pins can be in any order and relationship to each other.
 
-* `Component` Name, position and package for a component. The position specifies the location of pin 1 on the board.
+    * `Component` Name, position and package for a component. The position specifies the location of pin 1 on the board.
  
-* `Connection` Connections between component pins required for the circuit.
+    * `Connection` Connections between component pins required for the circuit.
      
-Packages, components and connections can be intermixed, however packages must be described before the components in which they are used, and components must be described before connections in which they are used.
+* Packages, components and connections can be intermixed, however packages must be described before the components in which they are used, and components must be described before connections in which they are used.
 
-If you are familiar with the netlists supported by most PCB design software, you will have noticed that the `.circuit` file does not support specifying nets. Instead, the nets are inferred from the point-to-point connections at runtime. In the `.circuit` file, simply reuse pins as often as necessary, as shown for the `vcc` and `gnd` connections in the included example.   
+* If you are familiar with the netlists supported by most PCB design software, you will have noticed that the `.circuit` file does not support specifying nets. Instead, the nets are inferred from the point-to-point connections at runtime. In the `.circuit` file, simply reuse pins as often as necessary, as shown for the `vcc` and `gnd` connections in the included example.   
 
-3) Whenever you want to see the current status of your `.circuit` file, just save it in the editor to display the new version in the router. If there are any problems in the file, a list of errors is shown in the router.
+* Whenever you want to see the current status of your `.circuit` file, just save it in the editor to display the new version in the router. If there are any problems in the file, a list of errors is shown in the router.
 
-4) Components can be moved with the mouse. If `Write changes to circuit file` is enabled, the new positions are automatically written back to the `.circuit` file. To avoid losing unsaved changes, save the file before moving components when write back is enabled.
+* Components can be moved with the mouse. If `Write changes to circuit file` is enabled, the new positions are automatically written back to the `.circuit` file. To avoid losing unsaved changes, save the file before moving components when write back is enabled.
 
-6) Wait while the program randomly searches for complete layouts. As long as the program is running, it is always searching for a better layout.
+* Wait while the program randomly searches for complete layouts. As long as the program is running, it is always searching for a better layout.
 
-8) If no satisfactory layouts are found, click `Rat's Nest` to view the required connections and try moving the components to create more space between components, fewer crossed connections and less interference in problem areas with many failed routes. A complete layout can always be found if there is enough room for routes between the components.
+* If no satisfactory layouts are found, click `Rat's Nest` to view the required connections and try moving the components to create more space between components, fewer crossed connections and less interference in problem areas with many failed routes. A complete layout can always be found if there is enough room for routes between the components.
 
-7) Click `Show best` to see the best layout found so far.
+* Click `Show best` to see the best layout found so far.
 
-8) If you find a layout that you wish to use, click `Pause` and then, ahem, use your OS Print Screen function to take a screenshot. There's no other way to save or export layouts yet.
+* If you find a layout that you wish to use, click `Pause` and then, ahem, use your OS Print Screen function to take a screenshot. There's no other way to save or export layouts yet.
 
 ### Tips and Tricks
 
