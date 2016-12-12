@@ -2,7 +2,7 @@
 
 <img align="right" width="50%" src="./screenshot.png">
 
-**Note**: Alpha / experimental state. Tested on Windows 10 64-bit and Linux Mint 18 64-bit. See [Releases](https://github.com/rogerdahl/striprouter/releases) for Windows and Linux binaries.
+**Note**: Experimental state. Tested on Windows 10 64-bit and Linux Mint 18 64-bit. See [Releases](https://github.com/rogerdahl/striprouter/releases) for Windows and Linux binaries.
 
 This is a cross-platform program that, given a description of a circuit, searches for the best way to create the required connections on a [stripboard](https://en.wikipedia.org/wiki/Stripboard).
 
@@ -23,11 +23,11 @@ Currently implemented:
 * Zoom and pan with mouse wheel and drag
 * Highlight connections with mouse hover
 * Gaps show where the copper traces need to be cut
-
+* Component position changes written back to the circuit file
 
 Planned functionality:
  
-* Use a genetic algorithm for exploring the search space
+* Better search algorithm
 * Write layout to file
 * Print mirror image of layout in 1:1 size for use when soldering  
 * Support components such as resistors and diodes that have variable length connectors
@@ -38,31 +38,33 @@ Planned functionality:
 
 1) Start the program. If things work, you will see it start searching for routes on the included circuit. A "no completed layouts" message means that no layout has been found in which it was possible to route all connections.
 
-2) Move the program to one side of the screen and open the included `circuit.txt` file in a text editor on the other. Start creating your circuit there, using the simple syntax shown in the file.
- 
-* `Board`: The size of the stripboard, specified by number of vias (through holes) horizontally and vertically, as seen when the copper strips run vertically. The board must be large enough that the circuit and routes will fit but should not be larger than necessary, as search speed slows down when board size increases.
+2) Move the program to one side of the screen and open the included `circuits/example.circuit` file in a text editor on the other. Start creating your circuit there, using the simple syntax shown in the file.
 
-* `Package`: Reusable pin layouts. Each pin is designated by a coordinate relative to pin 1, so pins can be in any order and relationship to each other.
-
-* `Component`: Name, position and package for a component. The position specifies the location of pin 1 on the board.
+    Alternately, the path to another `.circuit` file can be given as a command line argument when starting the program.
  
-* `Connection`: Connections between component pins required for the circuit.
+* `Board` The size of the stripboard, specified by number of vias (through holes) horizontally and vertically, as seen when the copper strips run vertically. The board must be large enough that the circuit and routes will fit but should not be larger than necessary, as search speed slows down when board size increases.
+
+* `Package` Reusable pin layouts. Each pin is designated by a coordinate relative to pin 1, so pins can be in any order and relationship to each other.
+
+* `Component` Name, position and package for a component. The position specifies the location of pin 1 on the board.
+ 
+* `Connection` Connections between component pins required for the circuit.
      
 Packages, components and connections can be intermixed, however packages must be described before the components in which they are used, and components must be described before connections in which they are used.
 
-If you are familiar with the netlists supported by most PCB design software, you will have noticed that the `circuit.txt` file does not support specifying nets. Instead, the nets are inferred from the point-to-point connections at runtime. In the `circuit.txt` file, simply reuse pins as often as necessary, as shown for the `vcc` and `gnd` connections in the included example.   
+If you are familiar with the netlists supported by most PCB design software, you will have noticed that the `.circuit` file does not support specifying nets. Instead, the nets are inferred from the point-to-point connections at runtime. In the `.circuit` file, simply reuse pins as often as necessary, as shown for the `vcc` and `gnd` connections in the included example.   
 
-3) Whenever you want to see the current status of your `circuit.txt` file, just save it in the editor to display the new version in the router. If there are any problems in the file, a list of errors is shown in the router.
+3) Whenever you want to see the current status of your `.circuit` file, just save it in the editor to display the new version in the router. If there are any problems in the file, a list of errors is shown in the router.
 
-4) Components can be moved with the mouse but the result can't be written back to the `circuit.txt` file (sorry). To see the coordinate for a component, hold it with the mouse.
+4) Components can be moved with the mouse. If `Write changes to circuit file` is enabled, the new positions are automatically written back to the `.circuit` file. To avoid losing unsaved changes, save the file before moving components when write back is enabled.
 
 6) Wait while the program randomly searches for complete layouts. As long as the program is running, it is always searching for a better layout.
 
-8) If no satisfactory layouts are found, click `Ratsnest` to view the required connections and try moving the components to create more space between components, fewer crossed connections and less interference in problem areas with many failed routes. A complete layout can always be found if there is enough room for routes between the components.
+8) If no satisfactory layouts are found, click `Rat's Nest` to view the required connections and try moving the components to create more space between components, fewer crossed connections and less interference in problem areas with many failed routes. A complete layout can always be found if there is enough room for routes between the components.
 
 7) Click `Show best` to see the best layout found so far.
 
-8) If you find a layout that you wish to use, click `Pause` and then, ahem, use your OS Print Screen function. There's no other way to save or export layouts yet.
+8) If you find a layout that you wish to use, click `Pause` and then, ahem, use your OS Print Screen function to take a screenshot. There's no other way to save or export layouts yet.
 
 ### Tips and Tricks
 
@@ -82,29 +84,33 @@ If you are familiar with the netlists supported by most PCB design software, you
 
 * Bonus: If you zoom in far enough, you get free modern art, such as [this](./art.png) :)
 
-### Overview of operation
+### Implementation
 
 * The program operates with objects called Layouts. Each Layout contains a Circuit object, a Settings object, potentially a set of discovered routes for the circuit, and misc other housekeeping and diagnostics information.
 
-* A Circuit holds a description of the components and connections that make up a circuit, much like the information in the `circuit.txt` file. 
+* A Circuit holds a description of the components and connections that make up a circuit, much like the information in the `.circuit` file. 
 
 * Settings holds various settings that are used when processing the Layout, such as the resource costs that are used by the router.
  
 * When the program starts, it creates three Layouts called inputLayout, currentLayout and bestLayout. The main thread then launches a set of router threads, typically one per logical core in the CPU(s), and a single parser thread.
 
-* The parser thread gains exclusive access to the `circuit.txt` file, parses it to a thread local Circuit and releases the file. It then locks the inputLayout and writes the local Circuit to the inputLayout Circuit. Then monitors the modified time on the `circuit.txt` file and, if it changes, starts over with gaining exclusive access to the file.
+* The parser thread gains exclusive access to the `.circuit` file, parses it to a thread local Circuit and releases the file. It then locks the inputLayout and writes the local Circuit to the inputLayout Circuit. Then monitors the modified time on the `.circuit` file and, if it changes, starts over with gaining exclusive access to the file.
 
-* The router threads compete for a lock on inputLayout. When a thread gets the lock, it creates a thread local copy of inputLayout, called threadLayout and releases the lock. Because the router always uses the lowest cost route for a given connection, only the order in which the routes are created affects the end result. So, as a temporary first approach, a random search is currently implemented by having the thread start by randomly shuffling the order of the connections in its threadLayout. It then creates, or attempts to create, the routes in the shuffled order. The number of ways the connections can be shuffled is the factorial of the number of connections, which makes it impossible to check all possible orderings even for fairly small circuits.
+* The router threads compete for a lock on inputLayout. When a thread gets the lock, it creates a thread local copy of inputLayout, called threadLayout and releases the lock. Because the router always uses the lowest cost route for a given connection, only the order in which the routes are created affects the end result. So, as a temporary first approach, a random search is currently implemented by having the thread start by randomly shuffling the order of the connections in its threadLayout. It then creates, or attempts to create, the routes in the shuffled order. The number of ways the connections can be shuffled is the factorial of the number of connections, which makes it impossible to check all possible orderings even for small circuits.
 
-    The Uniform Cost Search is based on assigning a cost to each point that can possibly be reached, so the cost for a completed route is the total of the costs of the points along the route. When the routing is done, the costs for each of the routes are summed up to get the total cost for the Layout. 
+    The Uniform Cost Search is based on assigning a cost to each point that can possibly be reached, so the cost for a completed route is the total of the costs of the points along the route. When the routing is completed, the costs for each of the routes are summed up to get the total cost for the Layout. 
    
-    When the routing is done, the thread locks bestLayout and compares the threadLayout and bestLayout for cost and number of completed routes. If threadLayout has more completed routes, or the same number of routes but a lower cost, it is better, and the thread copies it to bestLayout, overwriting the old bestLayout. The thread then always locks currentLayout and writes threadLayout to it, and loops back to the start, where it again locks inputLayout.
+    After completing the Layout, the thread locks bestLayout and compares the threadLayout and bestLayout for cost and number of completed routes. If threadLayout has more completed routes, or the same number of routes but a lower cost, it is better, and the thread copies it to bestLayout, overwriting the old bestLayout. The thread then always locks currentLayout and writes threadLayout to it, and loops back to the start, where it again locks inputLayout.
+    
+    Each Layout has a timestamp that is used for keeping track of lineage between Layouts. This is done so that, when the inputLayout changes, work on downstream Layouts for which the results are no longer needed, can be aborted, and outdated threadLayout, currentLayout and bestLayout objects flushed out.
    
-* The main thread runs the GUI and OpenGL rendering. When a setting is changed with the GUI or components are moved with the mouse, the main thread locks inputLayout and updates its Settings or Circuit. The main thread renders the inputLayout while a drag/drop operation is performed, bestLayout if the `Show best` checkbox is enabled, and currentLayout otherwise. To avoid locking the Layout being rendered during the entire rendering process, the main thread briefly locks the Layout it will render and creates a thread local copy, then renders the copy and discards it.
-   
-* The router is based on a custom implementation of the Dijkstra and Uniform Cost Search algorithms and includes a common optimization based on using a set and a priority queue. The search is restricted to only find paths that can be implemented on a stripboard, the most important limitation being that there are two layers, where one layer can have  only horizontal connections and the other can have only vertical connections.
+* The main thread runs the GUI and OpenGL rendering. When a setting is changed or components are moved through the GUI, the main thread locks inputLayout and updates its Settings or Circuit. The main thread renders the inputLayout while a drag/drop operation is performed and bestLayout if the `Show best` checkbox is enabled. Otherwise, it renders currentLayout if its lineage is to the current inputLayout, else falls back to render the inputLayout. The end result being that the most current information is displayed.
 
-* The router infers connected nets from the point-to-point connections described in `circuit.txt` and searches nets for potential shortcuts when routing. As routes are created, all points along the route are assigned to nets, using a structure that allows very fast checking for net membership when the points are encountered by the later Uniform Cost Searches.
+    To avoid locking the Layout being rendered during the entire rendering process, the main thread briefly locks the Layout it will render and creates a thread local copy, then renders the copy and discards it.
+   
+* The router is based on a custom implementation of the Uniform Cost Search algorithm and includes a common optimization based on using a set and a priority queue. The search is restricted to only find paths that can be implemented on a stripboard, the most important limitation being that there are two layers, where one layer can have only horizontal connections and the other can have only vertical connections.
+
+* The router infers connected nets from the point-to-point connections described in `.circuit` and searches nets for potential shortcuts when routing. As routes are created, all points along the route are assigned to nets, using a structure that allows very fast checking for net membership when the points are encountered by the later Uniform Cost Searches.
 
 
 ### Technologies

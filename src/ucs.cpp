@@ -227,8 +227,8 @@ UniformCostSearch::backtraceLowestCostRoute(const StartEndVia &viaStartEnd)
         }
       }
     }
+    routeCost += getCost(c) - getCost(n);
     c = n;
-    routeCost += getCost(c);
     routeStepVec.push_back(c);
   }
   layout_.totalCost += routeCost;
