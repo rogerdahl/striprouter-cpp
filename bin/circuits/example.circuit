@@ -46,7 +46,7 @@ hpad2x2     0,0 1,0 0,-1 1,-1
 # Components
 # <component name> <package name> <absolute position of component pin 0>
 
-rpi     header2x20mirror  19,12
+rpi     header2x20mirror  19,17
 
 vcc     hpad2x2     17,37
 gnd     hpad2x2     37,37
