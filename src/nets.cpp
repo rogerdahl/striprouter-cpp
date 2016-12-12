@@ -1,14 +1,14 @@
 #include "nets.h"
 
-Nets::Nets(Solution &_solution)
-  : solution_(_solution),
-    setIdxVec_(_solution.setIdxVec),
-    viaSetVec_(_solution.viaSetVec)
+Nets::Nets(Layout &_layout)
+  : layout_(_layout),
+    setIdxVec_(_layout.setIdxVec),
+    viaSetVec_(_layout.viaSetVec)
 {
-  setIdxVec_ = SetIdxVec(solution_.gridW * solution_.gridH, -1);
+  setIdxVec_ = SetIdxVec(layout_.gridW * layout_.gridH, -1);
 }
 
-void Nets::joinEquivalent(const Via &viaA, const Via &viaB)
+void Nets::connect(const Via &viaA, const Via &viaB)
 {
   int setIdxA = getViaSetIdx(viaA);
   int setIdxB = getViaSetIdx(viaB);
@@ -19,18 +19,18 @@ void Nets::joinEquivalent(const Via &viaA, const Via &viaB)
     auto viaSetIdx = createViaSet();
     viaSetVec_[viaSetIdx].insert(viaA);
     viaSetVec_[viaSetIdx].insert(viaB);
-    setIdxVec_[solution_.idx(viaA)] = viaSetIdx;
-    setIdxVec_[solution_.idx(viaB)] = viaSetIdx;
+    setIdxVec_[layout_.idx(viaA)] = viaSetIdx;
+    setIdxVec_[layout_.idx(viaB)] = viaSetIdx;
   }
   else if (setIdxA != -1 && setIdxB == -1) {
     auto &viaSet = viaSetVec_[setIdxA];
     viaSet.insert(viaB);
-    setIdxVec_[solution_.idx(viaB)] = setIdxA;
+    setIdxVec_[layout_.idx(viaB)] = setIdxA;
   }
   else if (setIdxA == -1 && setIdxB != -1) {
     auto &viaSet = viaSetVec_[setIdxB];
     viaSet.insert(viaA);
-    setIdxVec_[solution_.idx(viaA)] = setIdxB;
+    setIdxVec_[layout_.idx(viaA)] = setIdxB;
   }
   else {
     auto &viaSetA = viaSetVec_[setIdxA];
@@ -44,6 +44,22 @@ void Nets::joinEquivalent(const Via &viaA, const Via &viaB)
   }
 }
 
+void Nets::connectRoute(const RouteStepVec &routeStepVec)
+{
+  bool first = true;
+  for (auto c : routeStepVec) {
+    if (first) {
+      first = false;
+      continue;
+    }
+    // TODO: Equivalents don't keep track of layers, so skip steps where we only step through to the other layer.
+    if (!c.isWireLayer) {
+      connect(routeStepVec[0].via, c.via);
+    }
+  }
+  assert(isConnected(routeStepVec[0].via, routeStepVec[1].via));
+}
+
 // Register a single via as an equivalent to itself to simplify later checking for equivalents.
 void Nets::registerPin(const Via &via)
 {
@@ -55,25 +71,38 @@ void Nets::registerPin(const Via &via)
   else {
     auto viaSetIdx = createViaSet();
     viaSetVec_[viaSetIdx].insert(via);
-    setIdxVec_[solution_.idx(via)] = viaSetIdx;
+    setIdxVec_[layout_.idx(via)] = viaSetIdx;
   }
 }
 
-void Nets::joinEquivalentRoute(const RouteStepVec &routeStepVec)
+
+bool Nets::isConnected(const Via &currentVia, const Via &targetVia)
 {
-  for (auto c : routeStepVec) {
-    // TODO: Equivalents don't keep track of layers, so skip steps where we only step through to the other layer.
-    if (!c.isWireLayer) {
-      joinEquivalent(routeStepVec[0].via, c.via);
-    }
+  auto viaSetIdx = setIdxVec_[layout_.idx(currentVia)];
+  if (viaSetIdx == -1) {
+    return false;
   }
+  bool r = static_cast<bool>(viaSetVec_[viaSetIdx].count(targetVia));
+  return r;
 }
 
-int Nets::getViaSetIdx(const Via &via)
+bool Nets::hasConnection(const Via &via)
 {
-  int traceIdx = solution_.idx(via);
-  return setIdxVec_[traceIdx];
+  auto viaSetIdx = setIdxVec_[layout_.idx(via)];
+  return viaSetIdx != -1;
 }
+
+ViaSet &Nets::getViaSet(const Via &via)
+{
+  int traceIdx = layout_.idx(via);
+  int setIdx = setIdxVec_[traceIdx];
+  assert(setIdx != -1);
+  return viaSetVec_[setIdx];
+}
+
+//
+// Private
+//
 
 int Nets::createViaSet()
 {
@@ -89,26 +118,11 @@ int Nets::createViaSet()
   return static_cast<int>(viaSetVec_.size()) - 1;
 }
 
-ViaSet &Nets::getViaSet(const Via &via)
+int Nets::getViaSetIdx(const Via &via)
 {
-  int traceIdx = solution_.idx(via);
-  int setIdx = setIdxVec_[traceIdx];
-  assert(setIdx != -1);
-  return viaSetVec_[setIdx];
+  int traceIdx = layout_.idx(via);
+  return setIdxVec_[traceIdx];
 }
 
-bool Nets::isEquivalentVia(const Via &currentVia, const Via &targetVia)
-{
-  auto viaSetIdx = setIdxVec_[solution_.idx(currentVia)];
-  if (viaSetIdx == -1) {
-    return false;
-  }
-  bool r = static_cast<bool>(viaSetVec_[viaSetIdx].count(targetVia));
-  return r;
-}
 
-bool Nets::hasEquivalent(const Via &via)
-{
-  auto viaSetIdx = setIdxVec_[solution_.idx(via)];
-  return viaSetIdx != -1;
-}
+

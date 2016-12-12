@@ -50,22 +50,22 @@ public:
 // Circuit
 
 typedef std::vector<Connection> ConnectionVec;
-typedef std::vector<ViaStartEnd> ConnectionViaVec;
-typedef std::vector<std::string> CircuitInfoVec;
+typedef std::vector<StartEndVia> ConnectionViaVec;
+typedef std::vector<std::string> StringVec;
 typedef std::vector<Via> PinViaVec;
 
 class Circuit
 {
 public:
   Circuit();
+  bool hasParserError();
 
   ConnectionViaVec genConnectionViaVec();
-  ViaStartEnd calcComponentFootprint(std::string componentName) const;
+  StartEndVia calcComponentFootprint(std::string componentName) const;
   PinViaVec calcComponentPins(std::string componentName);
 
   PackageToPosMap packageToPosMap;
   ComponentNameToInfoMap componentNameToInfoMap;
   ConnectionVec connectionVec;
-  CircuitInfoVec circuitInfoVec;
-  bool hasError;
+  StringVec parserErrorVec;
 };

@@ -1,45 +1,31 @@
-#include "solution.h"
+#include "layout.h"
 
-Solution::Solution()
+Layout::Layout()
   : gridW(0),
     gridH(0),
     totalCost(0),
     numCompletedRoutes(0),
     numFailedRoutes(0),
     numShortcuts(0),
-    isReady(false),
+    isReadyForRouting(false),
+    isReadyForEval(false),
     hasError(false)
 {
+  setOriginal();
 }
 
-//Solution::Solution(int _gridW, int _gridH)
-//  : gridW(_gridW),
-//    gridH(_gridH),
-//    totalCost(0),
-//    numCompletedRoutes(0),
-//    numFailedRoutes(0),
-//    numShortcuts(0),
-//    isReady(false),
-//    hasError(false)
-//{
-//}
-
-Solution::~Solution()
-{
-}
-
-Solution::Solution(const Solution &s)
+Layout::Layout(const Layout &s)
 {
   copy(s);
 }
 
-Solution &Solution::operator=(const Solution &s)
+Layout &Layout::operator=(const Layout &s)
 {
   copy(s);
   return *this;
 }
 
-void Solution::copy(const Solution &s)
+void Layout::copy(const Layout &s)
 {
   circuit = s.circuit;
   settings = s.settings;
@@ -49,29 +35,49 @@ void Solution::copy(const Solution &s)
   numCompletedRoutes = s.numCompletedRoutes;
   numFailedRoutes = s.numFailedRoutes;
   numShortcuts = s.numShortcuts;
-  isReady = s.isReady;
-  solutionInfoVec = s.solutionInfoVec;
+  isReadyForRouting = s.isReadyForRouting;
+  isReadyForEval = s.isReadyForEval;
+  hasError = s.hasError;
+  layoutInfoVec = s.layoutInfoVec;
   routeVec = s.routeVec;
   routeStatusVec = s.routeStatusVec;
   // Nets
   viaSetVec = s.viaSetVec;
   setIdxVec = s.setIdxVec;
   // Debug
-  hasError = s.hasError;
   diagStartVia = s.diagStartVia;
   diagEndVia = s.diagEndVia;
   diagCostVec = s.diagCostVec;
   diagRouteStepVec = s.diagRouteStepVec;
   diagTraceVec = s.diagTraceVec;
   errorStringVec = s.errorStringVec;
+  // Private
+  timestamp_ = s.timestamp_;
 }
 
-std::unique_lock<std::mutex> Solution::scope_lock()
+void Layout::setOriginal() {
+  timestamp_ = std::chrono::high_resolution_clock::now();
+}
+
+bool Layout::isBasedOn(const Layout& other) {
+  return timestamp_ == other.timestamp_;
+}
+
+std::unique_lock<std::mutex> Layout::scopeLock()
 {
   return std::unique_lock<std::mutex>(mutex_);
 }
 
-int Solution::idx(const Via &v)
+Layout Layout::threadSafeCopy()
+{
+  auto lock = scopeLock();
+  Layout l = *this;
+  return l;
+}
+
+int Layout::idx(const Via &v)
 {
   return v.x() + gridW * v.y();
 }
+
+

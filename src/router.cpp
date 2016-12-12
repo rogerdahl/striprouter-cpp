@@ -1,65 +1,246 @@
 #include <algorithm>
+#include <chrono>
+#include <random>
 
 #include <fmt/format.h>
 
 #include "router.h"
 #include "ucs.h"
 
-// The nets and equivalents system is also what allows creating multiple routes
-// from a single pin by building out from that pin. Without the nets, one must
-// either specifically create pads and do one-to-one routes, or one must add a
-// function that specifically creates new one-to-one routes by selecting the
-// next available point next to the source and destination pins.
 
-Router::Router(Solution &_solution, ThreadStop &threadStop)
-  : solution_(_solution), nets_(_solution), threadStop_(threadStop),
 
-    allPinSet(ViaSet([](const Via &a, const Via &b) -> bool
-                     {
-                       return std::lexicographical_compare(a.data(),
-                                                           a.data() + a.size(),
-                                                           b.data(),
-                                                           b.data() + b.size());
-                     }))
+Router::Router(Layout &_layout, ThreadStop &threadStop, Layout& _inputLayout, Layout &_currentLayout,
+               const TimeDuration& _maxRenderDelay)
+  : layout_(_layout),
+    inputLayout_(_inputLayout),
+    currentLayout_(_currentLayout),
+    nets_(_layout),
+    threadStop_(threadStop),
+    allPinSet_(
+      ViaSet([](const Via &a, const Via &b) -> bool {
+         return std::lexicographical_compare(a.data(),
+                                             a.data() + a.size(),
+                                             b.data(),
+                                             b.data() + b.size());
+    })),
+    maxRenderDelay_(_maxRenderDelay)
 {
-  viaTraceVec_ = ViaTraceVec(solution_.gridW * solution_.gridH);
+  viaTraceVec_ = WireLayerViaVec(layout_.gridW * layout_.gridH);
 }
 
-void Router::route()
+bool Router::route()
 {
   blockComponentFootprints();
+  joinAllConnections();
   registerAllComponentPins();
-  routeAll();
-#ifndef NDEBUG
-  solution_.diagTraceVec = viaTraceVec_;
-  // Enable rendering of diags
-//  solution_.hasError = true;
-#endif
+  auto isAborted = routeAll();
+  layout_.isReadyForEval = true;
+  if (layout_.hasError) {
+    layout_.diagTraceVec = viaTraceVec_;
+  }
+  return isAborted;
 }
 
-void Router::registerAllComponentPins()
+//
+// Private
+//
+
+bool Router::routeAll()
 {
-  for (auto &ci : solution_.circuit.componentNameToInfoMap) {
-    const auto &componentName = ci.first;
-    auto pinViaVec = solution_.circuit.calcComponentPins(componentName);
-    for (auto via : pinViaVec) {
-      allPinSet.insert(via);
+#ifdef NDEBUG
+  random_shuffle(layout_.circuit.connectionVec.begin(),
+                 layout_.circuit.connectionVec.end());
+#endif
+
+//  // Testing random costs, to vary how the best path is selected
+//  std::default_random_engine generator;
+//  std::uniform_int_distribution<int> distribution(1,100);
+//  layout_.settings.strip_cost = distribution(generator);
+//  layout_.settings.wire_cost = distribution(generator);
+//  layout_.settings.via_cost = distribution(generator);
+
+  bool isAborted = false;
+  auto startTime = std::chrono::steady_clock::now();
+  for (auto viaStartEnd : layout_.circuit.genConnectionViaVec()) {
+    findCompleteRoute(viaStartEnd);
+
+#ifndef NDEBUG
+    // For debugging, exit router after a given number of routes.
+//  static int breakIdx = 0;
+//    if (++breakIdx == 3) {
+//      layout_.hasError = true;
+//      layout_.errorStringVec.push_back(fmt::format("Forced exit after route {}", breakIdx));
+//    }
+#endif
+
+    if (threadStop_.isStopped()) {
+      isAborted = true;
+      break;
     }
+    {
+      auto lock = inputLayout_.scopeLock();
+      if (!layout_.isBasedOn(inputLayout_)) {
+        isAborted = true;
+        break;
+      }
+    }
+    if (layout_.hasError) {
+      break;
+    }
+    if (std::chrono::steady_clock::now() - startTime > maxRenderDelay_) {
+      auto lock = currentLayout_.scopeLock();
+      currentLayout_ = layout_;
+      startTime = std::chrono::steady_clock::now();
+      layout_.isReadyForEval = true;
+    }
+  }
+  return isAborted;
+}
+
+// There are two main approaches possible when routing with potential shortcut.
+//
+// (1) If, when routing from A to B, the router starts at A, finds a shortcut to
+// B, and routes only to the shortcut, B remains unconnected. It then becomes
+// necessary to do a second route, starting at B, and routing to A or a shortcut
+// to A.
+//
+// (2) However, if Uniform Cost Search is instead allowed to flow through
+// shortcuts but does not stop there, one gets a route that always connects A
+// and B, but will follow low cost routes along shortcuts when possible.
+//
+// I've currently implemented (2). I'm not sure if (1) would create any
+// different routes.
+
+void Router::findCompleteRoute(const StartEndVia &viaStartEnd)
+{
+  Via shortcutEndVia;
+  auto routeWasFound = findRoute(shortcutEndVia, viaStartEnd);
+  if (routeWasFound) {
+    ++layout_.numCompletedRoutes;
+    layout_.routeStatusVec.push_back(true);
+  }
+  else {
+    ++layout_.numFailedRoutes;
+    layout_.routeStatusVec.push_back(false);
   }
 }
 
+bool Router::findRoute(Via &shortcutEndVia, const StartEndVia &viaStartEnd)
+{
+  UniformCostSearch ucs(*this, layout_, nets_, shortcutEndVia, viaStartEnd);
+  auto routeStepVec = ucs.findLowestCostRoute();
+  if (layout_.hasError) {
+    return false;
+  }
+  if (!routeStepVec.size()) {
+    // Push an empty routeSectionVec so that it and the values in routeStatusVec line up.
+    layout_.routeVec.push_back(RouteSectionVec());
+    return false;
+  }
+  blockRoute(routeStepVec);
+  nets_.connectRoute(routeStepVec);
+  auto routeSectionVec = condenseRoute(routeStepVec);
+  addWireJumps(routeSectionVec);
+  layout_.routeVec.push_back(routeSectionVec);
+  return true;
+}
+
+// - Route always starts and ends on wire layer.
+// - Through to wire always starts a wire section.
+// - Through to strip always ends a wire section.
+// - Everything else is a strip section.
+RouteSectionVec Router::condenseRoute(const RouteStepVec &routeStepVec)
+{
+  RouteSectionVec routeSectionVec;
+  assert(!routeStepVec.begin()->isWireLayer);
+  assert(!(routeStepVec.rend() - 1)->isWireLayer);
+  auto startSection = routeStepVec.begin();
+  for (auto i = routeStepVec.begin() + 1; i != routeStepVec.end(); ++i) {
+    if (i->isWireLayer != (i - 1)->isWireLayer) {
+      if ((i - 1) != startSection) {
+        routeSectionVec.push_back(LayerStartEndVia(*startSection, *(i - 1)));
+        startSection = i;
+      }
+    }
+  }
+  if (startSection != routeStepVec.end() - 1) {
+    routeSectionVec
+      .push_back(LayerStartEndVia(*startSection, *(routeStepVec.end() - 1)));
+  }
+  return routeSectionVec;
+}
+
 //
-// Blocking
+// Interface for Uniform Cost Search
 //
 
-// Blocking only applies to the wire layer.
+bool Router::isAvailable(const LayerVia &via,
+                         const Via &startVia,
+                         const Via &targetVia)
+{
+  if (via.via.x() < 0 || via.via.y() < 0 || via.via.x() >= layout_.gridW
+    || via.via.y() >= layout_.gridH) {
+    return false;
+  }
+  if (via.isWireLayer) {
+    if (isBlocked(via.via)) {
+      return false;
+    }
+  }
+  else {
+    // If it has an equivalent, it must be our equivalent
+    if (nets_.hasConnection(via.via)
+      && !nets_.isConnected(via.via, startVia)) {
+      return false;
+    }
+    // Can go to component pin only if it's our equivalent.
+    if (isAnyPin(via)) {
+      if (!nets_.isConnected(via.via, startVia)) {
+        return false;
+      }
+    }
+
+  }
+  // Can go there!
+  return true;
+}
+
+bool Router::isTarget(const LayerVia &via, const Via &targetVia)
+{
+  if (via.isWireLayer) {
+    return false;
+  }
+  else if (isTargetPin(via, targetVia)) {
+    return true;
+  }
+  return false;
+}
+
+bool Router::isTargetPin(const LayerVia &via, const Via &targetVia)
+{
+  return (via.via == targetVia).all();
+}
+
+bool Router::isAnyPin(const LayerVia &via)
+{
+  return allPinSet_.count(via.via) > 0;
+}
+
+ValidVia &Router::wireToViaRef(const Via &via)
+{
+  return viaTraceVec_[layout_.idx(via)].wireToVia;
+}
+
+//
+// Wire layer blocking
+//
 
 void Router::blockComponentFootprints()
 {
   // Block the entire component footprint on the wire layer
-  for (auto &ci : solution_.circuit.componentNameToInfoMap) {
+  for (auto &ci : layout_.circuit.componentNameToInfoMap) {
     const auto &componentName = ci.first;
-    auto footprint = solution_.circuit.calcComponentFootprint(componentName);
+    auto footprint = layout_.circuit.calcComponentFootprint(componentName);
     for (int y = footprint.start.y(); y <= footprint.end.y(); ++y) {
       for (int x = footprint.start.x(); x <= footprint.end.x(); ++x) {
         block(Via(x, y));
@@ -79,218 +260,47 @@ void Router::blockRoute(const RouteStepVec &routeStepVec)
 
 void Router::block(const Via &via)
 {
-  viaTraceVec_[solution_.idx(via)].isWireSideBlocked = true;
+  viaTraceVec_[layout_.idx(via)].isWireSideBlocked = true;
 }
 
 bool Router::isBlocked(const Via &via)
 {
-  return viaTraceVec_[solution_.idx(via)].isWireSideBlocked;
-}
-
-void Router::routeAll()
-{
-  random_shuffle(solution_.circuit.connectionVec.begin(),
-                 solution_.circuit.connectionVec.end());
-
-#ifndef NDEBUG
-//  int breakIdx = 0;
-#endif
-
-  for (auto viaStartEnd : solution_.circuit.genConnectionViaVec()) {
-    findCompleteRoute(viaStartEnd);
-
-#ifndef NDEBUG
-//    if (++breakIdx == 3) {
-//      solution_.hasError = true;
-//      solution_.errorStringVec.push_back(fmt::format("Forced exit after route {}", breakIdx));
-#endif
-
-    if (solution_.hasError) {
-      solution_.errorStringVec
-        .push_back(fmt::format("Detected in Router::routeAll()"));
-      break;
-    }
-
-    if (threadStop_.isStopped()) {
-      break;
-    }
-  }
+  return viaTraceVec_[layout_.idx(via)].isWireSideBlocked;
 }
 
 //
-// Private
+// Nets
 //
 
-// If, when routing from A to B, the router finds shortcut that routes to an equivalent of B, B remains unconnected
-// and an additional reverse route must be done from B to A. This function handles the potential extra routing.
-void Router::findCompleteRoute(const ViaStartEnd &viaStartEnd)
+void Router::joinAllConnections()
 {
-  Via shortcutEndVia;
-  auto routeWasFound = findRoute(shortcutEndVia, viaStartEnd);
-//  if (!(shortcutEndVia == viaStartEnd.end).all()) {
-//    ++solution_.numShortcuts;
-//    auto reverseStartEnd = ViaStartEnd(viaStartEnd.end, viaStartEnd.start);
-//    routeWasFound = findRoute(shortcutEndVia, reverseStartEnd);
-//  }
-//  // If reverse route was required, both routes must be successful before we count the input connection as successfully
-//  // routed.
-  if (routeWasFound) {
-    ++solution_.numCompletedRoutes;
-    solution_.routeStatusVec.push_back(true);
-  }
-  else {
-    ++solution_.numFailedRoutes;
-    solution_.routeStatusVec.push_back(false);
+  for (auto &c : layout_.circuit.genConnectionViaVec()) {
+    nets_.connect(c.start, c.end);
   }
 }
 
-bool Router::findRoute(Via &shortcutEndVia, const ViaStartEnd &viaStartEnd)
+
+void Router::registerAllComponentPins()
 {
-  UniformCostSearch ucs(*this, solution_, nets_, shortcutEndVia, viaStartEnd);
-  auto routeStepVec = ucs.findLowestCostRoute();
-
-  if (solution_.hasError) {
-    solution_.errorStringVec
-      .push_back(fmt::format("Detected in Router::findCompleteRoute()"));
-    return false;
-  }
-
-  if (!routeStepVec.size()) {
-    // Push an empty routeSectionVec so that it and the values in routeStatusVec line up.
-    solution_.routeVec.push_back(RouteSectionVec());
-    return false;
-  }
-
-  blockRoute(routeStepVec);
-
-  nets_.joinEquivalentRoute(routeStepVec);
-  assert(nets_.isEquivalentVia(routeStepVec[0].via, routeStepVec[1].via));
-
-  auto routeSectionVec = condenseRoute(routeStepVec);
-
-#ifndef NDEBUG
-//    dumpRouteSteps(routeStepVec);
-//    dumpRouteSections(routeSectionVec);
-#endif
-
-  addHyperspaceWireJumps(routeSectionVec);
-  solution_.routeVec.push_back(routeSectionVec);
-
-  return true;
-}
-
-bool Router::isAvailable(const ViaLayer &via,
-                         const Via &startVia,
-                         const Via &targetVia)
-{
-  if (via.via.x() < 0 || via.via.y() < 0 || via.via.x() >= solution_.gridW
-    || via.via.y() >= solution_.gridH) {
-    return false;
-  }
-
-  if (via.isWireLayer) {
-    if (isBlocked(via.via)) {
-      return false;
+  for (auto &ci : layout_.circuit.componentNameToInfoMap) {
+    const auto &componentName = ci.first;
+    auto pinViaVec = layout_.circuit.calcComponentPins(componentName);
+    for (auto via : pinViaVec) {
+      allPinSet_.insert(via);
     }
   }
-  else {
-    // If it has an equivalent, it must be our equivalent
-    if (nets_.hasEquivalent(via.via)
-      && !nets_.isEquivalentVia(via.via, startVia)) {
-      return false;
-    }
-//    // Allow moving into route from starting pin before the starting pin has been set as equivalent to the new target pin.
-//    else if (nets_.isEquivalentVia(via.via, startVia)) {
-//      return true;
-//    }
-    // Can go to component pin only if it's target.
-    if (isAnyPin(via) && !isTarget(via, targetVia)) {
-      return false;
-    }
-  }
-  // Can go there!
-  return true;
 }
 
-bool Router::isTarget(const ViaLayer &via, const Via &targetVia)
-{
-  if (via.isWireLayer) {
-    return false;
-  }
-  else if (isTargetPin(via, targetVia)) {
-    return true;
-  }
-  else if (nets_.isEquivalentVia(via.via, targetVia)) {
-    return true;
-  }
-  return false;
-}
-
-bool Router::isTargetPin(const ViaLayer &via, const Via &targetVia)
-{
-  return (via.via == targetVia).all();
-}
-
-bool Router::isAnyPin(const ViaLayer &via)
-{
-  return allPinSet.count(via.via) > 0;
-}
-
-// Route always starts and ends on wire layer
-// Through to wire always starts a wire section.
-// Through to strip always ends a wire section.
-// Everything else is a strip section.
-RouteSectionVec Router::condenseRoute(const RouteStepVec &routeStepVec)
-{
-  RouteSectionVec routeSectionVec;
-  assert(!routeStepVec.begin()->isWireLayer);
-  assert(!(routeStepVec.rend() - 1)->isWireLayer);
-  auto startSection = routeStepVec.begin();
-  for (auto i = routeStepVec.begin() + 1; i != routeStepVec.end(); ++i) {
-    if (i->isWireLayer != (i - 1)->isWireLayer) {
-      if ((i - 1) != startSection) {
-        routeSectionVec.push_back(ViaLayerStartEnd(*startSection, *(i - 1)));
-        startSection = i;
-      }
-    }
-  }
-  if (startSection != routeStepVec.end() - 1) {
-    routeSectionVec
-      .push_back(ViaLayerStartEnd(*startSection, *(routeStepVec.end() - 1)));
-  }
-  return routeSectionVec;
-}
-
-void Router::dumpRouteSteps(const RouteStepVec &routeStepVec)
-{
-  fmt::print("RouteStepVec\n");
-  for (const auto &step : routeStepVec) {
-    fmt::print("  {}\n", step.str());
-  }
-}
-
-void Router::dumpRouteSections(const RouteSectionVec &routeSectionVec)
-{
-  fmt::print("RouteSectionVec\n");
-  for (const auto &section : routeSectionVec) {
-    fmt::print("  {} - {}\n", section.start.str(), section.end.str());
-  }
-}
-
-void Router::addHyperspaceWireJumps(const RouteSectionVec &routeSectionVec)
+void Router::addWireJumps(const RouteSectionVec &routeSectionVec)
 {
   for (auto section : routeSectionVec) {
     const auto &start = section.start;
     const auto &end = section.end;
     assert(start.isWireLayer == end.isWireLayer);
     if (start.isWireLayer) {
-      wireToViaRef(start.via) = ViaValid(end.via, true);
-      wireToViaRef(end.via) = ViaValid(start.via, true);
+      wireToViaRef(start.via) = ValidVia(end.via, true);
+      wireToViaRef(end.via) = ValidVia(start.via, true);
     }
   }
 }
 
-ViaValid &Router::wireToViaRef(const Via &via)
-{
-  return viaTraceVec_[solution_.idx(via)].wireToVia;
-}

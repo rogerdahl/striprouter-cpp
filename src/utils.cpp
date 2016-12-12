@@ -1,41 +1,25 @@
+#include <chrono>
+#include <sys/file.h>
+#include <sys/stat.h>
+#include <thread>
+#include <vector>
+
+#include "fmt/format.h"
 #include <GL/glew.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <vector>
 
-#include "utils.h"
 #include "shader.h"
+#include "utils.h"
 
 
-averageSec::averageSec()
-  : doubleDequer_(0.0)
-{
-}
-
-averageSec::~averageSec()
-{
-}
-
-void averageSec::addSec(double s)
-{
-  doubleDequer_.push_back(s);
-  if (doubleDequer_.size() > 60) {
-    doubleDequer_.pop_front();
-  }
-}
-
-double averageSec::calcAverage()
-{
-  double sumSec = 0.0;
-  for (double s : doubleDequer_) {
-    sumSec += s;
-  }
-  return sumSec / doubleDequer_.size();
-}
+using namespace std::chrono_literals;
 
 //
+// OpenGL
+//
 
-bool save_screenshot(std::string filename, int w, int h)
+bool saveScreenshot(std::string filename, int w, int h)
 {
   //This prevents the images getting padded
   // when the width multiplied by 3 is not a multiple of 4
@@ -186,3 +170,88 @@ std::vector<unsigned char> makeTestTextureVector(int w, int h, int border)
   }
   return v;
 }
+
+//
+// File
+//
+
+double getMtime(const std::string& path)
+{
+  struct stat st = {0};
+  int ret = lstat(path.c_str(), &st);
+  if (ret == -1) {
+    throw fmt::format("Unable to stat file: {}", path);
+  }
+  return st.st_mtim.tv_sec + st.st_mtim.tv_nsec / 100'0000'000.0;
+}
+
+std::string joinPath(const std::string& a, const std::string& b)
+{
+  if (a.back() == '/') {
+    return a + b;
+  }
+  else {
+    return a + std::string("/")  + b;
+  }
+}
+
+int getExclusiveLock(const std::string filePath)
+{
+#if defined(_WIN32)
+  HANDLE hFile = CreateFile(_T("c:\\file.txt"), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
+#else
+  int fd = open(filePath.c_str(), O_RDWR);
+  while (true) {
+    int result = flock(fd, LOCK_EX); // blocks
+    if (!result) {
+      break;
+    }
+    std::this_thread::sleep_for(500ms);
+  }
+  return fd;
+#endif
+}
+
+void releaseExclusiveLock(int fd)
+{
+#if defined(_WIN32)
+  HANDLE hFile = CreateFile(_T("c:\\file.txt"), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
+#else
+  int result = flock(fd, LOCK_UN);
+  if (result) {
+    throw std::runtime_error("Unable to release exclusive lock");
+  }
+#endif
+}
+
+
+//
+// Average frames per second
+//
+
+averageSec::averageSec()
+  : doubleDeque_(0.0)
+{
+}
+
+averageSec::~averageSec()
+{
+}
+
+void averageSec::addSec(double s)
+{
+  doubleDeque_.push_back(s);
+  if (doubleDeque_.size() > 60) {
+    doubleDeque_.pop_front();
+  }
+}
+
+double averageSec::calcAverage()
+{
+  double sumSec = 0.0;
+  for (double s : doubleDeque_) {
+    sumSec += s;
+  }
+  return sumSec / doubleDeque_.size();
+}
+

@@ -7,5 +7,3 @@ Settings::Settings()
     pause(false)
 {
 }
-
-

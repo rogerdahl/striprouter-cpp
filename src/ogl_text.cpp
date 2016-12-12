@@ -2,10 +2,6 @@
 #include <iostream>
 
 #include <GL/glew.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/string_cast.hpp>
 #include <fmt/format.h>
 
 #include "ogl_text.h"
@@ -13,18 +9,15 @@
 
 
 const int MAX_TEXTURE_SIZE_W_H = 1024 * 1024;
-
 // FT returns some values in 1/64th of pixel size.
 const int FT_SIZE_FACTOR = 64;
-
 const int BACKGROUND_PADDING_PIXELS = 0;
 
-OglText::OglText(const std::string &fontPath, int fontH, int x, int y)
+
+OglText::OglText(const std::string &fontPath, int fontH)
   : oglInitialized_(false),
     texWH_(0),
     fontH_(fontH),
-    x_(x),
-    y_(y),
     textProgramId_(0),
     textBackgroundProgramId(0),
     face_(0)
@@ -40,8 +33,8 @@ void OglText::openGLInit()
   glGenBuffers(1, &vertexBufId_);
   glGenBuffers(1, &texBufId_);
   glGenTextures(1, &textureId_);
-  oglInitialized_ = true;
   createFontTexture();
+  oglInitialized_ = true;
 }
 
 OglText::~OglText()
@@ -49,7 +42,6 @@ OglText::~OglText()
   glDeleteBuffers(1, &vertexBufId_);
   glDeleteBuffers(1, &texBufId_);
   glDeleteTextures(1, &textureId_);
-
   int error = FT_Done_FreeType(freetypeLibraryHandle_);
   if (error) {
     fmt::print(stderr, "Error: Unable to release the FreeType2 library\n");
@@ -57,25 +49,33 @@ OglText::~OglText()
   }
 }
 
-void OglText::reset(int windowW, int windowH, int x, int y, int fontH)
+void OglText::setFontH(int fontH)
 {
-  windowW_ = windowW;
-  windowH_ = windowH;
-  x_ = x;
-  y_ = y;
   if (fontH != fontH_) {
     fontH_ = fontH;
     createFontTexture();
   }
 }
 
-void OglText::print(int nLine, const std::string &str)
+
+void OglText::print(glm::tmat4x4<float>& projMat, int x, int y, int nLine, const std::string &str, bool drawBackground)
 {
   assert(oglInitialized_); // Call openGLInit() after creating an OpenGL context
-  assert(windowW_ && windowH_); // Call reset() before print()
   glDisable(GL_DEPTH_TEST);
-  drawTextBackground(nLine, str);
-  drawText(nLine, str);
+
+  glBindTexture(GL_TEXTURE_2D, textureId_);
+  glActiveTexture(GL_TEXTURE0);
+
+  if (drawBackground) {
+    glUseProgram(textBackgroundProgramId);
+    GLint projectionId = glGetUniformLocation(textBackgroundProgramId, "projection");
+    glUniformMatrix4fv(projectionId, 1, GL_FALSE, glm::value_ptr(projMat));
+    drawTextBackground(x, y, nLine, str);
+  }
+  glUseProgram(textProgramId_);
+  GLint projectionId = glGetUniformLocation(textProgramId_, "projection");
+  glUniformMatrix4fv(projectionId, 1, GL_FALSE, glm::value_ptr(projMat));
+  drawText(x, y, nLine, str);
 }
 
 int OglText::calcStringWidth(const std::string &str)
@@ -88,7 +88,7 @@ int OglText::calcStringWidth(const std::string &str)
   return strW;
 }
 
-int OglText::getStringHeight()
+int OglText::getLineHeight()
 {
   return lineH_;
 }
@@ -218,27 +218,13 @@ bool OglText::renderFont(std::vector<unsigned char> &fontVec)
   return fitOk;
 }
 
-void OglText::drawText(int nLine, const std::string &str)
+void OglText::drawText(int x, int y, int nLine, const std::string &str)
 {
-  drawTextBackground(nLine, str);
-  glBindTexture(GL_TEXTURE_2D, textureId_);
-  glActiveTexture(GL_TEXTURE0);
-  auto projection = glm::ortho(0.0f,
-                               static_cast<float>(windowW_),
-                               static_cast<float>(windowH_),
-                               0.0f,
-                               0.0f,
-                               100.0f);
-  glUseProgram(textProgramId_);
-  GLint projectionId = glGetUniformLocation(textProgramId_, "projection");
-  assert(projectionId >= 0);
-  glUniformMatrix4fv(projectionId, 1, GL_FALSE, glm::value_ptr(projection));
-
   std::vector<GLfloat> triVec;
   std::vector<GLfloat> texVec;
 
-  int screen_x = x_;
-  int screen_y = y_ + nLine * lineH_;
+  int screen_x = x;
+  int screen_y = y + nLine * lineH_;
 
   for (const char &ascii : str) {
     auto &c = charMeta_[ascii - 32];
@@ -303,24 +289,12 @@ void OglText::drawText(int nLine, const std::string &str)
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
 }
 
-void OglText::drawTextBackground(int nLine, const std::string &str)
+void OglText::drawTextBackground(int x, int y, int nLine, const std::string &str)
 {
   auto strW = calcStringWidth(str);
-  auto projection = glm::ortho(0.0f,
-                               static_cast<float>(windowW_),
-                               static_cast<float>(windowH_),
-                               0.0f,
-                               0.0f,
-                               100.0f);
-  glUseProgram(textBackgroundProgramId);
-  glUniformMatrix4fv(glGetUniformLocation(textBackgroundProgramId,
-                                          "projection"),
-                     1,
-                     GL_FALSE,
-                     glm::value_ptr(projection));
 
-  float x1 = x_;
-  float y1 = y_ + nLine * lineH_;
+  float x1 = x;
+  float y1 = y + nLine * lineH_;
   float x2 = x1 + strW;
   float y2 = y1 + lineH_;
 

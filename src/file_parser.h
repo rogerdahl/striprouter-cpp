@@ -5,20 +5,22 @@
 #include <utility>
 #include <map>
 
-#include "solution.h"
+#include "layout.h"
 
-class Parser
+class CircuitFileParser
 {
 public:
-  Parser(Solution&);
-  ~Parser();
-  void parse();
+  CircuitFileParser(Layout&);
+  ~CircuitFileParser();
+  void parse(std::string& circuitFilePath);
 private:
   void parseLine(std::string lineStr);
-  bool parseBoard(std::string &lineStr);
   bool parseCommentOrEmpty(std::string &lineStr);
+  bool parseBoard(std::string &lineStr);
+  bool parseOffset(std::string &lineStr);
   bool parsePackage(std::string &lineStr);
   bool parseComponent(std::string &lineStr);
   bool parseConnection(std::string &lineStr);
-  Solution& solution_;
+  Layout& layout_;
+  Via offset_;
 };

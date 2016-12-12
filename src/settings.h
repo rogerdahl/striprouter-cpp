@@ -3,11 +3,10 @@
 #include <mutex>
 
 
-const int DEFAULT_WIRE_COST = 1000;
-
-const int DEFAULT_STRIP_COST = 1;
-
+const int DEFAULT_WIRE_COST = 1;
+const int DEFAULT_STRIP_COST = 10;
 const int DEFAULT_VIA_COST = 100;
+
 
 class Settings
 {

@@ -1,39 +1,34 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <string>
 #include <vector>
 
-#include <boost/filesystem/path.hpp>
-#include <GL/glew.h>
 #include <fmt/format.h>
-#include <GLFW/glfw3.h>
 
 #include "shader.h"
+#include "utils.h"
 
 
-const boost::filesystem::path SHADERS_DIR_PATH = "./shaders/";
+const std::string SHADERS_DIR_PATH = "./shaders/";
+
 
 void compileAndCheckShader(const char *path, GLuint shaderId);
 void printInfoLog(GLuint shaderId, bool isShader);
 std::string loadFile(const char *path);
 
+
 GLuint createProgram(const char *vertexShaderFileName,
                      const char *fragmentShaderFileName)
 {
-  boost::filesystem::path
-    vertexShaderPath = SHADERS_DIR_PATH / vertexShaderFileName;
-  boost::filesystem::path
-    fragmentShaderPath = SHADERS_DIR_PATH / fragmentShaderFileName;
-
-//  GLFWwindow* window = glfwGetCurrentContext();
+  std::string vertexShaderPath = joinPath(SHADERS_DIR_PATH, vertexShaderFileName);
+  std::string fragmentShaderPath = joinPath(SHADERS_DIR_PATH, fragmentShaderFileName);
 
   GLuint vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
-  compileAndCheckShader(vertexShaderPath.string().c_str(), vertexShaderId);
+  compileAndCheckShader(vertexShaderPath.c_str(), vertexShaderId);
 
   GLuint fragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
-  compileAndCheckShader(fragmentShaderPath.string().c_str(), fragmentShaderId);
-
-//    cout << "Linking shaders" << endl;
+  compileAndCheckShader(fragmentShaderPath.c_str(), fragmentShaderId);
 
   GLuint programId = glCreateProgram();
   glAttachShader(programId, vertexShaderId);

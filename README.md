@@ -13,11 +13,11 @@ Costs can be assigned to resources such as stripboard area and solder points in 
 The program searches only for routes that use non-overlapping wires that cross the traces at right angles, which tends to give layouts that look clean, and which allows using only uninsulated wires.   
 
 
-Currently somewhat working:
+Currently implemented:
 
 * Parsing of circuit description file
+* Automatic routing, aware of nets and indirect connections 
 * Visualization of circuit and discovered routes
-* Automatic routing that considers existing routes indirectly connected to target 
 * Basic GUI controls
 * Move components with mouse
 * Zoom and pan with mouse wheel and drag
@@ -40,7 +40,7 @@ Planned functionality:
 
 2) Move the program to one side of the screen and open the included `circuit.txt` file in a text editor on the other. Start creating your circuit there, using the simple syntax shown in the file.
  
-* `Board`: The size of the stripboard, specified by number of vias (holes) horizontally and vertically, as seen when the copper strips run vertically. The board must be large enough that the circuit and rutes will fit but should not be larger than necessary, as search speed slows down when board size increases.
+* `Board`: The size of the stripboard, specified by number of vias (through holes) horizontally and vertically, as seen when the copper strips run vertically. The board must be large enough that the circuit and routes will fit but should not be larger than necessary, as search speed slows down when board size increases.
 
 * `Package`: Reusable pin layouts. Each pin is designated by a coordinate relative to pin 1, so pins can be in any order and relationship to each other.
 
@@ -50,45 +50,25 @@ Planned functionality:
      
 Packages, components and connections can be intermixed, however packages must be described before the components in which they are used, and components must be described before connections in which they are used.
 
+If you are familiar with the netlists supported by most PCB design software, you will have noticed that the `circuit.txt` file does not support specifying nets. Instead, the nets are inferred from the point-to-point connections at runtime. In the `circuit.txt` file, simply reuse pins as often as necessary, as shown for the `vcc` and `gnd` connections in the included example.   
+
 3) Whenever you want to see the current status of your `circuit.txt` file, just save it in the editor to display the new version in the router. If there are any problems in the file, a list of errors is shown in the router.
 
 4) Components can be moved with the mouse but the result can't be written back to the `circuit.txt` file (sorry). To see the coordinate for a component, hold it with the mouse.
 
 6) Wait while the program randomly searches for complete layouts. As long as the program is running, it is always searching for a better layout.
 
-8) If no satisfactory layouts are found, click `Show input` to view the required connections and try moving the components to create more space between components, fewer crossed connections and less interference in problem areas with many failed routes. A complete layout can always be found if there is enough room for routes between the components.
+8) If no satisfactory layouts are found, click `Ratsnest` to view the required connections and try moving the components to create more space between components, fewer crossed connections and less interference in problem areas with many failed routes. A complete layout can always be found if there is enough room for routes between the components.
 
 7) Click `Show best` to see the best layout found so far.
 
 8) If you find a layout that you wish to use, click `Pause` and then, ahem, use your OS Print Screen function. There's no other way to save or export layouts yet.
 
-### Overview of operation
-
-* The program operates with objects called Solutions. Each Solution contains a Circuit object, a Settings object, potentially a set of discovered routes for the circuit, and misc other housekeeping and diagnostics information.
-
-* A Circuit holds a description of the components and connections that make up a circuit, much like the information in the `circuit.txt` file. 
-
-* Settings holds various settings that are used when processing the Solution, such as the resource costs that are used by the router.
- 
-* When the program starts, it creates three Solutions called inputSolution, currentSolution and bestSolution. The main thread then launches a set of router threads and a parser thread.
-
-* The parser thread gains exclusive access to the `circuit.txt` file, parses it to a thread local Circuit and releases the file. It then locks the inputSolution and writes the local Circuit to the inputSolution Circuit. Then monitors the modified time on the `circuit.txt` file and, if it changes, starts over with gaining exclusive access to the file.
-
-* The router threads compete for a lock on inputSolution. When a thread gets the lock, it creates a thread local copy of inputSolution, called threadSolution and releases the lock. Because the router always creates the shortest possible route for a given connection, only the order in which the routes are created affects the end result. So, as a temporary first approach, a random search is currently implemented by having the thread start by randomly shuffling the order of the connections in its threadSolution. It then creates, or attempts to create, the routes in the shuffled order. The number of ways the connections can be shuffled is the factorial of the number of connections, which makes it impossible to check all possible orderings even for fairly small circuits.
-
-    When the routing is done, the thread locks bestSolution and compares the threadSolution and bestSolution scores. If threadSolution has a better score, it copies threadSolution to bestSolution, overwriting the old bestSolution. The thread then locks currentSolution and writes threadSolution to it, and loops back to the start, where it again locks inputSolution.
-   
-    The main thread runs the GUI and OpenGL rendering. When a setting is changed with the GUI or components are moved with the mouse, the main thread locks inputSolution and updates its settings or circuit. The main thread renders the inputSolution while a drag/drop operation is performed, bestSolution if the `Show best` checkbox is enabled, and currentSolution otherwise. To avoid locking the solution being rendered during the entire rendering process, the main thread briefly locks the solution it will render and creates a thread local copy, then renders the copy and discards it.
-   
-* The router is based on the Dijkstra and Uniform Cost Search algorithms and uses a common optimization based on a set and a priority queue. The search is customized to only find paths that can be implemented on a stripboard, the most important limitation being that there are two layers, where one layer can have  only horizontal connections and the other can have only vertical connections.
-
-* The router also keeps tracks of the connections created by previous routes and searches them for shortcuts when creating new routes. E.g., if there is an existing route from A to B and another from C to D, the router knows that creating a route from A to C also connects B and D. If a later route connects to A, the router will also consider routes to B, C and D, and use the one that has the lowest cost.
-
 ### Tips and Tricks
 
 * The costs can be adjusted by hovering over the numbers and spinning the mouse wheel.
 
-* If the router is unable to find routes for all the required connections, the unrouted connections are listed separately in the solution. These can then be added by creating regular point-to-point connections with insulated wire at solder time.
+* If the router is unable to find routes for all the required connections, the unrouted connections are shown in the layout. These can then be added by creating regular point-to-point connections with insulated wire at solder time.
   
 * Some designs, such as [Rasperry Pi "Hats"](https://shop.pimoroni.com/collections/hats) require a double row header on the edge of the board. In the case of the Raspberry Pi, this is a 2x20 pin header. In order to connect to the outer header pins, the router must go around the header and use board area on the outer side for wires and traces, which makes it impossible for the header to be at the edge of the board. The more connections are required for the outer row, the further in on the board the header must be located.
 
@@ -101,6 +81,30 @@ Packages, components and connections can be intermixed, however packages must be
   3) Represent the double header with two single headers in the circuit description. Put one single header at the actual location of the inner row of the double header and put the other in another location on the board. The opposite side may be best. The router can then route directly to each of the single row headers without using area outside the headers. At solder time, connect the outer row of the double header to the row of points that were used by the router. Using an insulated flat cable can be convenient. Old IDE and floppy cables work well for this.
 
 * Bonus: If you zoom in far enough, you get free modern art, such as [this](./art.png) :)
+
+### Overview of operation
+
+* The program operates with objects called Layouts. Each Layout contains a Circuit object, a Settings object, potentially a set of discovered routes for the circuit, and misc other housekeeping and diagnostics information.
+
+* A Circuit holds a description of the components and connections that make up a circuit, much like the information in the `circuit.txt` file. 
+
+* Settings holds various settings that are used when processing the Layout, such as the resource costs that are used by the router.
+ 
+* When the program starts, it creates three Layouts called inputLayout, currentLayout and bestLayout. The main thread then launches a set of router threads, typically one per logical core in the CPU(s), and a single parser thread.
+
+* The parser thread gains exclusive access to the `circuit.txt` file, parses it to a thread local Circuit and releases the file. It then locks the inputLayout and writes the local Circuit to the inputLayout Circuit. Then monitors the modified time on the `circuit.txt` file and, if it changes, starts over with gaining exclusive access to the file.
+
+* The router threads compete for a lock on inputLayout. When a thread gets the lock, it creates a thread local copy of inputLayout, called threadLayout and releases the lock. Because the router always uses the lowest cost route for a given connection, only the order in which the routes are created affects the end result. So, as a temporary first approach, a random search is currently implemented by having the thread start by randomly shuffling the order of the connections in its threadLayout. It then creates, or attempts to create, the routes in the shuffled order. The number of ways the connections can be shuffled is the factorial of the number of connections, which makes it impossible to check all possible orderings even for fairly small circuits.
+
+    The Uniform Cost Search is based on assigning a cost to each point that can possibly be reached, so the cost for a completed route is the total of the costs of the points along the route. When the routing is done, the costs for each of the routes are summed up to get the total cost for the Layout. 
+   
+    When the routing is done, the thread locks bestLayout and compares the threadLayout and bestLayout for cost and number of completed routes. If threadLayout has more completed routes, or the same number of routes but a lower cost, it is better, and the thread copies it to bestLayout, overwriting the old bestLayout. The thread then always locks currentLayout and writes threadLayout to it, and loops back to the start, where it again locks inputLayout.
+   
+* The main thread runs the GUI and OpenGL rendering. When a setting is changed with the GUI or components are moved with the mouse, the main thread locks inputLayout and updates its Settings or Circuit. The main thread renders the inputLayout while a drag/drop operation is performed, bestLayout if the `Show best` checkbox is enabled, and currentLayout otherwise. To avoid locking the Layout being rendered during the entire rendering process, the main thread briefly locks the Layout it will render and creates a thread local copy, then renders the copy and discards it.
+   
+* The router is based on a custom implementation of the Dijkstra and Uniform Cost Search algorithms and includes a common optimization based on using a set and a priority queue. The search is restricted to only find paths that can be implemented on a stripboard, the most important limitation being that there are two layers, where one layer can have  only horizontal connections and the other can have only vertical connections.
+
+* The router infers connected nets from the point-to-point connections described in `circuit.txt` and searches nets for potential shortcuts when routing. As routes are created, all points along the route are assigned to nets, using a structure that allows very fast checking for net membership when the points are encountered by the later Uniform Cost Searches.
 
 
 ### Technologies
@@ -286,8 +290,8 @@ https://sourceforge.net/projects/freetype/ > ft263.zip (2.6.3)
 * Ignore error: "Could NOT find PkgConfig (missing:  PKG_CONFIG_EXECUTABLE)"
 * Click Generate
 * Open freetype-2.6.3\builds\freetype.sln
-* Solution Configurations > Release
-* Build > Build Solution
+* Layout Configurations > Release
+* Build > Build Layout
 
 #### GLFW
 
@@ -304,9 +308,9 @@ https://github.com/cppformat/cppformat/releases > 3.0.1
 * Select only: FMT_INSTALL, FMT_USE_CPP11
 * Click Generate
 * Open libraries\win64\fmt-3.0.1\builds\FMT.sln
-* Probably no longer required: Right click Solution "FMT" > Retarget solution
-* Solution Configurations > Release
-* Build > Build Solution
+* Probably no longer required: Right click Layout "FMT" > Retarget solution
+* Layout Configurations > Release
+* Build > Build Layout
 
 #### Boost
 
@@ -338,5 +342,5 @@ git clone --recursive https://github.com/wjakob/nanogui.git
 * Select only: NANOGUI_USE_GLAD, USE_MSVC_RUNTIME_LIBRARY_DLL
 * Generate
 * Open NanoGUI.sln
-* Solution Configurations (toolbar) > Release
-* Build > Build Solution
+* Layout Configurations (toolbar) > Release
+* Build > Build Layout

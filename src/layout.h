@@ -4,34 +4,38 @@
 #include <set>
 #include <thread>
 #include <vector>
+#include <chrono>
 
 #include "circuit.h"
 #include "settings.h"
 #include "via.h"
 
 
-typedef std::vector<ViaLayer> RouteStepVec;
-typedef std::vector<ViaLayerStartEnd> RouteSectionVec;
+typedef std::vector<LayerVia> RouteStepVec;
+typedef std::vector<LayerStartEndVia> RouteSectionVec;
 typedef std::vector<RouteSectionVec> RouteVec;
 typedef std::vector<std::string> StringVec;
 typedef std::vector<bool> RouteStatusVec;
 
 // Nets
 typedef std::set<Via, std::function<bool(const Via &, const Via &)> > ViaSet;
-
-//typedef std::map<Via, int, std::function<bool(const Via&,const Via&)> > ViaToIdxMap;
 typedef std::vector<ViaSet> ViaSetVec;
 typedef std::vector<int> SetIdxVec;
 
-class Solution
+
+class Layout
 {
 public:
-  Solution();
-//  Solution(int gridW, int gridH);
-  ~Solution();
-  Solution(const Solution &);
-  Solution &operator=(const Solution &);
-  std::unique_lock<std::mutex> scope_lock();
+  Layout();
+  Layout(const Layout &);
+  Layout &operator=(const Layout &);
+  // Lineage
+  void setOriginal();
+  bool isBasedOn(const Layout& other);
+  // Locking
+  std::unique_lock<std::mutex> scopeLock();
+  Layout threadSafeCopy();
+  //
   int idx(const Via &);
 
   Circuit circuit;
@@ -40,13 +44,16 @@ public:
   int gridW;
   int gridH;
 
-  int totalCost;
+  long totalCost;
   int numCompletedRoutes;
   int numFailedRoutes;
   int numShortcuts;
-  bool isReady;
 
-  StringVec solutionInfoVec;
+  bool isReadyForRouting;
+  bool isReadyForEval;
+  bool hasError;
+
+  StringVec layoutInfoVec;
   RouteVec routeVec;
   RouteStatusVec routeStatusVec;
 
@@ -55,15 +62,15 @@ public:
   SetIdxVec setIdxVec;
 
   // Debug
-  bool hasError;
-  ViaValid diagStartVia;
-  ViaValid diagEndVia;
-  ViaCostVec diagCostVec;
+  ValidVia diagStartVia;
+  ValidVia diagEndVia;
+  CostViaVec diagCostVec;
   RouteStepVec diagRouteStepVec;
-  ViaTraceVec diagTraceVec;
+  WireLayerViaVec diagTraceVec;
   StringVec errorStringVec;
 
 private:
-  void copy(const Solution &s);
+  void copy(const Layout &s);
   std::mutex mutex_;
+  std::chrono::time_point<std::chrono::high_resolution_clock> timestamp_;
 };

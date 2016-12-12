@@ -9,48 +9,53 @@
 #include <Eigen/Core>
 
 #include "circuit.h"
+#include "layout.h"
 #include "nets.h"
 #include "settings.h"
-#include "solution.h"
 #include "thread_stop.h"
 #include "via.h"
+
+
+typedef std::chrono::duration<double> TimeDuration;
+
 
 class Router
 {
 public:
-  Router(Solution &, ThreadStop &);
-  void route();
-
+  Router(Layout &, ThreadStop &, Layout& inputLayout, Layout& currentLayout, const TimeDuration& _maxRenderDelay);
+  bool route();
+  // Interface for Uniform Cost Search
   bool
-  isAvailable(const ViaLayer &via, const Via &startVia, const Via &targetVia);
-  bool isTarget(const ViaLayer &via, const Via &targetVia);
-  bool isTargetPin(const ViaLayer &via, const Via &targetVia);
-  bool isAnyPin(const ViaLayer &via);
-  ViaValid &wireToViaRef(const Via &via);
+  isAvailable(const LayerVia &via, const Via &startVia, const Via &targetVia);
+  bool isTarget(const LayerVia &via, const Via &targetVia);
+  bool isTargetPin(const LayerVia &via, const Via &targetVia);
+  bool isAnyPin(const LayerVia &via);
+  ValidVia &wireToViaRef(const Via &via);
 
 private:
-  void routeAll();
-
+  bool routeAll();
+  void findCompleteRoute(const StartEndVia &);
+  bool findRoute(Via &shortcutEndVia, const StartEndVia &viaStartEnd);
+  RouteSectionVec condenseRoute(const RouteStepVec &routeStepVec);
+  // Wire layer blocking
   void blockComponentFootprints();
   void blockRoute(const RouteStepVec &routeStepVec);
   void block(const Via &via);
   bool isBlocked(const Via &via);
-
-  void findCompleteRoute(const ViaStartEnd &);
-  bool findRoute(Via &shortcutEndVia, const ViaStartEnd &viaStartEnd);
-
+  // Nets
+  void joinAllConnections();
   void registerAllComponentPins();
+  void addWireJumps(const RouteSectionVec &routeSectionVec);
 
-  RouteSectionVec condenseRoute(const RouteStepVec &routeStepVec);
-  void addHyperspaceWireJumps(const RouteSectionVec &routeSectionVec);
+  Layout &layout_;
+  Layout &inputLayout_;
+  Layout &currentLayout_;
 
-  void dumpRouteSteps(const RouteStepVec &routeStepVec);
-  void dumpRouteSections(const RouteSectionVec &routeSectionVec);
-
-  Solution &solution_;
   Nets nets_;
   ThreadStop &threadStop_;
 
-  ViaTraceVec viaTraceVec_;
-  ViaSet allPinSet;
+  WireLayerViaVec viaTraceVec_;
+  ViaSet allPinSet_;
+
+  const TimeDuration& maxRenderDelay_;
 };

@@ -45,17 +45,6 @@ else ()
   set(FREETYPE_LINK_DIRS ${LIBRARIES}/freetype-2.6.3/builds/Release)
 endif ()
 
-# Boost
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-  # https://cmake.org/cmake/help/v3.0/module/FindBoost.html
-  find_package(Boost 1.58.0 REQUIRED)
-  set(BOOST_LIBRARIES boost_filesystem boost_system)
-else ()
-  set(BOOST_LIBRARIES libboost_filesystem-vc140-mt-1_60 libboost_system-vc140-mt-1_60)
-  set(BOOST_INCLUDE_DIR ${LIBRARIES}/boost_1_60_0)
-  set(BOOST_LINK_DIR ${LIBRARIES}/boost_1_60_0/stage/lib)
-endif ()
-
 # glm
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 else ()
@@ -116,12 +105,13 @@ set(SOURCE_FILES
   ${SOURCE_DIR}/main.cpp
   ${SOURCE_DIR}/nets.cpp
   ${SOURCE_DIR}/ogl_text.cpp
-  ${SOURCE_DIR}/parser.cpp
+  ${SOURCE_DIR}/file_parser.cpp
+  ${SOURCE_DIR}/file_writer.cpp
   ${SOURCE_DIR}/render.cpp
   ${SOURCE_DIR}/router.cpp
   ${SOURCE_DIR}/settings.cpp
   ${SOURCE_DIR}/shader.cpp
-  ${SOURCE_DIR}/solution.cpp
+  ${SOURCE_DIR}/layout.cpp
   ${SOURCE_DIR}/status.cpp
   ${SOURCE_DIR}/thread_stop.cpp
   ${SOURCE_DIR}/ucs.cpp
@@ -130,7 +120,6 @@ set(SOURCE_FILES
 )
 
 include_directories(
-  ${BOOST_INCLUDE_DIR}
   ${EIGEN3_INCLUDE_DIR}
   ${FMT_INCLUDE_DIR}
   ${FREETYPE_INCLUDE_DIRS}
@@ -142,7 +131,6 @@ include_directories(
 )
 
 link_directories(
-  ${BOOST_LINK_DIR}
   ${FMT_LINK_DIR}
   ${FREETYPE_LINK_DIRS}
   ${GLEW_LINK_DIR}
@@ -151,7 +139,6 @@ link_directories(
 )
 
 link_libraries(
-  ${BOOST_LIBRARIES}
   ${FMT_LIBRARIES}
   ${FREETYPE_LIBRARIES}
   ${GCC_LIBRARIES}

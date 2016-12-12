@@ -3,9 +3,25 @@
 #include <fmt/format.h>
 
 
-std::string getComponentAtMouseCoordinate(const Render &render,
-                                          Circuit &circuit,
-                                          const Pos &mouseBoardPos)
+Pos boardToScrPos(const Pos &boardPos, const float zoom, const Pos &boardScreenOffset)
+{
+  return boardPos * zoom + boardScreenOffset;
+}
+
+Pos screenToBoardPos(const Pos &scrPos, const float zoom, const Pos &boardScreenOffset)
+{
+  return (scrPos - boardScreenOffset) / zoom ;
+}
+
+Pos getMouseScrPos(const IntPos& intMousePos) {
+  return intMousePos.cast<float>();
+}
+
+Pos getMouseBoardPos(const IntPos& intMousePos, const float zoom, const Pos &boardScreenOffset) {
+  return screenToBoardPos(getMouseScrPos(intMousePos), zoom, boardScreenOffset);
+}
+
+std::string getComponentAtBoardPos(Circuit &circuit, const Pos &boardPos)
 {
   for (auto &ci : circuit.componentNameToInfoMap) {
     auto &componentName = ci.first;
@@ -14,20 +30,18 @@ std::string getComponentAtMouseCoordinate(const Render &render,
     Pos end = footprint.end.cast<float>();
     start -= 0.5f;
     end += 0.5f;
-    auto &m = mouseBoardPos;
-    if (m.x() >= start.x() && m.x() <= end.x() && m.y() >= start.y()
-      && m.y() <= end.y()) {
+    auto &p = boardPos;
+    if (p.x() >= start.x() && p.x() <= end.x() && p.y() >= start.y()
+      && p.y() <= end.y()) {
       return componentName;
     }
   }
   return "";
 }
 
-void setComponentPosition(const Render &render,
-                          Circuit &circuit,
+void setComponentPosition(Circuit &circuit,
                           const Via &mouseBoardVia,
                           const std::string &componentName)
 {
   circuit.componentNameToInfoMap[componentName].pin0AbsPos = mouseBoardVia;
-//    mouseBoardPos.cast<int>();
 }

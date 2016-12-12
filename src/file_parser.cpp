@@ -2,24 +2,25 @@
 #include <iostream>
 #include <regex>
 
-#include <boost/filesystem.hpp>
 #include <fmt/format.h>
 
-#include "parser.h"
+#include "file_parser.h"
+#include "utils.h"
 
 
-Parser::Parser(Solution& _solution)
-: solution_(_solution)
+CircuitFileParser::CircuitFileParser(Layout& _layout)
+: layout_(_layout), offset_(Via(0,0))
 {
 }
 
-Parser::~Parser()
+CircuitFileParser::~CircuitFileParser()
 {
 }
 
-void Parser::parse()
+void CircuitFileParser::parse(std::string& circuitFilePath)
 {
-  std::ifstream fin("./circuit.txt");
+  auto fd = getExclusiveLock(circuitFilePath);
+  std::ifstream fin(circuitFilePath);
   std::string lineStr;
   int lineIdx = 0;
   while (std::getline(fin, lineStr)) {
@@ -28,21 +29,33 @@ void Parser::parse()
       parseLine(lineStr);
     }
     catch (std::string s) {
-      solution_.circuit.hasError = true;
-      solution_.circuit.circuitInfoVec
+      layout_.circuit.parserErrorVec
         .push_back(fmt::format("Line {:n}: {}", lineIdx, lineStr));
-      solution_.circuit.circuitInfoVec.push_back(fmt::format("Error: {}", s));
+      layout_.circuit.parserErrorVec.push_back(fmt::format("Error: {}", s));
     }
   }
-  solution_.isReady = true;
+  layout_.isReadyForRouting = !layout_.circuit.hasParserError();
+  releaseExclusiveLock(fd);
 }
 
-void Parser::parseLine(std::string lineStr)
+//
+// Private
+//
+
+void CircuitFileParser::parseLine(std::string lineStr)
 {
-  if (parseCommentOrEmpty(lineStr)) {
+  // Connections are most common, so they are parsed first to improve
+  // performance.
+  if (parseConnection(lineStr)) {
+    return;
+  }
+  else if (parseCommentOrEmpty(lineStr)) {
     return;
   }
   else if (parseBoard(lineStr)) {
+    return;
+  }
+  else if (parseOffset(lineStr)) {
     return;
   }
   else if (parsePackage(lineStr)) {
@@ -51,53 +64,62 @@ void Parser::parseLine(std::string lineStr)
   else if (parseComponent(lineStr)) {
     return;
   }
-  else if (parseConnection(lineStr)) {
-    return;
-  }
   else {
     throw std::string("Invalid line");
   }
 }
 
-//
-// Private
-//
 
 // Comment or empty
-bool Parser::parseCommentOrEmpty(std::string &lineStr)
+bool CircuitFileParser::parseCommentOrEmpty(std::string &lineStr)
 {
-  std::regex commentOrEmptyFull("^(#.*)?$",
+  static std::regex commentOrEmptyFull("^(#.*)?$",
                                 std::regex_constants::ECMAScript
                                   | std::regex_constants::icase);
   return std::regex_match(lineStr, commentOrEmptyFull);
 }
 
 // Board params (currently just size)
-bool Parser::parseBoard(std::string &lineStr)
+bool CircuitFileParser::parseBoard(std::string &lineStr)
 {
-  std::regex boardSizeRx("^\\s*board\\s+(\\d+)\\s*,\\s*(\\d+)\\s*$",
+  static std::regex boardSizeRx("^\\s*board\\s+(\\d+)\\s*,\\s*(\\d+)\\s*$",
                      std::regex_constants::ECMAScript
                        | std::regex_constants::icase);
   std::smatch m;
   if (!regex_match(lineStr, m, boardSizeRx)) {
     return false;
   }
-  solution_.gridW = stoi(m[1]);
-  solution_.gridH = stoi(m[2]);
+  layout_.gridW = stoi(m[1]);
+  layout_.gridH = stoi(m[2]);
+  return true;
+}
+
+// Component position offset. Can be used multiple times to adjust section of circuit.
+bool CircuitFileParser::parseOffset(std::string &lineStr)
+{
+  static std::regex offsetRx("^\\s*offset\\s+(-?\\d+)\\s*,\\s*(-?\\d+)\\s*$",
+                         std::regex_constants::ECMAScript
+                           | std::regex_constants::icase);
+  std::smatch m;
+  if (!regex_match(lineStr, m, offsetRx)) {
+    return false;
+  }
+  offset_.x() = stoi(m[1]);
+  offset_.y() = stoi(m[2]);
   return true;
 }
 
 // Package
-// pkg dip8 0,0 1,0 2,0 3,0 4,0 5,0 6,0 7,0 7,-2 6,-2 5,-2 4,-2 3,-2 2,-2 1,-2
-bool Parser::parsePackage(std::string &lineStr)
+// dip8 0,0 1,0 2,0 3,0 4,0 5,0 6,0 7,0 7,-2 6,-2 5,-2 4,-2 3,-2 2,-2 1,-2
+bool CircuitFileParser::parsePackage(std::string &lineStr)
 {
-  std::regex pkgFull("^\\s*(\\w+)(\\s+(-?\\d+)\\s*,\\s*(-?\\d+))+$",
+  static std::regex pkgFull("^\\s*(\\w+)(\\s+(-?\\d+)\\s*,\\s*(-?\\d+))+$",
                      std::regex_constants::ECMAScript
                        | std::regex_constants::icase);
-  std::regex pkgRelativePosRx("(\\s+(-?\\d+)\\s*,\\s*(-?\\d+))",
+  static std::regex pkgRelativePosRx("(\\s+(-?\\d+)\\s*,\\s*(-?\\d+))",
                               std::regex_constants::ECMAScript
                                 | std::regex_constants::icase);
-  std::regex pkgPosValuesRx("\\s+(-?\\d+)\\s*,\\s*(-?\\d+)",
+  static std::regex pkgPosValuesRx("\\s+(-?\\d+)\\s*,\\s*(-?\\d+)",
                             std::regex_constants::ECMAScript
                               | std::regex_constants::icase);
   std::smatch m;
@@ -114,15 +136,15 @@ bool Parser::parsePackage(std::string &lineStr)
     regex_match(s, m, pkgPosValuesRx);
     v.push_back(Via(stoi(m[1]), stoi(m[2])));
   }
-  solution_.circuit.packageToPosMap[pkgName] = v;
+  layout_.circuit.packageToPosMap[pkgName] = v;
   return true;
 }
 
 // Component
-// com <component name> <package name> <absolute position of component pin 0>
-bool Parser::parseComponent(std::string &lineStr)
+// <component name> <package name> <absolute position of component pin 0>
+bool CircuitFileParser::parseComponent(std::string &lineStr)
 {
-  std::regex comFull("^\\s*(\\w+)\\s+(\\w+)\\s+(\\d+)\\s*,\\s*(\\d+)\\s*$",
+  static std::regex comFull("^\\s*(\\w+)\\s+(\\w+)\\s+(\\d+)\\s*,\\s*(\\d+)\\s*$",
                      std::regex_constants::ECMAScript
                        | std::regex_constants::icase);
   std::smatch m;
@@ -133,27 +155,27 @@ bool Parser::parseComponent(std::string &lineStr)
   auto packageName = m[2].str();
   auto x = std::stoi(m[3]);
   auto y = std::stoi(m[4]);
-  if (solution_.circuit.packageToPosMap.find(packageName) == solution_.circuit.packageToPosMap.end()) {
+  if (layout_.circuit.packageToPosMap.find(packageName) == layout_.circuit.packageToPosMap.end()) {
     throw fmt::format("Unknown package: {}", packageName);
   }
-  Via p(x, y);
+  Via p = Via(x, y) + offset_;
   auto i = 0;
-  for (auto& v : solution_.circuit.packageToPosMap[packageName]) {
-    if (p.x() + v.x() < 0 || p.x() + v.x() >= solution_.gridW || p.y() + v.y() < 0 || p.y() + v.y() >= solution_.gridH) {
+  for (auto& v : layout_.circuit.packageToPosMap[packageName]) {
+    if (p.x() + v.x() < 0 || p.x() + v.x() >= layout_.gridW || p.y() + v.y() < 0 || p.y() + v.y() >= layout_.gridH) {
       throw fmt::format("Component pin outside of board: {}.{}", componentName, i + 1);
     }
     ++i;
   }
   Component component(packageName, p);
-  solution_.circuit.componentNameToInfoMap[m[1]] = component;
+  layout_.circuit.componentNameToInfoMap[m[1]] = component;
   return true;
 }
 
 // Connection
 // 7400.9 rpi.10
-bool Parser::parseConnection(std::string &lineStr)
+bool CircuitFileParser::parseConnection(std::string &lineStr)
 {
-  std::regex comFull("^\\s*(\\w+)\\.(\\d+)\\s*(\\w+)\\.(\\d+)\\s*$",
+  static std::regex comFull("^\\s*(\\w+)\\.(\\d+)\\s*(\\w+)\\.(\\d+)\\s*$",
                      std::regex_constants::ECMAScript
                        | std::regex_constants::icase);
   std::smatch m;
@@ -163,16 +185,16 @@ bool Parser::parseConnection(std::string &lineStr)
   ConnectionPoint start(m[1], std::stoi(m[2]));
   ConnectionPoint end(m[3], std::stoi(m[4]));
   auto
-    startComponent = solution_.circuit.componentNameToInfoMap.find(start.componentName);
-  if (startComponent == solution_.circuit.componentNameToInfoMap.end()) {
+    startComponent = layout_.circuit.componentNameToInfoMap.find(start.componentName);
+  if (startComponent == layout_.circuit.componentNameToInfoMap.end()) {
     throw fmt::format("Unknown component: {}", start.componentName);
   }
-  auto endComponent = solution_.circuit.componentNameToInfoMap.find(end.componentName);
-  if (endComponent == solution_.circuit.componentNameToInfoMap.end()) {
+  auto endComponent = layout_.circuit.componentNameToInfoMap.find(end.componentName);
+  if (endComponent == layout_.circuit.componentNameToInfoMap.end()) {
     throw fmt::format("Unknown component: {}", end.componentName);
   }
   auto startPosVec =
-    solution_.circuit.packageToPosMap.find(startComponent->second.packageName)->second;
+    layout_.circuit.packageToPosMap.find(startComponent->second.packageName)->second;
   if (start.pinIdx < 1 || start.pinIdx > static_cast<int>(startPosVec.size())) {
     throw fmt::format(
       "Invalid pin number for {}.{}. Must be between 1 and {} (including)",
@@ -181,7 +203,7 @@ bool Parser::parseConnection(std::string &lineStr)
       startPosVec.size());
   }
   auto endPosVec =
-    solution_.circuit.packageToPosMap.find(endComponent->second.packageName)->second;
+    layout_.circuit.packageToPosMap.find(endComponent->second.packageName)->second;
   if (end.pinIdx < 1 || end.pinIdx > static_cast<int>(endPosVec.size())) {
     throw fmt::format(
       "Invalid pin number for {}.{}. Must be between 1 and {} (including)",
@@ -189,8 +211,13 @@ bool Parser::parseConnection(std::string &lineStr)
       end.pinIdx,
       endPosVec.size());
   }
+
+  if (start.componentName == end.componentName && start.pinIdx == end.pinIdx) {
+    return true;
+  }
+
   --start.pinIdx;
   --end.pinIdx;
-  solution_.circuit.connectionVec.push_back(Connection(start, end));
+  layout_.circuit.connectionVec.push_back(Connection(start, end));
   return true;
 }

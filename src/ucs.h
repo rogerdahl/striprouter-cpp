@@ -3,55 +3,50 @@
 #include <set>
 #include <queue>
 
-#include "solution.h"
+#include "layout.h"
 #include "via.h"
 #include "nets.h"
 
 
-typedef std::priority_queue<ViaLayerCost> FrontierPri;
-
-typedef std::set<ViaLayer> FrontierSet;
-
-typedef std::set<ViaLayer> ExploredSet;
+typedef std::priority_queue<LayerCostVia> FrontierPri;
+typedef std::set<LayerVia> FrontierSet;
+typedef std::set<LayerVia> ExploredSet;
 
 class Router;
 
 class UniformCostSearch
 {
 public:
-  UniformCostSearch(Router &dijkstra,
-                    Solution &solution,
+  UniformCostSearch(Router &router,
+                    Layout &layout,
                     Nets &nets,
                     Via &shortcutEndVia,
-                    const ViaStartEnd &viaStartEnd);
+                    const StartEndVia &viaStartEnd);
   RouteStepVec findLowestCostRoute();
 private:
   bool findCosts(Via &shortcutEndVia);
-  void exploreNeighbour(ViaLayerCost &node, ViaLayerCost n);
-  void exploreFrontier(ViaLayerCost &node, ViaLayerCost n);
-  RouteStepVec backtraceLowestCostRoute(const ViaStartEnd &);
+  void exploreNeighbour(LayerCostVia &node, LayerCostVia n);
+  void exploreFrontier(LayerCostVia &node, LayerCostVia n);
+  RouteStepVec backtraceLowestCostRoute(const StartEndVia &);
 
-  int getCost(const ViaLayer &);
-  void setCost(const ViaLayer &, int cost);
-  void setCost(const ViaLayerCost &);
+  int getCost(const LayerVia &);
+  void setCost(const LayerVia &, int cost);
+  void setCost(const LayerCostVia &);
 
-  ViaLayer stepLeft(const ViaLayer &v);
-  ViaLayer stepRight(const ViaLayer &);
-  ViaLayer stepUp(const ViaLayer &);
-  ViaLayer stepDown(const ViaLayer &);
-  ViaLayer stepToWire(const ViaLayer &);
-  ViaLayer stepToStrip(const ViaLayer &);
+  LayerVia stepLeft(const LayerVia &v);
+  LayerVia stepRight(const LayerVia &);
+  LayerVia stepUp(const LayerVia &);
+  LayerVia stepDown(const LayerVia &);
+  LayerVia stepToWire(const LayerVia &);
+  LayerVia stepToStrip(const LayerVia &);
 
-  void dump();
-  void dumpLayer(bool wireLayer);
-
-  Router &dijkstra_;
-  Solution &solution_;
+  Router &router_;
+  Layout &layout_;
   Nets &nets_;
   Via &shortcutEndVia_;
-  const ViaStartEnd &viaStartEnd_;
+  const StartEndVia &viaStartEnd_;
 
-  ViaCostVec viaCostVec_;
+  CostViaVec viaCostVec_;
   FrontierPri frontierPri;
   FrontierSet frontierSet;
   ExploredSet exploredSet;

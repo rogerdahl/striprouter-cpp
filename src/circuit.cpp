@@ -1,5 +1,6 @@
 #include "circuit.h"
 
+// Components
 
 Component::Component()
 {
@@ -9,6 +10,8 @@ Component::Component(const std::string &_packageName, const Via &_pin0AbsPos)
   : packageName(_packageName), pin0AbsPos(_pin0AbsPos)
 {
 }
+
+// Connections
 
 ConnectionPoint::ConnectionPoint(const std::string &_componentName, int _pinIdx)
   : componentName(_componentName), pinIdx(_pinIdx)
@@ -21,9 +24,15 @@ Connection::Connection(const ConnectionPoint &_start,
 {
 }
 
+// Circuit
+
 Circuit::Circuit()
-  : hasError(false)
 {
+}
+
+bool Circuit::hasParserError()
+{
+  return parserErrorVec.size() > 0UL;
 }
 
 ConnectionViaVec Circuit::genConnectionViaVec()
@@ -40,25 +49,14 @@ ConnectionViaVec Circuit::genConnectionViaVec()
     Via startAbsPin = startRelPin + startComponent.pin0AbsPos;
     Via endAbsPin = endRelPin + endComponent.pin0AbsPos;
 
-    v.push_back(ViaStartEnd(startAbsPin, endAbsPin));
+    v.push_back(StartEndVia(startAbsPin, endAbsPin));
   }
   return v;
 }
 
-PinViaVec Circuit::calcComponentPins(std::string componentName)
+StartEndVia Circuit::calcComponentFootprint(std::string componentName) const
 {
-  PinViaVec v;
-  const Component component = componentNameToInfoMap[componentName];
-  for (auto c : packageToPosMap[component.packageName]) {
-    c += component.pin0AbsPos;
-    v.push_back(c);
-  }
-  return v;
-}
-
-ViaStartEnd Circuit::calcComponentFootprint(std::string componentName) const
-{
-  ViaStartEnd v(Via(INT_MAX, INT_MAX), Via(0, 0));
+  StartEndVia v(Via(INT_MAX, INT_MAX), Via(0, 0));
   auto component =
     (const_cast<Circuit *>(this))->componentNameToInfoMap[componentName];
   for (auto c : (const_cast<Circuit *>(this))->packageToPosMap[component
@@ -79,3 +77,15 @@ ViaStartEnd Circuit::calcComponentFootprint(std::string componentName) const
   }
   return v;
 }
+
+PinViaVec Circuit::calcComponentPins(std::string componentName)
+{
+  PinViaVec v;
+  const Component component = componentNameToInfoMap[componentName];
+  for (auto c : packageToPosMap[component.packageName]) {
+    c += component.pin0AbsPos;
+    v.push_back(c);
+  }
+  return v;
+}
+

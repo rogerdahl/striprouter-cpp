@@ -4,26 +4,29 @@
 #include "router.h"
 
 
-UniformCostSearch::UniformCostSearch(Router &dijkstra,
-                                     Solution &solution,
+UniformCostSearch::UniformCostSearch(Router &router,
+                                     Layout &layout,
                                      Nets &nets,
                                      Via &shortcutEndVia,
-                                     const ViaStartEnd &viaStartEnd)
-  : dijkstra_(dijkstra),
-    solution_(solution),
+                                     const StartEndVia &viaStartEnd)
+  : router_(router),
+    layout_(layout),
     nets_(nets),
     shortcutEndVia_(shortcutEndVia),
     viaStartEnd_(viaStartEnd)
 {
-  viaCostVec_ = ViaCostVec(solution_.gridW * solution_.gridH);
+  viaCostVec_ = CostViaVec(layout_.gridW * layout_.gridH);
 }
 
 RouteStepVec UniformCostSearch::findLowestCostRoute()
 {
   shortcutEndVia_ = viaStartEnd_.end;
   bool foundRoute = findCosts(shortcutEndVia_);
+#ifndef NDEBUG
+  layout_.diagCostVec = viaCostVec_;
+#endif
   if (foundRoute) {
-    return backtraceLowestCostRoute(ViaStartEnd(viaStartEnd_.start,
+    return backtraceLowestCostRoute(StartEndVia(viaStartEnd_.start,
                                                 shortcutEndVia_));
   }
   else {
@@ -41,7 +44,7 @@ RouteStepVec UniformCostSearch::findLowestCostRoute()
 //       'return' failure
 //     node ← frontier.pop()
 //     'if' node is goal
-//       'return' solution
+//       'return' layout
 //     explored.add(node)
 //     'for each' of node's neighbors n
 //       'if' n is not in explored
@@ -52,39 +55,41 @@ RouteStepVec UniformCostSearch::findLowestCostRoute()
 
 bool UniformCostSearch::findCosts(Via &shortcutEndVia)
 {
-  Settings &settings = solution_.settings;
+  Settings &settings = layout_.settings;
 
-  auto start = ViaLayer(viaStartEnd_.start, false);
-  auto end = ViaLayer(viaStartEnd_.end, false);
+  auto start = LayerVia(viaStartEnd_.start, false);
+  auto end = LayerVia(viaStartEnd_.end, false);
 
-//  setCost(ViaLayer(start.via, true), 0);///////////////////////
   setCost(start, 0);
 
-  frontierPri.push(ViaLayerCost(start, 0));
-  frontierSet.insert(ViaLayerCost(start, 0));
+  frontierPri.push(LayerCostVia(start, 0));
+  frontierSet.insert(LayerCostVia(start, 0));
 
   while (true) {
     if (!frontierPri.size()) {
-#ifndef NDEBUG
-      solution_.diagCostVec = viaCostVec_;
-#endif
+//#ifndef NDEBUG
+//      layout_.errorStringVec.push_back(fmt::format("Debug: UniformCostSearch::findCosts() No route found"));
+//      layout_.diagStartVia = start.via;
+//      layout_.diagEndVia = end.via;
+//      layout_.hasError = true;
+//#endif
       return false;
     }
 
-    ViaLayerCost node = frontierPri.top();
+    LayerCostVia node = frontierPri.top();
     frontierPri.pop();
     frontierSet.erase(node);
 
     node.cost = getCost(node);
 
-    if (dijkstra_.isTarget(node, end.via)) {
+    if (router_.isTarget(node, end.via)) {
 
-//      if (nets_.isEquivalentVia(node.via, end.via)) {
+//      if (nets_.isConnected(node.via, end.via)) {
 //        shortcutEndVia = node.via;
 //      }
 
 #ifndef NDEBUG
-      solution_.diagCostVec = viaCostVec_;
+      layout_.diagCostVec = viaCostVec_;
 #endif
       return true;
     }
@@ -95,52 +100,35 @@ bool UniformCostSearch::findCosts(Via &shortcutEndVia)
     // new exploration can take place.
 
     if (node.isWireLayer) {
-      exploreNeighbour(node, ViaLayerCost(stepLeft(node), settings.wire_cost));
-      exploreNeighbour(node, ViaLayerCost(stepRight(node), settings.wire_cost));
+      exploreNeighbour(node, LayerCostVia(stepLeft(node), settings.wire_cost));
+      exploreNeighbour(node, LayerCostVia(stepRight(node), settings.wire_cost));
       exploreNeighbour(node,
-                       ViaLayerCost(stepToStrip(node), settings.via_cost));
+                       LayerCostVia(stepToStrip(node), settings.via_cost));
     }
     else {
-      exploreNeighbour(node, ViaLayerCost(stepUp(node), settings.strip_cost));
-      exploreNeighbour(node, ViaLayerCost(stepDown(node), settings.strip_cost));
-      exploreNeighbour(node, ViaLayerCost(stepToWire(node), settings.via_cost));
+      exploreNeighbour(node, LayerCostVia(stepUp(node), settings.strip_cost));
+      exploreNeighbour(node, LayerCostVia(stepDown(node), settings.strip_cost));
+      exploreNeighbour(node, LayerCostVia(stepToWire(node), settings.via_cost));
 
       // Wire jumps
-      const auto &wireToVia = dijkstra_.wireToViaRef(node.via);
+      const auto &wireToVia = router_.wireToViaRef(node.via);
       if (wireToVia.isValid) {
         exploreFrontier(node,
-                        ViaLayerCost(ViaLayer(wireToVia.via, false),
+                        LayerCostVia(LayerVia(wireToVia.via, false),
                                      settings.wire_cost));
       }
     }
-
-//    for (auto n : neighborVec) {
-//      n.cost += node.cost;
-//      setCost(n);
-//      auto frontierN = frontierSet.find(n);
-//      if (frontierN == frontierSet.end()) {
-//        frontierPri.push(n);
-//        frontierSet.insert(n);
-//        setCost(n);
-//      }
-//      else {
-//        auto frontierCost = getCost(*frontierN);
-//        if (frontierCost > n.cost) {
-//          node.cost = n.cost;
-//          setCost(node);
-//        }
-//      }
   }
 }
 
-void UniformCostSearch::exploreNeighbour(ViaLayerCost &node, ViaLayerCost n)
+void UniformCostSearch::exploreNeighbour(LayerCostVia &node, LayerCostVia n)
 {
-  if (dijkstra_.isAvailable(n, viaStartEnd_.start, shortcutEndVia_)) {
+  if (router_.isAvailable(n, viaStartEnd_.start, shortcutEndVia_)) {
     exploreFrontier(node, n);
   }
 }
 
-void UniformCostSearch::exploreFrontier(ViaLayerCost &node, ViaLayerCost n)
+void UniformCostSearch::exploreFrontier(LayerCostVia &node, LayerCostVia n)
 {
   if (exploredSet.count(n)) {
     return;
@@ -163,11 +151,11 @@ void UniformCostSearch::exploreFrontier(ViaLayerCost &node, ViaLayerCost n)
 }
 
 RouteStepVec
-UniformCostSearch::backtraceLowestCostRoute(const ViaStartEnd &viaStartEnd)
+UniformCostSearch::backtraceLowestCostRoute(const StartEndVia &viaStartEnd)
 {
   int routeCost = 0;
-  auto start = ViaLayer(viaStartEnd.start, false);
-  auto end = ViaLayer(viaStartEnd.end, false);
+  auto start = LayerVia(viaStartEnd.start, false);
+  auto end = LayerVia(viaStartEnd.end, false);
   RouteStepVec routeStepVec;
   auto c = end;
   routeStepVec.push_back(c);
@@ -177,25 +165,25 @@ UniformCostSearch::backtraceLowestCostRoute(const ViaStartEnd &viaStartEnd)
   int checkStuckCnt = 0;
 
   while (!((c.via == start.via).all() && c.isWireLayer == start.isWireLayer)) {
-    if (checkStuckCnt++ > solution_.gridW * solution_.gridH) {
-      solution_.errorStringVec.push_back(fmt::format(
+    if (checkStuckCnt++ > layout_.gridW * layout_.gridH) {
+      layout_.errorStringVec.push_back(fmt::format(
         "Error: backtraceLowestCostRoute() stuck at {}",
         c.str()));
-      solution_.diagStartVia = start.via;
-      solution_.diagEndVia = end.via;
-      solution_.diagRouteStepVec = routeStepVec;
-      solution_.hasError = true;
+      layout_.diagStartVia = start.via;
+      layout_.diagEndVia = end.via;
+      layout_.diagRouteStepVec = routeStepVec;
+      layout_.hasError = true;
       break;
     }
 
-    ViaLayer n = c;
+    LayerVia n = c;
     if (c.isWireLayer) {
       auto nLeft = stepLeft(c);
       if (c.via.x() > 0 && getCost(nLeft) < getCost(n)) {
         n = nLeft;
       }
       auto nRight = stepRight(c);
-      if (c.via.x() < solution_.gridW - 1 && getCost(nRight) < getCost(n)) {
+      if (c.via.x() < layout_.gridW - 1 && getCost(nRight) < getCost(n)) {
         n = nRight;
       }
       auto nStrip = stepToStrip(c);
@@ -209,7 +197,7 @@ UniformCostSearch::backtraceLowestCostRoute(const ViaStartEnd &viaStartEnd)
         n = nUp;
       }
       auto nDown = stepDown(c);
-      if (c.via.y() < solution_.gridH - 1 && getCost(nDown) < getCost(n)) {
+      if (c.via.y() < layout_.gridH - 1 && getCost(nDown) < getCost(n)) {
         n = nDown;
       }
       auto nWire = stepToWire(c);
@@ -217,24 +205,24 @@ UniformCostSearch::backtraceLowestCostRoute(const ViaStartEnd &viaStartEnd)
         n = nWire;
       }
 
-      const auto &wireToVia = dijkstra_.wireToViaRef(c.via);
+      const auto &wireToVia = router_.wireToViaRef(c.via);
       if (wireToVia.isValid) {
-        auto nWireJump = ViaLayer(wireToVia.via, false);
+        auto nWireJump = LayerVia(wireToVia.via, false);
         if (getCost(nWireJump) < getCost(n)) {
           // When we jump, we have to record the steps.
           // Through to wire layer.
-          routeStepVec.push_back(ViaLayer(c.via, true));
+          routeStepVec.push_back(LayerVia(c.via, true));
           int x1 = c.via.x();
           int x2 = nWireJump.via.x();
           int step = x1 > x2 ? -1 : 1;
           for (int x = x1; x != x2; x += step) {
-            routeStepVec.push_back(ViaLayer(Via(x, c.via.y()), true));
+            routeStepVec.push_back(LayerVia(Via(x, c.via.y()), true));
           }
           if (x1 != x2) {
-            routeStepVec.push_back(ViaLayer(Via(x2, c.via.y()), true));
+            routeStepVec.push_back(LayerVia(Via(x2, c.via.y()), true));
           }
-          // Through to strip layer
-//          routeStepVec.push_back(ViaLayer(nWireJump.via, true));
+          // Final step through to strip layer is stored outside the
+          // conditional.
           n = nWireJump;
         }
       }
@@ -243,22 +231,22 @@ UniformCostSearch::backtraceLowestCostRoute(const ViaStartEnd &viaStartEnd)
     routeCost += getCost(c);
     routeStepVec.push_back(c);
   }
-  solution_.totalCost += routeCost;
+  layout_.totalCost += routeCost;
   std::reverse(routeStepVec.begin(), routeStepVec.end());
 
 #ifndef NDEBUG
-  solution_.diagRouteStepVec = routeStepVec;
-  solution_.diagStartVia = ViaValid(start.via, true);
-  solution_.diagEndVia = ViaValid(end.via, true);
+  layout_.diagRouteStepVec = routeStepVec;
+  layout_.diagStartVia = ValidVia(start.via, true);
+  layout_.diagEndVia = ValidVia(end.via, true);
 #endif
 
   return routeStepVec;
 }
 
-int UniformCostSearch::getCost(const ViaLayer &viaLayer)
+int UniformCostSearch::getCost(const LayerVia &viaLayer)
 {
   int cost;
-  int i = solution_.idx(viaLayer.via);
+  int i = layout_.idx(viaLayer.via);
   if (viaLayer.isWireLayer) {
     cost = viaCostVec_[i].wireCost;
   }
@@ -268,9 +256,9 @@ int UniformCostSearch::getCost(const ViaLayer &viaLayer)
   return cost;
 }
 
-void UniformCostSearch::setCost(const ViaLayer &viaLayer, int cost)
+void UniformCostSearch::setCost(const LayerVia &viaLayer, int cost)
 {
-  int i = solution_.idx(viaLayer.via);
+  int i = layout_.idx(viaLayer.via);
   if (viaLayer.isWireLayer) {
     viaCostVec_[i].wireCost = cost;
   }
@@ -279,66 +267,39 @@ void UniformCostSearch::setCost(const ViaLayer &viaLayer, int cost)
   }
 }
 
-void UniformCostSearch::setCost(const ViaLayerCost &viaLayerCost)
+void UniformCostSearch::setCost(const LayerCostVia &viaLayerCost)
 {
   setCost(viaLayerCost, viaLayerCost.cost);
 }
 
-ViaLayer UniformCostSearch::stepLeft(const ViaLayer &v)
+LayerVia UniformCostSearch::stepLeft(const LayerVia &v)
 {
-  return ViaLayer(v.via + Via(-1, 0), v.isWireLayer);
+  return LayerVia(v.via + Via(-1, 0), v.isWireLayer);
 }
 
-ViaLayer UniformCostSearch::stepRight(const ViaLayer &v)
+LayerVia UniformCostSearch::stepRight(const LayerVia &v)
 {
-  return ViaLayer(v.via + Via(+1, 0), v.isWireLayer);
+  return LayerVia(v.via + Via(+1, 0), v.isWireLayer);
 }
 
-ViaLayer UniformCostSearch::stepUp(const ViaLayer &v)
+LayerVia UniformCostSearch::stepUp(const LayerVia &v)
 {
-  return ViaLayer(v.via + Via(0, -1), v.isWireLayer);
+  return LayerVia(v.via + Via(0, -1), v.isWireLayer);
 }
 
-ViaLayer UniformCostSearch::stepDown(const ViaLayer &v)
+LayerVia UniformCostSearch::stepDown(const LayerVia &v)
 {
-  return ViaLayer(v.via + Via(0, +1), v.isWireLayer);
+  return LayerVia(v.via + Via(0, +1), v.isWireLayer);
 }
 
-ViaLayer UniformCostSearch::stepToWire(const ViaLayer &v)
+LayerVia UniformCostSearch::stepToWire(const LayerVia &v)
 {
   assert(!v.isWireLayer);
-  return ViaLayer(v.via, true);
+  return LayerVia(v.via, true);
 }
 
-ViaLayer UniformCostSearch::stepToStrip(const ViaLayer &v)
+LayerVia UniformCostSearch::stepToStrip(const LayerVia &v)
 {
   assert(v.isWireLayer);
-  return ViaLayer(v.via, false);
+  return LayerVia(v.via, false);
 }
-
-void UniformCostSearch::dump()
-{
-  fmt::print("Wire layer\n");
-  dumpLayer(true);
-  fmt::print("Strip layer\n");
-  dumpLayer(false);
-}
-
-void UniformCostSearch::dumpLayer(bool wireLayer)
-{
-  for (int y = 0; y < solution_.gridH; ++y) {
-    for (int x = 0; x < solution_.gridW; ++x) {
-      int v = getCost(ViaLayer(Via(x, y), wireLayer));
-      if (v == INT_MAX) {
-        fmt::print("   -", v);
-      }
-      else {
-        fmt::print(" {:3d}", v);
-      }
-    }
-    fmt::print("\n");
-  }
-  fmt::print("\n");
-}
-
-
