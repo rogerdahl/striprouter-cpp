@@ -40,7 +40,7 @@ Planned functionality:
 
 2) Move the program to one side of the screen and open the included `circuits/example.circuit` file in a text editor on the other. Start creating your circuit there, using the simple syntax shown in the file.
 
-    Alternately, the path to another `.circuit` file can be given as a command line argument when starting the program.
+Alternately, the path to another `.circuit` file can be given as a command line argument when starting the program.
  
 * `Board` The size of the stripboard, specified by number of vias (through holes) horizontally and vertically, as seen when the copper strips run vertically. The board must be large enough that the circuit and routes will fit but should not be larger than necessary, as search speed slows down when board size increases.
 
