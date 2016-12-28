@@ -48,7 +48,7 @@ Planned functionality:
  
     * `Connection` Connections between component pins required for the circuit.
     
-    * `Don't Care` Specify component pins that are not internally connected,have been removed, or which control features that are not in use. Setting pins as "Don't Care" allows the router to use strip segments that are connected to the pins, for unrelated routes. This often allows the router to go under a component instead of around it.
+    * `Don't Care` Specify component pins that are not internally connected, have been removed, or which control features that are not in use. Setting pins as "Don't Care" allows the router to use strip segments that are connected to the pins, for unrelated routes. This often allows the router to go under a component instead of around it.
 
     * `Offset` This is a shortcut that is not typically needed. Allows setting an offset that will be added to the positions of all components that are declared below in the file. This makes it easier to adjust the positions of a group of components while maintaining their relative positions. Can be used multiple times. The offset that was last set remains in effect until disabled with `offset 0,0`.
 
@@ -110,19 +110,21 @@ Planned functionality:
 
 * The router threads compete for a lock on inputLayout. When a thread gets the lock, it creates a thread local copy of inputLayout, called threadLayout and releases the lock. Because the router always uses the lowest cost route for a given connection, only the order in which the routes are created affects the end result. So, as a temporary first approach, a random search is currently implemented by having the thread start by randomly shuffling the order of the connections in its threadLayout. It then creates, or attempts to create, the routes in the shuffled order. The number of ways the connections can be shuffled is the factorial of the number of connections, which makes it impossible to check all possible orderings even for small circuits.
 
-    The router is based on a custom implementation of the Uniform Cost Search algorithm and includes a common optimization based on using a set and a priority queue. The search is restricted to only find paths that can be implemented on a stripboard, the most important limitation being that there are two layers, where one layer can have only horizontal connections and the other can have only vertical connections.
+    The router is based on a custom implementation of the Uniform Cost Search algorithm and includes a common optimization based on using a set and a priority queue. The search is restricted to find only routes that can be implemented on a stripboard, the most important limitation being that there are two layers, where one layer can have only horizontal connections and the other can have only vertical connections.
 
     The Uniform Cost Search is based on assigning a cost to each point that can possibly be reached, so the cost for a completed route is the total of the costs of the points along the route. When the routing is completed, the costs for each of the routes are summed up to get the total cost for the Layout. 
    
     After completing the Layout, the thread locks bestLayout and compares the threadLayout and bestLayout for cost and number of completed routes. If threadLayout has more completed routes, or the same number of routes but a lower cost, it is considered to be better, and the thread copies it to bestLayout, overwriting the old bestLayout. The thread then always locks currentLayout and writes threadLayout to it, and loops back to the start, where it again locks inputLayout.
-    
+
+* While the wire, strip and via costs directly affect how routes are laid out, copper trace cuts are handled differently, as the minimal required cuts can only be determined after routing is completed. After finding the cuts, the number of cuts is multiplied with the cost for each cut, as set in the UI, and added to the total cost for the Layout.   
+
 * Each Layout has a timestamp that is used for keeping track of lineage between Layouts. This is done so that, when the inputLayout changes, work on downstream Layouts for which the results are no longer needed, can be aborted. Outdated threadLayout, currentLayout and bestLayout objects are then dropped, which causes them to be replaced with layouts based on the new inputLayout.
    
-* The main thread runs the GUI and OpenGL rendering. When a setting is changed or components are moved through the GUI, the main thread locks inputLayout and updates its Settings or Circuit. The main thread renders the inputLayout while a drag/drop operation is performed and bestLayout if the `Show best` checkbox is enabled. Otherwise, it renders currentLayout if its lineage is to the current inputLayout, else falls back to render the inputLayout. The end result being that the most current information is displayed.
+* The main thread runs the UI and OpenGL rendering. When a setting is changed or components are moved in the UI, the main thread locks inputLayout and updates its Settings or Circuit. The main thread renders the inputLayout while a drag/drop operation is performed and currentLayout if `Current` is checked. Otherwise, it renders bestLayout if its lineage is to the current inputLayout, else falls back to render the inputLayout. The end result being that the most current information is displayed.
 
     To avoid locking the Layout being rendered during the entire rendering process, the main thread briefly locks the Layout it will render and creates a thread local copy, then renders the copy and discards it.
    
-* The router infers connected nets from the point-to-point connections described in `.circuit` and searches nets for potential shortcuts when routing. As routes are created, all points along the route are assigned to nets, using a structure that allows very fast checking for net membership when the points are encountered by the later Uniform Cost Searches.
+* The router infers connected nets from the point-to-point connections described in `.circuit` and searches nets for potential shortcuts when routing. As routes are created, all points along the route are assigned to nets, using a structure that allows fast checking for net membership when the points are encountered by later Uniform Cost Searches.
 
 * For routes that belong to nets, routes that reuse existing sections of earlier routes (instead of creating new sections), are preferred by setting very low costs for the reused sections.
 
