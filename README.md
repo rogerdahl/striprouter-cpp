@@ -36,7 +36,7 @@ Planned functionality:
 
 ### How to use
 
-* Start the program. You should see it start searching for routes on the included circuit. There will be several updates over the first few seconds, and then update frequency will slow down as it becomes harder for the program to find a layout that is better than the current best.
+* Start the program. You should see it start searching for routes on the included circuit. Typically, there will be several updates over the first few seconds, and then the update frequency will slow down as it becomes harder for the program to find a layout that is better than the current best.
  
 * Move the program to one side of the screen and open the included `circuits/example.circuit` file in a text editor on the other. Start creating your circuit there, using the simple syntax shown in the file. Alternately, the path to another `.circuit` file can be given as a command line argument when starting the program.
  
