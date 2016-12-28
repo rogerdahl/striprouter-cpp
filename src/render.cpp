@@ -18,11 +18,11 @@
 
 const float PI_F = static_cast<float>(M_PI);
 const float CIRCUIT_FONT_SIZE = 1.0f;
-const char *CIRCUIT_FONT_PATH = "./fonts/Roboto-Regular.ttf";
+const char* CIRCUIT_FONT_PATH = "./fonts/Roboto-Regular.ttf";
 const int NOTATION_FONT_SIZE = 10;
 const float SET_DIM = 0.3f;
 const int NUM_VIA_TRIANGLES = 16;
-const float STRIP_WIDTH = 0.83f;
+const float CUT_W = 0.83f;
 const float VIA_RADIUS = 0.2f;
 const float WIRE_WIDTH = 0.125f;
 const float RATS_NEST_WIRE_WIDTH = 0.1f;
@@ -39,7 +39,6 @@ Render::Render()
 
 Render::~Render()
 {
-  glDeleteBuffers(1, &vertexBufId_);
 }
 
 void Render::openGLInit()
@@ -50,8 +49,13 @@ void Render::openGLInit()
   notationText_.openGLInit();
 }
 
+void Render::openGLFree()
+{
+  glDeleteBuffers(1, &vertexBufId_);
+}
+
 void Render::draw(
-  Layout &layout,
+  Layout& layout,
   glm::tmat4x4<float>& projMat,
   const Pos& boardScreenOffset,
   const Pos& mouseBoardPos,
@@ -79,6 +83,7 @@ void Render::draw(
   drawUsedStrips();
   drawWireSections();
   drawComponents();
+  drawStripCuts();
   if (showRatsNestBool) {
     drawRatsNest(showOnlyFailedBool);
   }
@@ -99,8 +104,8 @@ void Render::drawUsedStrips()
 // Strips
   for (auto routeSectionVec : layout_->routeVec) {
     for (auto section : routeSectionVec) {
-      const auto &start = section.start.via;
-      const auto &end = section.end.via;
+      const auto& start = section.start.via;
+      const auto& end = section.end.via;
       assert(section.start.isWireLayer == section.end.isWireLayer);
       if (!section.start.isWireLayer) {
         drawStripboardSection(StartEndVia(start, end));
@@ -113,8 +118,8 @@ void Render::drawWireSections()
 {
   for (auto routeSectionVec : layout_->routeVec) {
     for (auto section : routeSectionVec) {
-      const auto &start = section.start.via;
-      const auto &end = section.end.via;
+      const auto& start = section.start.via;
+      const auto& end = section.end.via;
       if (start.x() != end.x() && start.y() == end.y()) {
         int x1 = section.start.via.x();
         int x2 = section.end.via.x();
@@ -124,7 +129,7 @@ void Render::drawWireSections()
         RGBA rgba(0, 0, 0, 0.7f);
         auto mouseNet = getMouseNet();
         if (mouseNet.size() && mouseNet.count(section.start.via)) {
-          rgba = RGBA(0.5f, 0.5f, 0.5f, 0.7f);
+          rgba = RGBA(0.7f, 0.7f, 0.7f, 0.7f);
         }
         drawThickLine(section.start.via.cast<float>(),
                       section.end.via.cast<float>(),
@@ -138,29 +143,32 @@ void Render::drawWireSections()
 void Render::drawComponents()
 {
   componentText_.setFontH(static_cast<int>(CIRCUIT_FONT_SIZE * zoom_));
-  for (auto ci : layout_->circuit.componentNameToInfoMap) {
+  for (auto ci : layout_->circuit.componentNameToComponentMap) {
+    auto& componentName = ci.first;
+    auto& component = ci.second;
     // Footprint
-    auto &componentName = ci.first;
-    auto footprint = const_cast<Layout &>(*layout_).circuit
-      .calcComponentFootprint(componentName);
+    auto footprint = layout_->circuit.calcComponentFootprint(componentName);
     auto start = footprint.start.cast<float>() - 0.5f;
     auto end = footprint.end.cast<float>() + 0.5f;
     drawFilledRectangle(start, end, RGBA(0, 0, 0, 0.4f));
     // Pins
     bool isPin0 = true;
-    for (auto pinVia : const_cast<Layout &>(*layout_).circuit
-      .calcComponentPins(componentName)) {
+    int pinIdx = 0;
+    for (auto pinVia : const_cast<Layout&>(*layout_).circuit
+         .calcComponentPins(componentName)) {
+      auto isDontCarePin = component.dontCarePinIdxSet.count(pinIdx) > 0;
+      RGBA rgba = isDontCarePin ? RGBA(0.0f, .784f, 0.0f, 1.0f) : RGBA(.784f, 0.0f, 0.0f, 1.0f);
       if (isPin0) {
         isPin0 = false;
         auto start = pinVia.cast<float>() - VIA_RADIUS;
         auto end = pinVia.cast<float>() + VIA_RADIUS;
-        drawFilledRectangle(start, end, RGBA(.784f, 0.0f, 0.0f, 1.0f));
+        drawFilledRectangle(start, end, rgba);
       }
       else {
-        addFilledCircle(pinVia.cast<float>(), VIA_RADIUS);
+        drawFilledCircle(pinVia.cast<float>(), VIA_RADIUS * zoom_, rgba);
       }
+      ++pinIdx;
     }
-    drawFilledCircleBuffer(RGBA(.784f, 0.0f, 0.0f, 1.0f));
     // Name label
     int stringWidth = componentText_.calcStringWidth(componentName);
     int stringHeight = componentText_.getLineHeight();
@@ -176,7 +184,7 @@ void Render::drawComponents()
   }
 }
 
-void Render::drawStripboardSection(const StartEndVia &viaStartEnd)
+void Render::drawStripboardSection(const StartEndVia& viaStartEnd)
 {
   // Copper strip
   int y1 = viaStartEnd.start.y();
@@ -184,8 +192,8 @@ void Render::drawStripboardSection(const StartEndVia &viaStartEnd)
   if (y1 > y2) {
     std::swap(y1, y2);
   }
-  Pos start(viaStartEnd.start.x() - STRIP_WIDTH / 2.0f, y1 - 0.40f);
-  Pos end(viaStartEnd.start.x() + STRIP_WIDTH / 2.0f, y2 + 0.40f);
+  Pos start(viaStartEnd.start.x() - CUT_W / 2.0f, y1 - 0.40f);
+  Pos end(viaStartEnd.start.x() + CUT_W / 2.0f, y2 + 0.40f);
   auto f = setAlpha(viaStartEnd.start);
   drawFilledRectangle(start, end, RGBA(.85f * f, .565f * f, .345f * f, 1.0f));
   // Vias
@@ -195,10 +203,22 @@ void Render::drawStripboardSection(const StartEndVia &viaStartEnd)
   drawFilledCircleBuffer(RGBA(0, 0, 0, 1));
 }
 
+
+void Render::drawStripCuts()
+{
+  for (auto& v : layout_->stripCutVec) {
+    auto halfStripW = CUT_W / 2.0f;
+    auto halfCutH = 0.08f / 2.0f;
+    Pos start(v.x() - halfStripW, v.y() - halfCutH);
+    Pos end(v.x() + halfStripW, v.y() + halfCutH);
+    drawFilledRectangle(start - Pos(0, 0.5f), end - Pos(0, 0.5f), RGBA(0, 0.8f, 0.8f, 1));
+  }
+}
+
 void Render::drawRatsNest(bool showOnlyFailedBool)
 {
   auto& routedConVec = layout_->routeStatusVec;
-  auto allConVec = const_cast<Layout &>(*layout_).circuit.genConnectionViaVec();
+  auto allConVec = const_cast<Layout&>(*layout_).circuit.genConnectionViaVec();
   int i = 0;
   for (auto c : allConVec) {
     auto blueRgba = RGBA(0, .392f, .784f, 0.5f); // not yet routed
@@ -282,7 +302,7 @@ void Render::drawDiag()
   // Draw wire jump labels
   for (int y = 0; y < layout_->gridH; ++y) {
     for (int x = 0; x < layout_->gridW; ++x) {
-      auto &wireToVia =
+      auto& wireToVia =
         layout_->diagTraceVec[layout_->idx(Via(x, y))].wireToVia;
       if (wireToVia.isValid) {
         printNotation(Pos(x, y), 0, fmt::format("->{}", str(wireToVia.via)));
@@ -291,11 +311,11 @@ void Render::drawDiag()
   }
   // Print error notice and any info
   auto nLine = 0;
-  auto sideBoardPos = screenToBoardPos(Pos(0,300), zoom_, boardScreenOffset_);
+  auto sideBoardPos = screenToBoardPos(Pos(0, 300), zoom_, boardScreenOffset_);
   printNotation(sideBoardPos, nLine++, "Diag");
   printNotation(sideBoardPos, nLine++, "wire = red");
   printNotation(sideBoardPos, nLine++, "strip = green");
-  for (const auto &str : layout_->errorStringVec) {
+  for (const auto& str : layout_->errorStringVec) {
     printNotation(sideBoardPos, nLine++, str);
   }
   // Mouse pointer coordinate info
@@ -304,14 +324,14 @@ void Render::drawDiag()
     nLine = 2;
     auto idx = layout_->idx(v.via);
     printNotation(mouseBoardPos_, nLine++, fmt::format("{}", str(v.via)));
-    const auto &viaCost = layout_->diagCostVec[idx];
+    const auto& viaCost = layout_->diagCostVec[idx];
     printNotation(mouseBoardPos_,
                   nLine++,
                   fmt::format("wireCost: {}", viaCost.wireCost));
     printNotation(mouseBoardPos_,
                   nLine++,
                   fmt::format("stripCost: {}", viaCost.stripCost));
-    const auto &viaTrace = layout_->diagTraceVec[idx];
+    const auto& viaTrace = layout_->diagTraceVec[idx];
     printNotation(mouseBoardPos_,
                   nLine++,
                   fmt::format("wireBlocked: {}", viaTrace.isWireSideBlocked));
@@ -335,7 +355,7 @@ void Render::drawDiag()
 }
 
 void
-Render::drawFilledRectangle(const Pos &start, const Pos &end, const RGBA &rgba)
+Render::drawFilledRectangle(const Pos& start, const Pos& end, const RGBA& rgba)
 {
   if (isLineOutsideScreen(start, end)) {
     return;
@@ -356,11 +376,11 @@ Render::drawFilledRectangle(const Pos &start, const Pos &end, const RGBA &rgba)
                triVec.size() * sizeof(GLfloat),
                &triVec[0],
                GL_DYNAMIC_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*) 0);
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
 }
 
-void Render::drawFilledCircle(const Pos &center, float radius, const RGBA &rgba)
+void Render::drawFilledCircle(const Pos& center, float radius, const RGBA& rgba)
 {
   if (isPointOutsideScreen(center)) {
     return;
@@ -386,11 +406,11 @@ void Render::drawFilledCircle(const Pos &center, float radius, const RGBA &rgba)
                triVec.size() * sizeof(GLfloat),
                &triVec[0],
                GL_DYNAMIC_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*) 0);
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
 }
 
-void Render::addFilledCircle(const Pos &center, float radius)
+void Render::addFilledCircle(const Pos& center, float radius)
 {
   if (isPointOutsideScreen(center)) {
     return;
@@ -400,7 +420,7 @@ void Render::addFilledCircle(const Pos &center, float radius)
   auto centerS = boardToScrPos(center, zoom_, boardScreenOffset_);
 
   if (centerS.x() + radius < 0.0f || centerS.x() - radius > windowW_
-    || centerS.y() + radius < 0.0f || centerS.y() - radius > windowH_) {
+      || centerS.y() + radius < 0.0f || centerS.y() - radius > windowH_) {
     return;
   }
 
@@ -417,8 +437,11 @@ void Render::addFilledCircle(const Pos &center, float radius)
   }
 }
 
-void Render::drawFilledCircleBuffer(const RGBA &rgba)
+void Render::drawFilledCircleBuffer(const RGBA& rgba)
 {
+	if (!triVec.size()) {
+		return;
+	}
   setColor(rgba);
   glEnableVertexAttribArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, vertexBufId_);
@@ -426,15 +449,15 @@ void Render::drawFilledCircleBuffer(const RGBA &rgba)
                triVec.size() * sizeof(GLfloat),
                &triVec[0],
                GL_DYNAMIC_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*) 0);
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
   triVec.clear();
 }
 
-void Render::drawThickLine(const Pos &start,
-                           const Pos &end,
+void Render::drawThickLine(const Pos& start,
+                           const Pos& end,
                            float radius,
-                           const RGBA &rgba)
+                           const RGBA& rgba)
 {
   if (isLineOutsideScreen(start, end)) {
     return;
@@ -453,21 +476,21 @@ void Render::drawThickLine(const Pos &start,
   float t2cosa2 = t2 / 2 * cos(angle);
   std::vector<GLfloat> triVec;
   triVec
-    .insert(triVec.end(), {startS.x() + t2sina1, startS.y() - t2cosa1, 0.0f});
+  .insert(triVec.end(), {startS.x() + t2sina1, startS.y() - t2cosa1, 0.0f});
   triVec.insert(triVec.end(), {endS.x() + t2sina2, endS.y() - t2cosa2, 0.0f});
   triVec.insert(triVec.end(), {endS.x() - t2sina2, endS.y() + t2cosa2, 0.0f});
   triVec.insert(triVec.end(), {endS.x() - t2sina2, endS.y() + t2cosa2, 0.0f});
   triVec
-    .insert(triVec.end(), {startS.x() - t2sina1, startS.y() + t2cosa1, 0.0f});
+  .insert(triVec.end(), {startS.x() - t2sina1, startS.y() + t2cosa1, 0.0f});
   triVec
-    .insert(triVec.end(), {startS.x() + t2sina1, startS.y() - t2cosa1, 0.0f});
+  .insert(triVec.end(), {startS.x() + t2sina1, startS.y() - t2cosa1, 0.0f});
   glEnableVertexAttribArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, vertexBufId_);
   glBufferData(GL_ARRAY_BUFFER,
                triVec.size() * sizeof(GLfloat),
                &triVec[0],
                GL_DYNAMIC_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*) 0);
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
 }
 
@@ -478,30 +501,32 @@ void Render::printNotation(Pos boardPos, int nLine, std::string msg)
   notationText_.print(projMat_, scrPos.x() + 5, scrPos.y() + 5, nLine, msg);
 }
 
-void Render::setColor(const RGBA &rgba)
+void Render::setColor(const RGBA& rgba)
 {
   glUseProgram(fillProgramId_);
   GLint colorLoc = glGetUniformLocation(fillProgramId_, "color");
   glProgramUniform4fv(fillProgramId_, colorLoc, 1, rgba.data());
 }
 
-bool Render::isPointOutsideScreen(const Pos &p) {
+bool Render::isPointOutsideScreen(const Pos& p)
+{
   float pad = 50.0f;
   return
     p.x() < -pad || p.x() >= windowW_ + pad ||
-      p.y() < -pad || p.y() >= windowH_ + pad;
+    p.y() < -pad || p.y() >= windowH_ + pad;
 }
 
-bool Render::isLineOutsideScreen(const Pos& start, const Pos& end) {
+bool Render::isLineOutsideScreen(const Pos& start, const Pos& end)
+{
   float pad = 50.0f;
   return
     (start.x() < -pad && end.x() < -pad) ||
-      (start.x() >= windowW_ + pad && end.x() >= windowW_ + pad) ||
-      (start.y() < -pad && end.y() < -pad) ||
-      (start.y() >= windowW_ + pad && end.y() >= windowH_ + pad);
+    (start.x() >= windowW_ + pad && end.x() >= windowW_ + pad) ||
+    (start.y() < -pad && end.y() < -pad) ||
+    (start.y() >= windowW_ + pad && end.y() >= windowH_ + pad);
 }
 
-float Render::setAlpha(const Via &v)
+float Render::setAlpha(const Via& v)
 {
   auto mouseNet = getMouseNet();
   if (!mouseNet.size()) {
@@ -515,7 +540,7 @@ ValidVia Render::getMouseVia()
   Via v = Via(static_cast<int>(mouseBoardPos_.x() + 0.5f),
               static_cast<int>(mouseBoardPos_.y() + 0.5f));
   if (v.x() >= 0 && v.y() >= 0 && v.x() < layout_->gridW
-    && v.y() < layout_->gridH) {
+      && v.y() < layout_->gridH) {
     return ValidVia(v, true);
   }
   else {
@@ -523,7 +548,7 @@ ValidVia Render::getMouseVia()
   }
 }
 
-ViaSet &Render::getMouseNet()
+ViaSet& Render::getMouseNet()
 {
   static auto emptyViaSet = ViaSet();
   auto v = getMouseVia();

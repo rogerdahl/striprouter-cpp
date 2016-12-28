@@ -9,5 +9,5 @@ class Status
 {
 public:
   Status();
-  int nunCombinationsChecked;
+  int nCombinationsChecked;
 };

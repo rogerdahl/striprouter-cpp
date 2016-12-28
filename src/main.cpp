@@ -1,12 +1,7 @@
 // Style: http://geosoft.no/development/cppstyle.html
-// Format: CLion. Config:
-// Settings > Editor > Code Style > C/C++ > Set from > Predefined Style > Qt
-// Blank Lines > Around global variable > 0
-// Tabs and indents > Set all that are 4 to 2
-// Wrapping and Braces > Simple functions in one line > off
-// Wrapping and Braces > After function return type > Wrap if long (all)
-// Wrapping and Braces > Keep when reformatting > Line breaks > off
+// Format: See included astyle_all.sh.
 
+#include <algorithm>
 #include <chrono>
 #include <climits>
 #include <cstdio>
@@ -16,21 +11,32 @@
 #include <thread>
 #include <vector>
 
+#if defined(_WIN32)
+#include <Windows.h>
+#endif
+
 #include <fmt/format.h>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <nanogui/nanogui.h>
 
-#include "file_parser.h"
-#include "file_writer.h"
+#include "circuit_parser.h"
+#include "circuit_writer.h"
 #include "gl_error.h"
 #include "gui.h"
+#include "gui_status.h"
+#include "icon.h"
 #include "ogl_text.h"
 #include "render.h"
 #include "router.h"
 #include "status.h"
 #include "utils.h"
 #include "via.h"
+#include "write_svg.h"
+
+
+#undef max
+#undef min
 
 
 using namespace std::chrono_literals;
@@ -50,18 +56,25 @@ const float ZOOM_DEF = 2.0f;
 const int INITIAL_BORDER_PIXELS = 50;
 float zoomLinear = ZOOM_DEF;
 float zoom = expf(zoomLinear);
+
 bool isZoomPanAdjusted = false;
 void setZoomPan(Pos scrPos);
+void centerBoard();
+nanogui::Slider* zoomSlider;
 
 // GUI settings
 int windowW = 1920 / 2;
 int windowH = 1080 - 200;
-bool showRatsNestBool = false;
-bool showOnlyFailedBool = false;
-bool showBestBool = false;
-bool writeChangesToCircuitFileBool = false;
+bool isShowRatsNestEnabled = true;
+bool isShowOnlyFailedEnabled = true;
+bool isShowCurrentEnabled = false;
 std::string circuitFilePath = "./circuits/example.circuit";
 glm::tmat4x4<float> projMat;
+nanogui::FormHelper* form;
+nanogui::Window* formWin;
+nanogui::Button* saveInputLayoutButton;
+
+GuiStatus guiStatus;
 
 // Threads
 // TODO: Consider https://github.com/vit-vit/ctpl
@@ -89,7 +102,6 @@ void launchParserThread();
 // Drag / drop
 bool isComponentDragActive = false;
 bool isBoardDragActive = false;
-bool isDragBlockingActive = false;
 Pos dragStartPos;
 Pos panOffsetScrPos;
 Pos dragPin0BoardOffset;
@@ -98,39 +110,28 @@ OglText dragText(DIAG_FONT_PATH, DRAG_FONT_SIZE);
 void handleMouseDragOperations(const IntPos& mouseScrPos);
 void renderDragStatus(const IntPos mouseScrPos);
 
-// Diag
-averageSec averageRendering;
-
-// Util
-std::string formatTotalCost(int totalCost);
-
 // Shared objects
 Layout inputLayout;
-Layout bestLayout;
 Layout currentLayout;
+Layout bestLayout;
 
 // Misc
 Status status;
 Render render;
-
+averageSec averageRenderTime;
+void resetInputLayout();
+nanogui::Button* saveBestLayoutButton;
 
 
 class Application: public nanogui::Screen
 {
 public:
   Application()
-    : nanogui::Screen(Eigen::Vector2i(windowW, windowH),
+    : nanogui::Screen(IntPos(windowW, windowH),
                       "Stripboard Autorouter",
-    // resizable, fullscreen, colorBits, alphaBits, depthBits, stencilBits, nSamples, glMajor, glMinor
-                      true,
-                      false,
-                      8,
-                      8,
-                      24,
-                      8,
-                      4,
-                      3,
-                      3)
+                      /*resizable*/true, /*fullscreen*/false, /*colorBits*/8,
+                      /*alphaBits*/8, /*depthBits*/24, /*stencilBits*/8,
+                      /*nSamples*/4, /*glMajor*/3, /*glMinor*/3)
   {
     GLuint mTextureId;
     glGenTextures(1, &mTextureId);
@@ -153,177 +154,151 @@ public:
     glGenVertexArrays(1, &vertexArrayId);
     glBindVertexArray(vertexArrayId);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, windowW, windowH);
 
     diagText.openGLInit();
     dragText.openGLInit();
     render.openGLInit();
 
-    // Main grid window
-    auto window = new nanogui::Window(this, "Router");
-    window->setPosition(Eigen::Vector2i(windowW - 400, windowH - 300));
-    nanogui::GridLayout *layout =
-      new nanogui::GridLayout(nanogui::Orientation::Horizontal,
-                              2,
-                              nanogui::Alignment::Middle,
-                              15,
-                              5);
-    layout->setColAlignment({nanogui::Alignment::Maximum,
-                             nanogui::Alignment::Fill});
-    layout->setSpacing(0, 10);
-    window->setLayout(layout);
+    guiStatus.init(this);
 
-//    mProgress = new ProgressBar(window);
-    {
-      new nanogui::Label(window, "Wire cost:", "sans-bold");
-      auto intBox = new nanogui::IntBox<int>(window);
-      intBox->setEditable(true);
-      intBox->setFixedSize(Eigen::Vector2i(100, 20));
-      {
-        auto lock = inputLayout.scopeLock();
-        intBox->setValue(inputLayout.settings.wire_cost);
-      }
-      intBox->setDefaultValue("0");
-      intBox->setFontSize(18);
-      intBox->setFormat("[1-9][0-9]*");
-      intBox->setSpinnable(true);
-      intBox->setMinValue(1);
-      intBox->setValueIncrement(1);
-      intBox->setCallback([intBox](int value)
-                          {
-                            {
-                              auto lock = inputLayout.scopeLock();
-                              inputLayout.settings.wire_cost = value;
-                              inputLayout.setOriginal();
-                            }
-                          });
-    }
-    {
-      new nanogui::Label(window, "Strip cost:", "sans-bold");
-      auto intBox = new nanogui::IntBox<int>(window);
-      intBox->setEditable(true);
-      intBox->setFixedSize(Eigen::Vector2i(100, 20));
-      {
-        auto lock = inputLayout.scopeLock();
-        intBox->setValue(inputLayout.settings.strip_cost);
-      }
-      intBox->setDefaultValue("0");
-      intBox->setFontSize(18);
-      intBox->setFormat("[1-9][0-9]*");
-      intBox->setSpinnable(true);
-      intBox->setMinValue(1);
-      intBox->setValueIncrement(1);
-      intBox->setCallback([intBox](int value)
-                          {
-                            {
-                              auto lock = inputLayout.scopeLock();
-                              inputLayout.settings.strip_cost = value;
-                              inputLayout.setOriginal();
-                            }
-                          });
-    }
-    {
-      new nanogui::Label(window, "Via cost:", "sans-bold");
-      auto intBox = new nanogui::IntBox<int>(window);
-      intBox->setEditable(true);
-      intBox->setFixedSize(Eigen::Vector2i(100, 20));
-      {
-        auto lock = inputLayout.scopeLock();
-        intBox->setValue(inputLayout.settings.via_cost);
-      }
-      intBox->setDefaultValue("0");
-      intBox->setFontSize(18);
-      intBox->setFormat("[1-9][0-9]*");
-      intBox->setSpinnable(true);
-      intBox->setMinValue(1);
-      intBox->setValueIncrement(1);
-      intBox->setCallback([intBox](int value)
-                          {
-                            {
-                              auto lock = inputLayout.scopeLock();
-                              inputLayout.settings.via_cost = value;
-                              inputLayout.setOriginal();
-                            }
-                          });
-    }
-    {
-      new nanogui::Label(window, "Rat's nest:", "sans-bold");
-      auto cb = new nanogui::CheckBox(window, "");
-      cb->setFontSize(18);
-      cb->setChecked(showRatsNestBool);
-      cb->setCallback([cb](bool value)
-                      {
-                        showRatsNestBool = value;
-                      });
-    }
-    {
-      new nanogui::Label(window, "Only Failed:", "sans-bold");
-      auto cb = new nanogui::CheckBox(window, "");
-      cb->setFontSize(18);
-      cb->setChecked(showOnlyFailedBool);
-      cb->setCallback([cb](bool value)
-                      {
-                        showOnlyFailedBool = value;
-                      });
-    }
-    {
-      new nanogui::Label(window, "Show best:", "sans-bold");
-      auto cb = new nanogui::CheckBox(window, "");
-      cb->setFontSize(18);
-      cb->setChecked(showBestBool);
-      cb->setCallback([cb](bool value)
-                      {
-                        showBestBool = value;
-                      });
-    }
-    {
-      new nanogui::Label(window, "Pause:", "sans-bold");
-      auto cb = new nanogui::CheckBox(window, "");
-      cb->setFontSize(18);
-      {
-        auto lock = inputLayout.scopeLock();
-        cb->setChecked(inputLayout.settings.pause);
-      }
-      cb->setCallback([cb](bool value)
-                      {
-                        {
-                          auto lock = inputLayout.scopeLock();
-                          inputLayout.settings.pause = value;
-                        }
-                      });
-    }
-    {
-      new nanogui::Label(window, "Write changes to circuit file:", "sans-bold");
-      auto cb = new nanogui::CheckBox(window, "");
-      cb->setFontSize(18);
-      cb->setChecked(writeChangesToCircuitFileBool);
-      cb->setCallback([cb](bool value)
-                      {
-                        writeChangesToCircuitFileBool = value;
-                      });
-    }
-    {
-      new nanogui::Label(window, "Zoom:", "sans-bold");
+    form = new nanogui::FormHelper(this);
+    formWin = form->addWindow(IntPos(10, 10), "Router");
 
-      nanogui::Widget *panel = new nanogui::Widget(window);
-      panel->setLayout(new nanogui::BoxLayout(nanogui::Orientation::Horizontal,
-                                              nanogui::Alignment::Middle,
-                                              0,
-                                              5));
-
-      nanogui::Slider *slider = new nanogui::Slider(panel);
-      slider->setRange(std::make_pair(ZOOM_MIN, ZOOM_MAX));
-      slider->setValue(ZOOM_DEF);
-      slider->setFixedWidth(100);
-      slider->setCallback([slider, this](float value) {
+    form->addGroup("Costs");
+    {
+      auto w = form->addVariable<int>(
+                 "Wire",
+      [&](int v) {
+        auto lock = inputLayout.scopeLock();
+        inputLayout.settings.wire_cost = v;
+        resetInputLayout();
+      },
+      [&]() {
+        auto lock = inputLayout.scopeLock();
+        return inputLayout.settings.wire_cost;
+      }
+               );
+      w->setSpinnable(true);
+      w->setMinValue(1);
+      w->setValueIncrement(1);
+    }
+    {
+      auto w = form->addVariable<int>(
+                 "Strip",
+      [&](int v) {
+        auto lock = inputLayout.scopeLock();
+        inputLayout.settings.strip_cost = v;
+        resetInputLayout();
+      },
+      [&]() {
+        auto lock = inputLayout.scopeLock();
+        return inputLayout.settings.strip_cost;
+      }
+               );
+      w->setSpinnable(true);
+      w->setMinValue(1);
+      w->setValueIncrement(1);
+    }
+    {
+      auto w = form->addVariable<int>(
+                 "Via",
+      [&](int v) {
+        auto lock = inputLayout.scopeLock();
+        inputLayout.settings.via_cost = v;
+        resetInputLayout();
+      },
+      [&]() {
+        auto lock = inputLayout.scopeLock();
+        return inputLayout.settings.via_cost;
+      }
+               );
+      w->setSpinnable(true);
+      w->setMinValue(1);
+      w->setValueIncrement(1);
+    }
+    {
+      auto w = form->addVariable<int>(
+        "Cut",
+        [&](int v) {
+          auto lock = inputLayout.scopeLock();
+          inputLayout.settings.cut_cost = v;
+          resetInputLayout();
+        },
+        [&]() {
+          auto lock = inputLayout.scopeLock();
+          return inputLayout.settings.cut_cost;
+        }
+      );
+      w->setSpinnable(true);
+      w->setMinValue(1);
+      w->setValueIncrement(1);
+    }
+    form->addGroup("Display");
+    form->addVariable("Rat's Nest", isShowRatsNestEnabled);
+    form->addVariable("Only Failed", isShowOnlyFailedEnabled);
+    form->addVariable("Current", isShowCurrentEnabled);
+    {
+      zoomSlider = new nanogui::Slider(formWin);
+      form->addWidget("Zoom", zoomSlider);
+      zoomSlider->setRange(std::make_pair(ZOOM_MIN, ZOOM_MAX));
+      zoomSlider->setValue(ZOOM_DEF);
+      zoomSlider->setFixedWidth(80);
+      zoomSlider->setCallback([this](float value) {
         zoomLinear = value;
-        auto upperLeftPos = boardToScrPos(Pos(0.0f, 0.0f), zoom, panOffsetScrPos);
-        auto lowerRightPos = boardToScrPos(Pos(inputLayout.gridW, inputLayout.gridH), zoom, panOffsetScrPos);
-        auto centerBoardPos = upperLeftPos + (lowerRightPos - upperLeftPos ) / 2.0f;
+        auto
+        upperLeftPos = boardToScrPos(Pos(0.0f, 0.0f), zoom, panOffsetScrPos);
+        auto lowerRightPos =
+          boardToScrPos(Pos(inputLayout.gridW, inputLayout.gridH),
+                        zoom,
+                        panOffsetScrPos);
+        auto
+        centerBoardPos = upperLeftPos + (lowerRightPos - upperLeftPos) / 2.0f;
         setZoomPan(centerBoardPos);
       });
     }
+    form->addGroup("Misc");
+    {
+      form->addVariable<bool>(
+        "Pause",
+      [&](bool v) {
+        auto lock = inputLayout.scopeLock();
+        inputLayout.settings.pause = v;
+      },
+      [&]() {
+        auto lock = inputLayout.scopeLock();
+        return inputLayout.settings.pause;
+      }
+      );
+    }
+    form->addGroup("Input Layout");
+    {
+      saveInputLayoutButton = form->addButton("Save to .circuit file", []() {
+        CircuitFileWriter fileWriter;
+        fileWriter.updateComponentPositions(circuitFilePath, inputLayout.circuit);
+        saveInputLayoutButton->setEnabled(false);
+      });
+      saveInputLayoutButton->setEnabled(false);
+    }
+    form->addGroup("Best Layout");
+    {
+      saveBestLayoutButton = form->addButton("Save to .svg files", [this]() {
+        SvgWriter svgWriter(bestLayout);
+        auto svgPathVec = svgWriter.writeFiles(circuitFilePath);
+        std::stringstream ss;
+        ss << "Wrote .svg (Scalable Vector Graphics) files:\n\n";
+        for (auto& p : svgPathVec) {
+          ss << p << "\n";
+        }
+        new nanogui::MessageDialog(
+          this,
+          nanogui::MessageDialog::Type::Information, "Saved .svg files",
+          ss.str()
+        );
+      });
+      saveBestLayoutButton->setEnabled(true);
+    }
     performLayout();
+    resizeEvent(IntPos(windowW, windowH));
     launchRouterThreads();
     launchParserThread();
   }
@@ -337,7 +312,7 @@ public:
   // Could not get NanoGUI mouseDragEvent to trigger so rolling my own.
   // See NanoGUI src/window.cpp for example mouseDragEvent handler.
   virtual bool
-  mouseButtonEvent(const Eigen::Vector2i &p, int button, bool down, int modifiers)
+  mouseButtonEvent(const IntPos& p, int button, bool down, int modifiers)
   {
     if (nanogui::Widget::mouseButtonEvent(p, button, down, modifiers)) {
       // Event was handled by NanoGUI.
@@ -352,24 +327,19 @@ public:
           getComponentAtBoardPos(inputLayout.circuit, getMouseBoardPos(mousePos(), zoom, panOffsetScrPos));
       }
       if (componentName != "") {
-        if (!showBestBool) {
-          // Start component drag
-          isComponentDragActive = true;
-          dragComponentName = componentName;
-          {
-            auto lock = inputLayout.scopeLock();
-            auto pin0BoardPos =
-              inputLayout.circuit.componentNameToInfoMap[componentName]
-                .pin0AbsPos.cast<float>();
-            dragPin0BoardOffset = getMouseBoardPos(mousePos(), zoom, panOffsetScrPos) - pin0BoardPos;
-          }
-        }
-        else {
-          isDragBlockingActive = true;
+        // Start component drag
+        isComponentDragActive = true;
+        dragComponentName = componentName;
+        {
+          auto lock = inputLayout.scopeLock();
+          auto pin0BoardPos =
+            inputLayout.circuit.componentNameToComponentMap[componentName]
+            .pin0AbsPos.cast<float>();
+          dragPin0BoardOffset = getMouseBoardPos(mousePos(), zoom, panOffsetScrPos) - pin0BoardPos;
         }
       }
       else {
-        // Start stripboard drag
+        // Start board drag
         isBoardDragActive = true;
         isZoomPanAdjusted = true;
       }
@@ -378,38 +348,44 @@ public:
       // End component drag
       if (isComponentDragActive) {
         isComponentDragActive = false;
-        inputLayout.setOriginal();
+        saveInputLayoutButton->setEnabled(true);
+        {
+          auto lock = inputLayout.scopeLock();
+          resetInputLayout();
+        }
       }
-      // End blocked drag
-      isDragBlockingActive = false;
       // End board drag
       isBoardDragActive = false;
     }
     return true;
   }
 
-  virtual bool scrollEvent(const Eigen::Vector2i &p, const Eigen::Vector2f &rel)
+  virtual bool scrollEvent(const IntPos& p, const Eigen::Vector2f& rel)
   {
     if (nanogui::Widget::scrollEvent(p, rel)) {
       // Event was handled by NanoGUI.
       return true;
     }
-
     // Mouse wheel zoom towards or away from current mouse position
     zoomLinear += rel.y() * ZOOM_MOUSE_WHEEL_STEP;
-    zoomLinear = std::max(zoomLinear, ZOOM_MIN);
-    zoomLinear = std::min(zoomLinear, ZOOM_MAX);
-    setZoomPan(getMouseScrPos(mousePos()));
+    // zoom towards mouse pointer
+    // setZoomPan(getMouseScrPos(mousePos()));
+    // zoom towards center of board
+    auto lock = inputLayout.scopeLock();
+    Pos centerBoardPos(inputLayout.gridW / 2.0f, inputLayout.gridH / 2.0f);
+    setZoomPan(boardToScrPos(centerBoardPos, zoom, panOffsetScrPos));
     return true;
   }
 
   void setZoomPan(Pos scrPos)
   {
+    zoomLinear = clamp(zoomLinear, ZOOM_MIN, ZOOM_MAX);
+    zoomSlider->setValue(zoomLinear);
     auto beforeMouseBoardPos = screenToBoardPos(scrPos, zoom, panOffsetScrPos);
     zoom = expf(zoomLinear);
     auto afterMouseBoardPos = screenToBoardPos(scrPos, zoom, panOffsetScrPos);
     panOffsetScrPos -= boardToScrPos(beforeMouseBoardPos, zoom, panOffsetScrPos)
-    - boardToScrPos(afterMouseBoardPos, zoom, panOffsetScrPos);
+                       - boardToScrPos(afterMouseBoardPos, zoom, panOffsetScrPos);
     isZoomPanAdjusted = true;
   }
 
@@ -425,64 +401,109 @@ public:
     return false;
   }
 
-  // Draw the NanoGUI user interface
-  virtual void draw(NVGcontext *ctx)
+  virtual bool resizeEvent(const IntPos& size)
   {
+    windowW = size.x();
+    windowH = size.y();
+    projMat = glm::ortho(
+                0.0f,
+                static_cast<float>(size.x()),
+                static_cast<float>(size.y()),
+                0.0f,
+                0.0f,
+                100.0f
+              );
+    glViewport(0, 0, size.x(), size.y());
+    // Move the GUI window to the upper right corner
+    auto w = formWin->width();
+    formWin->setPosition(IntPos(size.x() - w, 0));
+    // Status window
+    guiStatus.moveToUpperLeft();
+    return false;
+  }
+
+  // Update and draw the NanoGUI user interface
+  virtual void draw(NVGcontext* ctx)
+  {
+    // Render
+    auto avgRenderingSec = averageRenderTime.calcAverage();
+    guiStatus.msPerFrame = avgRenderingSec * 1000;
+    // Status
+    {
+      auto inputLock = inputLayout.scopeLock();
+      std::lock_guard<std::mutex> lockStatus(statusMutex);
+      auto nowTimestamp = std::chrono::high_resolution_clock::now();
+      auto layoutElapsed = nowTimestamp - inputLayout.getBaseTimestamp();
+      auto layoutElapsedSec = std::chrono::duration_cast<std::chrono::milliseconds>(layoutElapsed).count() / 1000.0f;
+      guiStatus.nCombinationsChecked = status.nCombinationsChecked;
+      if (layoutElapsedSec > 0) {
+        guiStatus.nCheckedPerSec = status.nCombinationsChecked / layoutElapsedSec;
+      }
+    }
+    // Current
+    {
+      auto inputLock = inputLayout.scopeLock();
+      auto currentLock = currentLayout.scopeLock();
+      if (currentLayout.isBasedOn(inputLayout)) {
+        guiStatus.nCurrentCompletedRoutes = currentLayout.nCompletedRoutes;
+        guiStatus.nCurrentFailedRoutes = currentLayout.nFailedRoutes;
+        guiStatus.currentCost = currentLayout.cost;
+      }
+      else {
+        guiStatus.nCurrentCompletedRoutes = 0;
+        guiStatus.nCurrentFailedRoutes = 0;
+        guiStatus.currentCost = 0;
+      }
+    }
+    // Best
+    {
+      auto inputLock = inputLayout.scopeLock();
+      auto bestLock = bestLayout.scopeLock();
+      if (bestLayout.isBasedOn(inputLayout)) {
+        guiStatus.nBestCompletedRoutes = bestLayout.nCompletedRoutes;
+        guiStatus.nBestFailedRoutes = bestLayout.nFailedRoutes;
+        guiStatus.bestCost = bestLayout.cost;
+      }
+      else {
+        guiStatus.nBestCompletedRoutes = 0;
+        guiStatus.nBestFailedRoutes = 0;
+        guiStatus.bestCost = 0;
+      }
+    }
+    guiStatus.refresh();
+
     nanogui::Screen::draw(ctx);
   }
 
   // Draw app contents (layouts, routes)
   virtual void drawContents()
   {
-    glfwGetWindowSize(glfwWindow(), &windowW, &windowH);
-    projMat = glm::ortho(
-      0.0f,
-      static_cast<float>(windowW),
-      static_cast<float>(windowH),
-      0.0f,
-      0.0f,
-      100.0f
-    );
-
+    centerBoard();
     double drawStartTime = glfwGetTime();
 
     glBindVertexArray(vertexArrayId);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, windowW, windowH);
 
     handleMouseDragOperations(mousePos());
 
-    // Render a copy of the layout to avoid locking the layout during the render
-    // time, which could hold up the router threads.
-    //
-    //
-    // - When the "Show best" checbox is set, render the best found layout.
-    // - Else render the current layout.
+    // Select which layout to render and render a copy of it to avoid locking
+    // the layout during the render time, which could hold up the router
+    // threads.
     {
       Layout layout;
-      // When dragging a component, always render the input layout
       if (isComponentDragActive) {
         layout = inputLayout.threadSafeCopy();
       }
-      // When "Show best" is set, render the best layout if it's based on the
-      // current input. If not, render a blank screen.
-      else if (showBestBool) {
-        if (bestLayout.isBasedOn(inputLayout)) {
-          layout = bestLayout.threadSafeCopy();
-        }
+      else if (isShowCurrentEnabled && currentLayout.isBasedOn(inputLayout)) {
+        layout = currentLayout.threadSafeCopy();
+      }
+      else if (bestLayout.isBasedOn(inputLayout)) {
+        layout = bestLayout.threadSafeCopy();
       }
       else {
-        // If there is a current layout that is based on the current input
-        // layout, show render it.
-        auto lock = currentLayout.scopeLock();
-        if (currentLayout.isBasedOn(inputLayout) && currentLayout.isReadyForEval) {
-          layout = currentLayout;
-        }
-        // Else drop back to rendering the input layout.
-        else {
-          layout = inputLayout.threadSafeCopy();
-        }
+        layout = inputLayout.threadSafeCopy();
       }
+
       if (!layout.circuit.hasParserError()) {
         // Render the selected layout
         render.draw(
@@ -493,8 +514,8 @@ public:
           zoom,
           windowW,
           windowH,
-          showRatsNestBool,
-          showOnlyFailedBool
+          isShowRatsNestEnabled || isComponentDragActive,
+          isShowOnlyFailedEnabled && !isComponentDragActive
         );
       }
     }
@@ -505,88 +526,24 @@ public:
     renderDragStatus(mousePos());
 
     double drawEndTime = glfwGetTime();
-    averageRendering.addSec(drawEndTime - drawStartTime);
-    auto avgRenderingSec = averageRendering.calcAverage();
+    averageRenderTime.addSec(drawEndTime - drawStartTime);
 
-    // Print status and diags
-
-    // Run status
-    int nLine = 0;
-    diagText
-      .print(projMat, 0, 0, nLine++, fmt::format("Render: {:.1f}ms", avgRenderingSec * 1000));
-    diagText.print(projMat, 0, 0, nLine++,
-                  fmt::format("Checked: {:n}", status.nunCombinationsChecked));
-    diagText.print(projMat, 0, 0, nLine++,
-                  fmt::format("Checked/s: {:.2f}",
-                              status.nunCombinationsChecked / drawEndTime));
-    ++nLine;
-    // Input
+    // Circuit file errors
     {
       auto lock = inputLayout.scopeLock();
       if (inputLayout.circuit.hasParserError()) {
+        int nLine = 0;
         diagText.print(projMat, 0, 0, nLine++, "Circuit file parsing errors:");
         for (auto s : inputLayout.circuit.parserErrorVec) {
           diagText.print(projMat, 0, 0, nLine++, s);
         }
-        ++nLine;
       }
-    }
-    // Current
-    {
-      diagText.print(projMat, 0, 0, nLine++, fmt::format("Current"));
-      auto inputLock = inputLayout.scopeLock();
-      auto currentLock = currentLayout.scopeLock();
-      if (currentLayout.isBasedOn(inputLayout)) {
-        diagText.print(projMat,
-                       0,
-                       0,
-                       nLine++,
-                       fmt::format("Completed: {:n}",
-                                   currentLayout.numCompletedRoutes));
-        diagText.print(projMat,
-                       0,
-                       0,
-                       nLine++,
-                       fmt::format("Failed: {:n}",
-                                   currentLayout.numFailedRoutes));
-        diagText.print(projMat,
-                       0,
-                       0,
-                       nLine++,
-                       fmt::format("Cost: {}",
-                                   formatTotalCost(currentLayout.totalCost)));
-      }
-      else {
-        diagText.print(projMat, 0, 0, nLine++, fmt::format("<none>"));
-      }
-      ++nLine;
-    }
-    // Best
-    {
-      diagText.print(projMat, 0, 0, nLine++, fmt::format("Best"));
-      auto inputLock = inputLayout.scopeLock();
-      auto bestLock = bestLayout.scopeLock();
-      if (bestLayout.isBasedOn(inputLayout)) {
-        diagText.print(projMat, 0, 0, nLine++,
-                       fmt::format("Completed: {:n}",
-                                   bestLayout.numCompletedRoutes));
-        diagText.print(projMat, 0, 0, nLine++,
-                       fmt::format("Failed: {:n}", bestLayout.numFailedRoutes));
-        diagText.print(projMat, 0, 0, nLine++,
-                       fmt::format("Cost: {}",
-                                   formatTotalCost(bestLayout.totalCost)));
-      }
-      else {
-        diagText.print(projMat, 0, 0, nLine++, fmt::format("<none>"));
-      }
-      ++nLine;
     }
 
     checkGlError();
   }
 
 private:
-  nanogui::ProgressBar *mProgress;
   GLuint vertexArrayId;
 };
 
@@ -599,25 +556,12 @@ void handleMouseDragOperations(const IntPos& mousePos)
     return;
   }
 
-  if (!isZoomPanAdjusted) {
-    float zoomW = (windowW - INITIAL_BORDER_PIXELS) / static_cast<float>(inputLayout.gridW);
-    float zoomH = (windowH - INITIAL_BORDER_PIXELS) / static_cast<float>(inputLayout.gridH);
-    zoom = std::min(zoomW, zoomH);
-    float boardScreenW = (inputLayout.gridW - 1) * zoom;
-    float boardScreenH = (inputLayout.gridH - 1)* zoom;
-    panOffsetScrPos = Pos(
-      windowW / 2.0f - boardScreenW / 2.0f,
-      windowH / 2.0f - boardScreenH / 2.0f
-    );
-    zoomLinear = logf(zoom);
-  }
-
   if (isComponentDragActive) {
     // Prevent dragging outside of grid
     auto mouseBoardPos = getMouseBoardPos(mousePos, zoom, panOffsetScrPos);
     Via v = (mouseBoardPos - dragPin0BoardOffset + 0.5f).cast<int>();
     auto component =
-      inputLayout.circuit.componentNameToInfoMap[dragComponentName];
+      inputLayout.circuit.componentNameToComponentMap[dragComponentName];
     auto footprint =
       inputLayout.circuit.calcComponentFootprint(dragComponentName);
     auto startPin0Offset = component.pin0AbsPos - footprint.start;
@@ -635,13 +579,7 @@ void handleMouseDragOperations(const IntPos& mousePos)
       v.y() = inputLayout.gridH - endPin0Offset.y() - 1;
     }
     setComponentPosition(inputLayout.circuit, v, dragComponentName);
-
-    if (writeChangesToCircuitFileBool) {
-      CircuitFileWriter fileWriter;
-      fileWriter.updateComponentPosition(circuitFilePath, dragComponentName, v);
-    }
-
-    inputLayout.setOriginal();
+    resetInputLayout();
   }
   // Drag board
   else if (isBoardDragActive) {
@@ -649,14 +587,9 @@ void handleMouseDragOperations(const IntPos& mousePos)
   }
 }
 
-void renderDragStatus(const IntPos mouseScrPos) {
-  if (isDragBlockingActive) {
-    dragText.print(projMat, mouseScrPos.x(), mouseScrPos.y(), 0,
-             fmt::format("Can't edit -- showing best")
-    );
-  }
-  else if (isComponentDragActive) {
-//    auto via = inputLayout.circuit.componentNameToInfoMap[dragComponentName].pin0AbsPos;
+void renderDragStatus(const IntPos mouseScrPos)
+{
+  if (isComponentDragActive) {
     auto mouseBoardPos = getMouseBoardPos(mouseScrPos, zoom, panOffsetScrPos);
     Via mouseVia = (mouseBoardPos - dragPin0BoardOffset + 0.5f).cast<int>();
     dragText.print(projMat, mouseScrPos.x(), mouseScrPos.y(), 0,
@@ -664,13 +597,21 @@ void renderDragStatus(const IntPos mouseScrPos) {
   }
 }
 
-
-std::string formatTotalCost(int totalCost)
+void centerBoard()
 {
-  if (totalCost == INT_MAX) {
-    return "<no complete layouts>";
+  if (isZoomPanAdjusted || !inputLayout.isReadyForRouting) {
+    return;
   }
-  return fmt::format("{:n}", totalCost);
+  float zoomW = (windowW - INITIAL_BORDER_PIXELS) / static_cast<float>(inputLayout.gridW);
+  float zoomH = (windowH - INITIAL_BORDER_PIXELS) / static_cast<float>(inputLayout.gridH);
+  zoom = std::min(zoomW, zoomH);
+  float boardScreenW = (inputLayout.gridW - 1) * zoom;
+  float boardScreenH = (inputLayout.gridH - 1) * zoom;
+  panOffsetScrPos = Pos(
+                      windowW / 2.0f - boardScreenW / 2.0f,
+                      windowH / 2.0f - boardScreenH / 2.0f
+                    );
+  zoomLinear = logf(zoom);
 }
 
 //
@@ -707,7 +648,7 @@ void routerThread()
     }
     {
       Router
-        router(threadLayout, threadStopRouter, inputLayout, currentLayout, maxRenderDelay);
+      router(threadLayout, threadStopRouter, inputLayout, currentLayout, maxRenderDelay);
       auto isAborted = router.route();
       // Ignore result if the routing was aborted or the input has changed.
       if (isAborted || !threadLayout.isBasedOn(inputLayout)) {
@@ -716,7 +657,7 @@ void routerThread()
     }
     {
       std::lock_guard<std::mutex> lockStatus(statusMutex);
-      ++status.nunCombinationsChecked;
+      ++status.nCombinationsChecked;
     }
     // Update currentLayout
     {
@@ -728,13 +669,13 @@ void routerThread()
       auto inputLock = inputLayout.scopeLock();
       auto bestLock = bestLayout.scopeLock();
       auto hasMoreCompletedRoutes =
-        threadLayout.numCompletedRoutes > bestLayout.numCompletedRoutes;
+        threadLayout.nCompletedRoutes > bestLayout.nCompletedRoutes;
       auto hasEqualRoutesAndBetterScore =
-        threadLayout.numCompletedRoutes == bestLayout.numCompletedRoutes
-          && threadLayout.totalCost > bestLayout.totalCost;
+        threadLayout.nCompletedRoutes == bestLayout.nCompletedRoutes
+        && threadLayout.cost > bestLayout.cost;
       auto isBasedOnOtherLayout = !bestLayout.isBasedOn(threadLayout);
       if (hasMoreCompletedRoutes || hasEqualRoutesAndBetterScore
-        || isBasedOnOtherLayout) {
+          || isBasedOnOtherLayout) {
         bestLayout = threadLayout;
       }
     }
@@ -769,9 +710,9 @@ void parserThread()
         auto lock = inputLayout.scopeLock();
         inputLayout = Layout();
         inputLayout.circuit.parserErrorVec.push_back(errorMsg);
+        resetInputLayout();
       }
       curMtime = 0.0;
-      inputLayout.setOriginal();
       std::this_thread::sleep_for(1s);
       continue;
     }
@@ -783,37 +724,48 @@ void parserThread()
       {
         auto lock = inputLayout.scopeLock();
         inputLayout = threadLayout;
+        resetInputLayout();
       }
-
     }
     std::this_thread::sleep_for(500ms);
   }
 }
 
-int main(int argc, char **argv)
+void resetInputLayout()
 {
+  assert(inputLayout.isLocked());
+  inputLayout.updateBaseTimestamp();
+  status.nCombinationsChecked = 0;
+  guiStatus.reset();
+}
+
+int main(int argc, char** argv)
+{
+//  fmt::print("GLFW: {}\n", glfwGetVersionString());
   if (argc == 2) {
     circuitFilePath = argv[1];
   }
   try {
     nanogui::init();
     {
-      setlocale(LC_NUMERIC, "en_US.UTF-8");
+      setlocale(LC_NUMERIC, "");
       nanogui::ref<Application> app = new Application();
       app->setVisible(true);
+      setWindowIcon("./icons/48x48.png");
       nanogui::mainloop();
     }
+    delete form;
+    guiStatus.free();
     nanogui::shutdown();
   }
-  catch (const std::runtime_error &e) {
-    std::string
-      error_msg = std::string("Fatal error: ") + std::string(e.what());
+  catch (const std::runtime_error& e) {
+    auto errorStr = fmt::format("Fatal error: {}", e.what());
+    fmt::print(stderr, errorStr + "\n");
 #if defined(_WIN32)
-    MessageBoxA(nullptr, error_msg.c_str(), NULL, MB_ICONERROR | MB_OK);
-#else
-    std::cerr << error_msg << std::endl;
+    MessageBoxA(nullptr, errorStr.c_str(), NULL, MB_ICONERROR | MB_OK);
 #endif
     return -1;
   }
   return 0;
 }
+

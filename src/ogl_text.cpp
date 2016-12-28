@@ -14,7 +14,7 @@ const int FT_SIZE_FACTOR = 64;
 const int BACKGROUND_PADDING_PIXELS = 0;
 
 
-OglText::OglText(const std::string &fontPath, int fontH)
+OglText::OglText(const std::string& fontPath, int fontH)
   : oglInitialized_(false),
     texWH_(0),
     fontH_(fontH),
@@ -23,6 +23,15 @@ OglText::OglText(const std::string &fontPath, int fontH)
     face_(0)
 {
   createFreeType(fontPath);
+}
+
+OglText::~OglText()
+{
+  int error = FT_Done_FreeType(freetypeLibraryHandle_);
+  if (error) {
+    fmt::print(stderr, "Error: Unable to release the FreeType2 library\n");
+    exit(0);
+  }
 }
 
 void OglText::openGLInit()
@@ -37,16 +46,11 @@ void OglText::openGLInit()
   oglInitialized_ = true;
 }
 
-OglText::~OglText()
+void OglText::openGLFree()
 {
   glDeleteBuffers(1, &vertexBufId_);
   glDeleteBuffers(1, &texBufId_);
   glDeleteTextures(1, &textureId_);
-  int error = FT_Done_FreeType(freetypeLibraryHandle_);
-  if (error) {
-    fmt::print(stderr, "Error: Unable to release the FreeType2 library\n");
-    exit(0);
-  }
 }
 
 void OglText::setFontH(int fontH)
@@ -58,7 +62,7 @@ void OglText::setFontH(int fontH)
 }
 
 
-void OglText::print(glm::tmat4x4<float>& projMat, int x, int y, int nLine, const std::string &str, bool drawBackground)
+void OglText::print(glm::tmat4x4<float>& projMat, int x, int y, int nLine, const std::string& str, bool drawBackground)
 {
   assert(oglInitialized_); // Call openGLInit() after creating an OpenGL context
   glDisable(GL_DEPTH_TEST);
@@ -78,11 +82,11 @@ void OglText::print(glm::tmat4x4<float>& projMat, int x, int y, int nLine, const
   drawText(x, y, nLine, str);
 }
 
-int OglText::calcStringWidth(const std::string &str)
+int OglText::calcStringWidth(const std::string& str)
 {
   int strW = 0;
-  for (const char &ascii : str) {
-    auto &c = charMeta_[ascii - 32];
+  for (const char& ascii : str) {
+    auto& c = charMeta_[ascii - 32];
     strW += c.advance;
   }
   return strW;
@@ -97,7 +101,7 @@ int OglText::getLineHeight()
 // Private
 //
 
-void OglText::createFreeType(const std::string &fontPath)
+void OglText::createFreeType(const std::string& fontPath)
 {
   int error = FT_Init_FreeType(&freetypeLibraryHandle_);
   if (error) {
@@ -166,7 +170,7 @@ void OglText::createFontTexture()
 //  fmt::print("Info: New font texture size: {0}x{0}\n", texWH_);
 }
 
-bool OglText::renderFont(std::vector<unsigned char> &fontVec)
+bool OglText::renderFont(std::vector<unsigned char>& fontVec)
 {
   // Iterate over all the printable ASCII characters, which span from ASCII 32 to 126. 32 is space, which typically
   // renders as a 0x0 texture. We include it anyway, so that we can get the advance metadata, which says how wide
@@ -209,8 +213,9 @@ bool OglText::renderFont(std::vector<unsigned char> &fontVec)
     charMeta_.push_back({tex_x, tex_y, static_cast<int>(glyph_bitmap.width),
                          static_cast<int>(glyph_bitmap.rows), -slot->bitmap_top,
                          slot
-                           ->bitmap_left, // Negate Y since FT uses cartesian coords.
-                         static_cast<int>(slot->advance.x / FT_SIZE_FACTOR)});
+                         ->bitmap_left, // Negate Y since FT uses cartesian coords.
+                         static_cast<int>(slot->advance.x / FT_SIZE_FACTOR)
+                        });
 
     tex_x += glyph_bitmap.width;
   }
@@ -218,7 +223,7 @@ bool OglText::renderFont(std::vector<unsigned char> &fontVec)
   return fitOk;
 }
 
-void OglText::drawText(int x, int y, int nLine, const std::string &str)
+void OglText::drawText(int x, int y, int nLine, const std::string& str)
 {
   std::vector<GLfloat> triVec;
   std::vector<GLfloat> texVec;
@@ -226,8 +231,8 @@ void OglText::drawText(int x, int y, int nLine, const std::string &str)
   int screen_x = x;
   int screen_y = y + nLine * lineH_;
 
-  for (const char &ascii : str) {
-    auto &c = charMeta_[ascii - 32];
+  for (const char& ascii : str) {
+    auto& c = charMeta_[ascii - 32];
 
     float x1 = screen_x + c.left_offset;
     float y1 = screen_y + c.top_offset + maxAscender_;
@@ -269,8 +274,8 @@ void OglText::drawText(int x, int y, int nLine, const std::string &str)
                         GL_FLOAT,  // type
                         GL_FALSE,  // normalized?
                         0,         // stride
-                        (void *) 0   // array buffer offset
-  );
+                        (void*) 0    // array buffer offset
+                       );
 
   glEnableVertexAttribArray(1);
   glBindBuffer(GL_ARRAY_BUFFER, texBufId_);
@@ -283,13 +288,13 @@ void OglText::drawText(int x, int y, int nLine, const std::string &str)
                         GL_FLOAT,  // type
                         GL_FALSE,  // normalized?
                         0,         // stride
-                        (void *) 0   // array buffer offset
-  );
+                        (void*) 0    // array buffer offset
+                       );
 
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
 }
 
-void OglText::drawTextBackground(int x, int y, int nLine, const std::string &str)
+void OglText::drawTextBackground(int x, int y, int nLine, const std::string& str)
 {
   auto strW = calcStringWidth(str);
 
@@ -323,7 +328,7 @@ void OglText::drawTextBackground(int x, int y, int nLine, const std::string &str
                         GL_FLOAT,  // type
                         GL_FALSE,  // normalized?
                         0,         // stride
-                        (void *) 0   // array buffer offset
-  );
+                        (void*) 0    // array buffer offset
+                       );
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
 }

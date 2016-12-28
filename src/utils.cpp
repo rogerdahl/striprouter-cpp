@@ -1,6 +1,7 @@
+#include <algorithm>
+#include <cctype>
 #include <chrono>
-#include <sys/file.h>
-#include <sys/stat.h>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -26,7 +27,7 @@ bool saveScreenshot(std::string filename, int w, int h)
   glPixelStorei(GL_PACK_ALIGNMENT, 1);
   int nSize = w * h * 3;
   // First let's create our buffer, 3 channels per Pixel
-  char *dataBuffer = (char *) malloc(nSize * sizeof(char));
+  char* dataBuffer = (char*) malloc(nSize * sizeof(char));
   if (!dataBuffer) {
     return false;
   }
@@ -34,15 +35,16 @@ bool saveScreenshot(std::string filename, int w, int h)
   // We request the pixels in GL_BGR format, thanks to Berzeger for the tip
   glReadPixels(0, 0, w, h, GL_BGR, GL_UNSIGNED_BYTE, dataBuffer);
   //Now the file creation
-  FILE *filePtr = fopen(filename.c_str(), "wb");
+  FILE* filePtr = fopen(filename.c_str(), "wb");
   if (!filePtr) {
     return false;
   }
   unsigned char TGAheader[12] = {0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-  unsigned char header[6] =
-    {static_cast<unsigned char>(w % 256), static_cast<unsigned char>(w / 256),
-     static_cast<unsigned char>(h % 256), static_cast<unsigned char>(h / 256),
-     static_cast<unsigned char>(24), static_cast<unsigned char>(0)};
+  unsigned char header[6] = {
+    static_cast<unsigned char>(w % 256), static_cast<unsigned char>(w / 256),
+    static_cast<unsigned char>(h % 256), static_cast<unsigned char>(h / 256),
+    static_cast<unsigned char>(24), static_cast<unsigned char>(0)
+  };
   // We write the headers
   fwrite(TGAheader, sizeof(unsigned char), 12, filePtr);
   fwrite(header, sizeof(unsigned char), 6, filePtr);
@@ -113,8 +115,8 @@ void showTexture(int windowW, int windowH, GLuint textureId)
                         GL_FLOAT,  // type
                         GL_FALSE,  // normalized?
                         0,         // stride
-                        (void *) 0   // array buffer offset
-  );
+                        (void*) 0    // array buffer offset
+                       );
 
   glEnableVertexAttribArray(1);
 
@@ -131,8 +133,8 @@ void showTexture(int windowW, int windowH, GLuint textureId)
                         GL_FLOAT,  // type
                         GL_TRUE,  // normalized?
                         0,         // stride
-                        (void *) 0   // array buffer offset
-  );
+                        (void*) 0    // array buffer offset
+                       );
 
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
 
@@ -175,15 +177,31 @@ std::vector<unsigned char> makeTestTextureVector(int w, int h, int border)
 // File
 //
 
+#if defined(_WIN32)
+
 double getMtime(const std::string& path)
 {
-  struct stat st = {0};
+  HANDLE hFile = CreateFile(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+  FILETIME lastWriteTime;
+  GetFileTime(hFile, NULL, NULL, &lastWriteTime);
+  double r = static_cast<double>(lastWriteTime.dwLowDateTime);
+  CloseHandle(hFile);
+  return r;
+}
+
+#else
+
+double getMtime(const std::string& path)
+{
+  struct stat st = { 0 };
   int ret = lstat(path.c_str(), &st);
   if (ret == -1) {
     throw fmt::format("Unable to stat file: {}", path);
   }
   return st.st_mtim.tv_sec + st.st_mtim.tv_nsec / 100'0000'000.0;
 }
+
+#endif
 
 std::string joinPath(const std::string& a, const std::string& b)
 {
@@ -195,35 +213,88 @@ std::string joinPath(const std::string& a, const std::string& b)
   }
 }
 
-int getExclusiveLock(const std::string filePath)
+#ifdef _WIN32
+
+// Create a string with last error message
+std::string GetLastErrorStdStr()
 {
-#if defined(_WIN32)
-  HANDLE hFile = CreateFile(_T("c:\\file.txt"), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
-#else
-  int fd = open(filePath.c_str(), O_RDWR);
-  while (true) {
-    int result = flock(fd, LOCK_EX); // blocks
-    if (!result) {
-      break;
+  DWORD error = GetLastError();
+  if (error) {
+    LPVOID lpMsgBuf;
+    DWORD bufLen = FormatMessage(
+                     FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                     FORMAT_MESSAGE_FROM_SYSTEM |
+                     FORMAT_MESSAGE_IGNORE_INSERTS,
+                     NULL,
+                     error,
+                     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                     (LPTSTR)&lpMsgBuf,
+                     0, NULL);
+    if (bufLen) {
+      LPCSTR lpMsgStr = (LPCSTR)lpMsgBuf;
+      std::string result(lpMsgStr, lpMsgStr + bufLen);
+      LocalFree(lpMsgBuf);
+      return result;
     }
-    std::this_thread::sleep_for(500ms);
   }
-  return fd;
-#endif
+  return std::string();
 }
 
-void releaseExclusiveLock(int fd)
+#endif
+
+ExclusiveFileLock::ExclusiveFileLock(const std::string filePath)
 {
-#if defined(_WIN32)
-  HANDLE hFile = CreateFile(_T("c:\\file.txt"), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
+	isLocked = false;
+  while (true) {
+#ifndef _WIN32
+    fileHandle_ = open(filePath.c_str(), O_RDWR);
+    auto result = flock(fileHandle_, LOCK_EX); // blocks
+    if (!result) {
+			isLocked = true;
+      return;
+    }
+    auto errStr = fmt::format("{}", result);
 #else
-  int result = flock(fd, LOCK_UN);
-  if (result) {
-    throw std::runtime_error("Unable to release exclusive lock");
-  }
+    fileHandle_ = CreateFile(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+    if (fileHandle_ != INVALID_HANDLE_VALUE) {
+			isLocked = true;
+      return;
+    }
+    auto errStr = GetLastErrorStdStr();
 #endif
+    fmt::print("Retrying exclusive file lock. Error={}\n", errStr);
+    std::this_thread::sleep_for(1s);
+  }
 }
 
+ExclusiveFileLock::~ExclusiveFileLock()
+{
+	if (isLocked) {
+		release();
+	}
+}
+
+void ExclusiveFileLock::release()
+{
+  while (true) {
+#ifndef _WIN32
+    auto result = flock(fileHandle_, LOCK_UN);
+    if (!result) {
+			isLocked = false;
+      return;
+    }
+    auto errStr = fmt::format("{}", result);
+#else
+    if (CloseHandle(fileHandle_)) {
+			isLocked = false;
+      return;
+    }
+    auto errStr = GetLastErrorStdStr();
+#endif
+    fmt::print("Retrying release of exclusive file lock. Error={}\n", errStr);
+    std::this_thread::sleep_for(1s);
+  }
+}
 
 //
 // Average frames per second
@@ -255,3 +326,15 @@ double averageSec::calcAverage()
   return sumSec / doubleDeque_.size();
 }
 
+//
+// Misc
+//
+
+std::string trim(const std::string& s)
+{
+  auto wsfront = std::find_if_not(s.begin(), s.end(), [](int c)
+  { return std::isspace(c); });
+  auto wsback = std::find_if_not(s.rbegin(), s.rend(), [](int c)
+  { return std::isspace(c); }).base();
+  return (wsback <= wsfront ? std::string() : std::string(wsfront, wsback));
+}

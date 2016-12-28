@@ -18,17 +18,17 @@
 class Nets
 {
 public:
-  Nets(Layout &);
-  void connect(const Via &viaA, const Via &viaB);
-  void connectRoute(const RouteStepVec &routeStepVec);
-  void registerPin(const Via &via);
-  bool isConnected(const Via &currentVia, const Via &targetVia);
-  bool hasConnection(const Via &via);
-  ViaSet &getViaSet(const Via &via);
+  Nets(Layout&);
+  void connect(const Via& viaA, const Via& viaB);
+  void connectRoute(const RouteStepVec& routeStepVec);
+  void registerPin(const Via& via);
+  bool isConnected(const Via& currentVia, const Via& targetVia);
+  bool hasConnection(const Via& via);
+  ViaSet& getViaSet(const Via& via);
+  int getViaSetIdx(const Via& via);
 private:
   int createViaSet();
-  int getViaSetIdx(const Via &via);
-  Layout &layout_;
-  SetIdxVec &setIdxVec_;
-  ViaSetVec &viaSetVec_;
+  Layout& layout_;
+  SetIdxVec& setIdxVec_;
+  ViaSetVec& viaSetVec_;
 };

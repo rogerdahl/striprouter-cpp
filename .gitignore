@@ -1,6 +1,7 @@
 /cmake-build-*
 /libraries
 /releases
+/.idea
 
 # Compiled Object files
 *.slo

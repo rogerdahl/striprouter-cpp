@@ -2,45 +2,43 @@
 
 <img align="right" width="50%" src="./screenshot.png">
 
-**Note**: Experimental state. Tested on Windows 10 64-bit and Linux Mint 18 64-bit. See [Releases](https://github.com/rogerdahl/striprouter/releases) for Windows and Linux binaries.
+**Note**: Beta software, but should be ready for testing in real projects. Tested on Windows 10 64-bit and Linux Mint 18 64-bit. See [Releases](https://github.com/rogerdahl/striprouter/releases) for Windows and Linux binaries.
 
 This is a cross-platform program that, given a description of a circuit, searches for the best way to create the required connections on a [stripboard](https://en.wikipedia.org/wiki/Stripboard).
 
-The output is a description of where to place and solder wires and where to cut the existing stripboard traces in order to create the connections.
+The output is a description of where to place and solder wires and where to cut the copper traces on the stripboard in order to create the connections.
 
-Costs can be assigned to resources such as stripboard area and solder points in order to direct the router towards preferred layouts. E.g., setting the cost of solder points high in relation to other resources will typically generate layouts that use fewer solder points at the expense of stripboard area.
+Costs can be assigned to resources such as stripboard area and solder points in order to direct the router towards preferred layouts.
 
-The program searches only for routes that use non-overlapping wires that cross the traces at right angles, which tends to give layouts that look clean, and which allows using only uninsulated wires.   
+The program searches only for routes that use non-overlapping wires that cross the traces at right angles, which tends to give clean layouts, and which allows using only uninsulated wires.   
 
+If a good layout is found, the solution can be printed in two separate layers, with the bottom layer showing the required copper trace cuts, and the top layer showing the required wires. The printed sheets are then fastened to the board with paper glue or tape one layer at a time, providing an exact reference while working on the board. Wires can be placed by poking them through the indicated locations on the paper, and traces are cut through the paper.
 
 Currently implemented:
 
-* Parsing of circuit description file
+* Parse circuit description file 
 * Automatic routing, aware of nets and indirect connections 
-* Visualization of circuit and discovered routes
-* Basic GUI controls
+* Visualize circuit and discovered routes
+* GUI controls
 * Move components with mouse
 * Zoom and pan with mouse wheel and drag
-* Highlight connections with mouse hover
-* Gaps show where the copper traces need to be cut
-* Component position changes written back to the circuit file
+* Highlight connections and nets with mouse hover
+* Find and display the minimally required copper trace cut positions
+* Write component position changes back to the circuit file
+* Write the best solution to .svg (Scalable Vector Grahics) files for 1:1 printing
 
 Planned functionality:
  
 * Better search algorithm
-* Write layout to file
-* Print mirror image of layout in 1:1 size for use when soldering  
 * Support components such as resistors and diodes that have variable length connectors
 * Automatic optimization of component locations
 
 
 ### How to use
 
-* Start the program. If things work, you will see it start searching for routes on the included circuit. A "no completed layouts" message means that no layout has been found in which it was possible to route all connections.
-
-* Move the program to one side of the screen and open the included `circuits/example.circuit` file in a text editor on the other. Start creating your circuit there, using the simple syntax shown in the file.
-
-    Alternately, the path to another `.circuit` file can be given as a command line argument when starting the program.
+* Start the program. You should see it start searching for routes on the included circuit. There will be several updates over the first few seconds, and then update frequency will slow down as it becomes harder for the program to find a layout that is better than the current best.
+ 
+* Move the program to one side of the screen and open the included `circuits/example.circuit` file in a text editor on the other. Start creating your circuit there, using the simple syntax shown in the file. Alternately, the path to another `.circuit` file can be given as a command line argument when starting the program.
  
     * `Board` The size of the stripboard, specified by number of vias (through holes) horizontally and vertically, as seen when the copper strips run vertically. The board must be large enough that the circuit and routes will fit but should not be larger than necessary, as search speed slows down when board size increases.
 
@@ -49,22 +47,33 @@ Planned functionality:
     * `Component` Name, position and package for a component. The position specifies the location of pin 1 on the board.
  
     * `Connection` Connections between component pins required for the circuit.
-     
-* Packages, components and connections can be intermixed, however packages must be described before the components in which they are used, and components must be described before connections in which they are used.
+    
+    * `Don't Care` Specify component pins that are not internally connected,have been removed, or which control features that are not in use. Setting pins as "Don't Care" allows the router to use strip segments that are connected to the pins, for unrelated routes. This often allows the router to go under a component instead of around it.
+
+    * `Offset` This is a shortcut that is not typically needed. Allows setting an offset that will be added to the positions of all components that are declared below in the file. This makes it easier to adjust the positions of a group of components while maintaining their relative positions. Can be used multiple times. The offset that was last set remains in effect until disabled with `offset 0,0`.
+
+* Packages, components and connections can be intermixed, however packages must be declared before the components in which they are used, and so on. The dependencies are as follows:
+
+        Board > Package > Offset > Component > Connection > Don't Care
 
 * If you are familiar with the netlists supported by most PCB design software, you will have noticed that the `.circuit` file does not support specifying nets. Instead, the nets are inferred from the point-to-point connections at runtime. In the `.circuit` file, simply reuse pins as often as necessary, as shown for the `vcc` and `gnd` connections in the included example.   
 
 * Whenever you want to see the current status of your `.circuit` file, just save it in the editor to display the new version in the router. If there are any problems in the file, a list of errors is shown in the router.
 
-* Components can be moved with the mouse. If `Write changes to circuit file` is enabled, the new positions are automatically written back to the `.circuit` file. To avoid losing unsaved changes, save the file before moving components when write back is enabled.
+* Components can be moved with the mouse. Clicking `Save to .circuit file` updates the `.circuit` file with the new positions. To avoid losing unsaved changes, save the `.circuit` file in the editor before saving in the router.
 
-* Wait while the program randomly searches for complete layouts. As long as the program is running, it is always searching for a better layout.
+* Wait while the program searches for better layouts. Currently, only a simple random search is implemented. As long as `Pause` is not checked, the program keeps searching for a better layout.
 
-* If no satisfactory layouts are found, click `Rat's Nest` to view the required connections and try moving the components to create more space between components, fewer crossed connections and less interference in problem areas with many failed routes. A complete layout can always be found if there is enough room for routes between the components.
+* If no satisfactory layouts are found, click `Rat's Nest` to view the required connections and try moving the components to create more space between them, reduce crossed connections and reduce interference in problem areas with many failed routes. A complete layout can usually be found if there is enough room for routes between the components.
 
-* Click `Show best` to see the best layout found so far.
+* Click `Current` to see the current layouts as they are being tested. Most layouts are dropped after routing due to having lower scores than the best layout found so far. 
 
-* If you find a layout that you wish to use, click `Pause` and then, ahem, use your OS Print Screen function to take a screenshot. There's no other way to save or export layouts yet.
+* If you find a layout that you wish to use, click `Save to .svg files`. This will save two files in Scalable Vector Graphics format. The files are stored in the same folder as the currently open `.circuit` file, with filenames that match the `.circuit` file. The file named `.wires.svg` shows the required wire connections and the file named `.cuts.svg` shows the required copper strip cuts. The names include number of completed and failed routes for the solution, and the score for the completed routes.   
+
+* The `.svg` files contain exact physical size information so, when printed, should match the size of the stripboard. The `.cuts.svg` shows the cut locations as seen from the copper stripe side. It's a mirror image as compared to `wires.svg`. That way, the two sheets can be fastened to each side of the board with paper glue or tape. Then the wires and cuts can be done through the paper, reducing the chance of errors.      
+
+* To print the `.svg` files, open them in a graphics editor, such as the excellent [Inkscape](https://inkscape.org/en/), which is free, open source, and available for Linux, Mac and Windows. Make sure that the scale is set to 100% in the printer dialog, since the print will not match the board if the scale is wrong. If the print does not match even when the scale is set to 100%, you may be the unfortunate owner of a printer that does not print to scale. Laser printers are somewhat less reliable than inkjet printers in this regard.
+
 
 ### Tips and Tricks
 
@@ -74,15 +83,18 @@ Planned functionality:
   
 * Some designs, such as [Rasperry Pi "Hats"](https://shop.pimoroni.com/collections/hats) require a double row header on the edge of the board. In the case of the Raspberry Pi, this is a 2x20 pin header. In order to connect to the outer header pins, the router must go around the header and use board area on the outer side for wires and traces, which makes it impossible for the header to be at the edge of the board. The more connections are required for the outer row, the further in on the board the header must be located.
 
-  Depending on the physical requirements for the final board, this may be acceptable. If it's not, you can enable the double header to stay at the edge of the board by connecting the outer pins with insulated wire. To do this, you have several options:
+  Depending on the physical requirements for the final board, this may be acceptable. If it's not, you may be able to keep the double header at the edge of the board with one of these options:
   
-  1) Leave the outer row connections out of the circuit description altogether and create direct point-to-point connections for them at solder time.
+    * Leave the connections to the outer row of the header out of the circuit description, so that the router does not know about them. Then, create direct point-to-point connections for them at solder time.
   
-  2) Keep the outer row connections in the circuit description and use the resulting routes as hints on how to best create your connections.
+    * Keep the outer row connections in the circuit description and use the resulting routes as hints on how to best create your connections.
   
-  3) Represent the double header with two single headers in the circuit description. Put one single header at the actual location of the inner row of the double header and put the other in another location on the board. The opposite side may be best. The router can then route directly to each of the single row headers without using area outside the headers. At solder time, connect the outer row of the double header to the row of points that were used by the router. Using an insulated flat cable can be convenient. Old IDE and floppy cables work well for this.
+    * Represent the double header with two single headers in the circuit description. Put one single header at the actual location of the inner row of the double header and put the other in another location on the board. The opposite side may be best. The router can then route directly to each of the single row headers without using area outside the headers. At solder time, connect the outer row of the double header to the row of points that were used by the router. Using an insulated flat cable can be convenient. Old IDE and floppy cables work well for this.
+
+    * Determine which pins you will be using on the header and remove the unused pins before soldering the header to the board (making sure to keep enough pins that the header can be fastened properly). Then, configure the removed pins as `Don't Care` in the `.circuit` file. The router will then be able to reach the pins in the outer row by going past the `Don't Care` pins.    
 
 * Bonus: If you zoom in far enough, you get free modern art, such as [this](./art.png) :)
+
 
 ### Implementation
 
@@ -98,27 +110,27 @@ Planned functionality:
 
 * The router threads compete for a lock on inputLayout. When a thread gets the lock, it creates a thread local copy of inputLayout, called threadLayout and releases the lock. Because the router always uses the lowest cost route for a given connection, only the order in which the routes are created affects the end result. So, as a temporary first approach, a random search is currently implemented by having the thread start by randomly shuffling the order of the connections in its threadLayout. It then creates, or attempts to create, the routes in the shuffled order. The number of ways the connections can be shuffled is the factorial of the number of connections, which makes it impossible to check all possible orderings even for small circuits.
 
+    The router is based on a custom implementation of the Uniform Cost Search algorithm and includes a common optimization based on using a set and a priority queue. The search is restricted to only find paths that can be implemented on a stripboard, the most important limitation being that there are two layers, where one layer can have only horizontal connections and the other can have only vertical connections.
+
     The Uniform Cost Search is based on assigning a cost to each point that can possibly be reached, so the cost for a completed route is the total of the costs of the points along the route. When the routing is completed, the costs for each of the routes are summed up to get the total cost for the Layout. 
    
-    After completing the Layout, the thread locks bestLayout and compares the threadLayout and bestLayout for cost and number of completed routes. If threadLayout has more completed routes, or the same number of routes but a lower cost, it is better, and the thread copies it to bestLayout, overwriting the old bestLayout. The thread then always locks currentLayout and writes threadLayout to it, and loops back to the start, where it again locks inputLayout.
+    After completing the Layout, the thread locks bestLayout and compares the threadLayout and bestLayout for cost and number of completed routes. If threadLayout has more completed routes, or the same number of routes but a lower cost, it is considered to be better, and the thread copies it to bestLayout, overwriting the old bestLayout. The thread then always locks currentLayout and writes threadLayout to it, and loops back to the start, where it again locks inputLayout.
     
-    Each Layout has a timestamp that is used for keeping track of lineage between Layouts. This is done so that, when the inputLayout changes, work on downstream Layouts for which the results are no longer needed, can be aborted, and outdated threadLayout, currentLayout and bestLayout objects flushed out.
+* Each Layout has a timestamp that is used for keeping track of lineage between Layouts. This is done so that, when the inputLayout changes, work on downstream Layouts for which the results are no longer needed, can be aborted. Outdated threadLayout, currentLayout and bestLayout objects are then dropped, which causes them to be replaced with layouts based on the new inputLayout.
    
 * The main thread runs the GUI and OpenGL rendering. When a setting is changed or components are moved through the GUI, the main thread locks inputLayout and updates its Settings or Circuit. The main thread renders the inputLayout while a drag/drop operation is performed and bestLayout if the `Show best` checkbox is enabled. Otherwise, it renders currentLayout if its lineage is to the current inputLayout, else falls back to render the inputLayout. The end result being that the most current information is displayed.
 
     To avoid locking the Layout being rendered during the entire rendering process, the main thread briefly locks the Layout it will render and creates a thread local copy, then renders the copy and discards it.
    
-* The router is based on a custom implementation of the Uniform Cost Search algorithm and includes a common optimization based on using a set and a priority queue. The search is restricted to only find paths that can be implemented on a stripboard, the most important limitation being that there are two layers, where one layer can have only horizontal connections and the other can have only vertical connections.
-
 * The router infers connected nets from the point-to-point connections described in `.circuit` and searches nets for potential shortcuts when routing. As routes are created, all points along the route are assigned to nets, using a structure that allows very fast checking for net membership when the points are encountered by the later Uniform Cost Searches.
 
+* For routes that belong to nets, routes that reuse existing sections of earlier routes (instead of creating new sections), are preferred by setting very low costs for the reused sections.
 
 ### Technologies
 
 * C++
 * NanoGUI
 * OpenGL
-* Boost
 * fmt
 * FreeType2
 * GLEW
@@ -151,8 +163,8 @@ This is the circuit description used in the screenshot.
 # GEN6 22
 # GP05 29
 
-# Stripboard
-# board <width>,<height>
+# Board params (currently just size)
+# board <number of horizontal vias> , <number of vertical vias>
 
 board 60,60
 
@@ -162,6 +174,11 @@ board 60,60
 dip14       0,0 1,0 2,0 3,0 4,0 5,0 6,0 6,-3 5,-3 4,-3 3,-3 2,-3 1,-3 0,-3
 header2x20  0,0 0,-1 1,0 1,-1 2,0 2,-1 3,0 3,-1 4,0 4,-1 5,0 5,-1 6,0 6,-1 7,0 7,-1 8,0 8,-1 9,0 9,-1 10,0 10,-1 11,0 11,-1 12,0 12,-1 13,0 13,-1 14,0 14,-1 15,0 15,-1 16,0 16,-1 17,0 17,-1 18,0 18,-1 19,0 19,-1
 hpad2x2     0,0 1,0 0,-1 1,-1
+
+# Component position offset. Can be used multiple times to adjust section of
+# circuit. Adds the given offset to the positions of components defined below.
+# To disable, set to 0,0.
+# offset <relative x pos>, <relative y pos>
 
 # Components
 # <component name> <package name> <absolute position of component pin 0>
@@ -182,6 +199,10 @@ chan5   hpad2x2     37,25
 chan6   hpad2x2     37,28
 chan7   hpad2x2     37,31
 chan8   hpad2x2     37,34
+
+# "Don't Care" pins
+# <component name> <comma separated list of pin indexes>
+rpi 1, 3, 5, 7, 9, 17, 19, 21, 23, 27, 31, 35, 37
 
 # Connections
 # <from component name>.<pin index> <to component name>.<pin index>
@@ -237,9 +258,9 @@ rpi.29    7400B.12
 
 #### Packaged dependencies
 
-* $ `sudo apt-get install --yes cmake git build-essential libglm-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libboost-dev libboost-filesystem-dev libglew-dev libfreetype6-dev libglfw3-dev` 
+* $ `sudo apt-get install --yes cmake git build-essential libglm-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libglew-dev libfreetype6-dev libglfw3-dev libz3-dev libpng++-dev` 
 
-#### StripRouter source
+#### Striprouter source
 
 * $ `git clone <copy and paste the "Clone with HTTPS " URL from the top of this page>`
 
@@ -283,7 +304,7 @@ https://go.microsoft.com/fwlink/?LinkId=691978&clcid=0x409
 
 https://cmake.org/download/ > `cmake-3.6.3-win64-x64.msi`
 
-#### FreeType
+#### FreeType2
 
 https://sourceforge.net/projects/freetype/ > ft263.zip (2.6.3)
 * Open the CMake GUI and browse to the source.
@@ -317,12 +338,6 @@ https://github.com/cppformat/cppformat/releases > 3.0.1
 * Probably no longer required: Right click Layout "FMT" > Retarget solution
 * Layout Configurations > Release
 * Build > Build Layout
-
-#### Boost
-
-https://sourceforge.net/projects/boost/ > 1.60.0
-`bootstrap.bat`
-`b2.exe address-model=64`
 
 #### glm
 

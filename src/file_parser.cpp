@@ -19,7 +19,7 @@ CircuitFileParser::~CircuitFileParser()
 
 void CircuitFileParser::parse(std::string& circuitFilePath)
 {
-  auto fd = getExclusiveLock(circuitFilePath);
+  //auto fd = getExclusiveLock(circuitFilePath);
   std::ifstream fin(circuitFilePath);
   std::string lineStr;
   int lineIdx = 0;
@@ -35,7 +35,7 @@ void CircuitFileParser::parse(std::string& circuitFilePath)
     }
   }
   layout_.isReadyForRouting = !layout_.circuit.hasParserError();
-  releaseExclusiveLock(fd);
+  //releaseExclusiveLock(fd);
 }
 
 //
@@ -113,19 +113,21 @@ bool CircuitFileParser::parseOffset(std::string &lineStr)
 // dip8 0,0 1,0 2,0 3,0 4,0 5,0 6,0 7,0 7,-2 6,-2 5,-2 4,-2 3,-2 2,-2 1,-2
 bool CircuitFileParser::parsePackage(std::string &lineStr)
 {
-  static std::regex pkgFull("^\\s*(\\w+)(\\s+(-?\\d+)\\s*,\\s*(-?\\d+))+$",
+	// Had to remove optional whitespace around comma to work around memory error in regex engine on Windows.
+	// Original first regex: "^\\s*(\\w+)(\\s+(-?\\d+)\\s*,\\s*(-?\\d+))+$",
+	static std::regex pkgFull("^\\s*(\\w+)(\\s+(-?\\d+),(-?\\d+))+$",
                      std::regex_constants::ECMAScript
                        | std::regex_constants::icase);
-  static std::regex pkgRelativePosRx("(\\s+(-?\\d+)\\s*,\\s*(-?\\d+))",
+  static std::regex pkgRelativePosRx("(\\s+(-?\\d+),(-?\\d+))",
                               std::regex_constants::ECMAScript
                                 | std::regex_constants::icase);
-  static std::regex pkgPosValuesRx("\\s+(-?\\d+)\\s*,\\s*(-?\\d+)",
+  static std::regex pkgPosValuesRx("\\s+(-?\\d+),(-?\\d+)",
                             std::regex_constants::ECMAScript
                               | std::regex_constants::icase);
   std::smatch m;
-  if (!regex_match(lineStr, m, pkgFull)) {
-    return false;
-  }
+	if (!regex_match(lineStr, m, pkgFull)) {
+		return false;
+	}
   std::string pkgName = m[1];
   PackageRelPosVec v;
   for (auto iter = std::sregex_token_iterator(lineStr.begin(),

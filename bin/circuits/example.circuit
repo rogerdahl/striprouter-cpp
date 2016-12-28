@@ -48,20 +48,24 @@ hpad2x2     0,0 1,0 0,-1 1,-1
 
 rpi     header2x20mirror  19,17
 
-vcc     hpad2x2     17,37
-gnd     hpad2x2     37,37
+vcc     hpad2x2     18,37
+gnd     hpad2x2     38,37
 
 7400A   dip14       25,27
-chan1   hpad2x2     17,25
-chan2   hpad2x2     17,28
-chan3   hpad2x2     17,31
-chan4   hpad2x2     17,34
+chan1   hpad2x2     18,25
+chan2   hpad2x2     18,28
+chan3   hpad2x2     18,31
+chan4   hpad2x2     18,34
 
 7400B   dip14       25,35
-chan5   hpad2x2     37,25
-chan6   hpad2x2     37,28
-chan7   hpad2x2     37,31
-chan8   hpad2x2     37,34
+chan5   hpad2x2     38,25
+chan6   hpad2x2     38,28
+chan7   hpad2x2     38,31
+chan8   hpad2x2     38,34
+
+# "Don't Care" pins
+# <component name> <comma separated list of pin indexes>
+rpi 1, 3, 5, 7, 9, 17, 19, 21, 23, 27, 31, 35, 37
 
 # Connections
 # <from component name>.<pin index> <to component name>.<pin index>

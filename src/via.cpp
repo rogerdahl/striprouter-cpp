@@ -8,7 +8,7 @@
 // Via
 //
 
-std::string str(const Via &v)
+std::string str(const Via& v)
 {
   return fmt::format("{},{}", v.x(), v.y());
 }
@@ -22,12 +22,12 @@ ValidVia::ValidVia()
 {
 }
 
-ValidVia::ValidVia(const Via &_via)
+ValidVia::ValidVia(const Via& _via)
   : via(_via), isValid(true)
 {
 }
 
-ValidVia::ValidVia(const Via &_via, bool _isValid)
+ValidVia::ValidVia(const Via& _via, bool _isValid)
   : via(_via), isValid(_isValid)
 {
 }
@@ -41,46 +41,46 @@ LayerVia::LayerVia()
 {
 }
 
-LayerVia::LayerVia(const LayerVia &other)
+LayerVia::LayerVia(const LayerVia& other)
   : via(other.via), isWireLayer(other.isWireLayer)
 {
 }
 
-LayerVia::LayerVia(const Via &_via, bool _isWireLayer)
+LayerVia::LayerVia(const Via& _via, bool _isWireLayer)
   : via(_via), isWireLayer(_isWireLayer)
 {
 }
 
-LayerVia::LayerVia(const LayerCostVia &viaLayerCost)
+LayerVia::LayerVia(const LayerCostVia& viaLayerCost)
   : via(viaLayerCost.via), isWireLayer(viaLayerCost.isWireLayer)
 {
 }
 
-bool operator<(const LayerVia &l, const LayerVia &r)
+bool operator<(const LayerVia& l, const LayerVia& r)
 {
   return std::tie(l.via.x(), l.via.y(), l.isWireLayer)
-    < std::tie(r.via.x(), r.via.y(), r.isWireLayer);
+         < std::tie(r.via.x(), r.via.y(), r.isWireLayer);
 }
 
-bool operator>(const LayerVia &l, const LayerVia &r)
+bool operator>(const LayerVia& l, const LayerVia& r)
 {
   return r < l;
 }
-bool operator<=(const LayerVia &l, const LayerVia &r)
+bool operator<=(const LayerVia& l, const LayerVia& r)
 {
   return !(l > r);
 }
-bool operator>=(const LayerVia &l, const LayerVia &r)
+bool operator>=(const LayerVia& l, const LayerVia& r)
 {
   return !(l < r);
 }
 
-bool operator==(const LayerVia &l, const LayerCostVia &r)
+bool operator==(const LayerVia& l, const LayerCostVia& r)
 {
   return (l.via == r.via).all() && l.isWireLayer == r.isWireLayer;
 }
 
-bool operator!=(const LayerVia &l, const LayerCostVia &r)
+bool operator!=(const LayerVia& l, const LayerCostVia& r)
 {
   return !(l == r);
 }
@@ -99,7 +99,7 @@ LayerCostVia::LayerCostVia()
 {
 }
 
-LayerCostVia::LayerCostVia(const LayerVia &viaLayerIn, int costIn)
+LayerCostVia::LayerCostVia(const LayerVia& viaLayerIn, int costIn)
   : ::LayerVia(viaLayerIn), cost(costIn)
 {
 }
@@ -114,10 +114,10 @@ std::string LayerCostVia::str()
   return fmt::format("{},cost={:n}", LayerVia::str(), cost);
 }
 
-bool operator<(const LayerCostVia &l, const LayerCostVia &r)
+bool operator<(const LayerCostVia& l, const LayerCostVia& r)
 {
   return std::tie(l.cost, l.via.x(), l.via.y(), l.isWireLayer)
-    > std::tie(r.cost, r.via.x(), r.via.y(), r.isWireLayer);
+         > std::tie(r.cost, r.via.x(), r.via.y(), r.isWireLayer);
 }
 
 //
@@ -129,7 +129,7 @@ StartEndVia::StartEndVia()
 {
 }
 
-StartEndVia::StartEndVia(const Via &startIn, const Via &endIn)
+StartEndVia::StartEndVia(const Via& startIn, const Via& endIn)
   : start(startIn), end(endIn)
 {
 }
@@ -142,8 +142,8 @@ LayerStartEndVia::LayerStartEndVia()
 {
 }
 
-LayerStartEndVia::LayerStartEndVia(const LayerVia &startIn,
-                                   const LayerVia &endIn)
+LayerStartEndVia::LayerStartEndVia(const LayerVia& startIn,
+                                   const LayerVia& endIn)
   : start(startIn), end(endIn)
 {
 }

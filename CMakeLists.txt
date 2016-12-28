@@ -13,6 +13,8 @@ else ()
   set(LIBRARIES ${CMAKE_SOURCE_DIR}/libraries/win64)
 endif ()
 
+set(HEADER_LIBRARIES ${CMAKE_SOURCE_DIR}/libraries/header_only)
+
 # GLFW
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(GLFW_LIBRARIES glfw)
@@ -31,6 +33,7 @@ else ()
   set(FMT_LIBRARIES fmt.lib)
   set(FMT_INCLUDE_DIR ${LIBRARIES}/fmt-3.0.1)
   set(FMT_LINK_DIR ${LIBRARIES}/fmt-3.0.1/builds/fmt/Release)
+  #set(FMT_LINK_DIR ${LIBRARIES}/fmt-3.0.1/builds/fmt/Debug)
 endif ()
 
 # FreeType2
@@ -93,30 +96,51 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 else ()
   set(NANO_LIBRARIES nanogui.lib)
   set(NANO_LINK_DIR ${LIBRARIES}/nanogui/build/Release)
+  #set(NANO_LINK_DIR ${LIBRARIES}/nanogui/build/Debug)
 endif ()
 
 # Eigen
 #find_package(Eigen3 REQUIRED)
 
+# libpng
+# png++
+# Header-only library that depends on libpng.
+# Linux: Installing libpng++-dev with apt-get pulls in libpng.
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  find_package(PNG REQUIRED)
+else ()
+  set(PNG_INCLUDE_DIRS
+	${HEADER_LIBRARIES}/png++-0.2.9
+	${LIBRARIES}/libpng-1.6.26
+  )
+endif ()
+
+
+# simple_svg
+set(SIMPLE_SVG_INCLUDE_DIR ${HEADER_LIBRARIES}/simple_svg)
+
 set(SOURCE_FILES
   ${SOURCE_DIR}/circuit.cpp
+  ${SOURCE_DIR}/circuit_parser.cpp
+  ${SOURCE_DIR}/circuit_writer.cpp
   ${SOURCE_DIR}/gl_error.cpp
   ${SOURCE_DIR}/gui.cpp
+  ${SOURCE_DIR}/gui_status.cpp
+  ${SOURCE_DIR}/icon.cpp
+  ${SOURCE_DIR}/layout.cpp
   ${SOURCE_DIR}/main.cpp
   ${SOURCE_DIR}/nets.cpp
   ${SOURCE_DIR}/ogl_text.cpp
-  ${SOURCE_DIR}/file_parser.cpp
-  ${SOURCE_DIR}/file_writer.cpp
   ${SOURCE_DIR}/render.cpp
   ${SOURCE_DIR}/router.cpp
   ${SOURCE_DIR}/settings.cpp
   ${SOURCE_DIR}/shader.cpp
-  ${SOURCE_DIR}/layout.cpp
   ${SOURCE_DIR}/status.cpp
   ${SOURCE_DIR}/thread_stop.cpp
   ${SOURCE_DIR}/ucs.cpp
   ${SOURCE_DIR}/utils.cpp
   ${SOURCE_DIR}/via.cpp
+  ${SOURCE_DIR}/write_svg.cpp
 )
 
 include_directories(
@@ -128,6 +152,8 @@ include_directories(
   ${GLM_INCLUDE_DIR}
   ${NANO_INCLUDE_DIR}
   ${OPENGL_INCLUDE_DIR}
+  ${PNG_INCLUDE_DIRS}
+  ${SIMPLE_SVG_INCLUDE_DIR}
 )
 
 link_directories(
@@ -146,8 +172,11 @@ link_libraries(
   ${GLFW_LIBRARIES}
   ${NANO_LIBRARIES}
   ${OPENGL_LIBRARIES}
+  ${PNG_LIBRARIES}
   ${X_LIBRARIES}
 )
+
+add_definitions(${PNG_DEFINITIONS})
 
 # Suppress GLM warning about having switched from degrees to radians as default
 add_definitions(-DGLM_FORCE_RADIANS)

@@ -16,27 +16,31 @@ typedef std::vector<LayerStartEndVia> RouteSectionVec;
 typedef std::vector<RouteSectionVec> RouteVec;
 typedef std::vector<std::string> StringVec;
 typedef std::vector<bool> RouteStatusVec;
+typedef std::vector<Via> StripCutVec;
 
 // Nets
-typedef std::set<Via, std::function<bool(const Via &, const Via &)> > ViaSet;
+typedef std::set<Via, std::function<bool(const Via&, const Via&)>> ViaSet;
 typedef std::vector<ViaSet> ViaSetVec;
 typedef std::vector<int> SetIdxVec;
 
+typedef std::chrono::time_point<std::chrono::high_resolution_clock> Timestamp;
 
 class Layout
 {
 public:
   Layout();
-  Layout(const Layout &);
-  Layout &operator=(const Layout &);
+  Layout(const Layout&);
+  Layout& operator=(const Layout&);
   // Lineage
-  void setOriginal();
+  void updateBaseTimestamp();
   bool isBasedOn(const Layout& other);
+  Timestamp& getBaseTimestamp();
   // Locking
   std::unique_lock<std::mutex> scopeLock();
   Layout threadSafeCopy();
+  bool isLocked();
   //
-  int idx(const Via &);
+  int idx(const Via&);
 
   Circuit circuit;
   Settings settings;
@@ -44,9 +48,9 @@ public:
   int gridW;
   int gridH;
 
-  long totalCost;
-  int numCompletedRoutes;
-  int numFailedRoutes;
+  long cost;
+  int nCompletedRoutes;
+  int nFailedRoutes;
   int numShortcuts;
 
   bool isReadyForRouting;
@@ -55,6 +59,7 @@ public:
 
   StringVec layoutInfoVec;
   RouteVec routeVec;
+  StripCutVec stripCutVec;
   RouteStatusVec routeStatusVec;
 
   // Nets
@@ -70,7 +75,7 @@ public:
   StringVec errorStringVec;
 
 private:
-  void copy(const Layout &s);
+  void copy(const Layout& s);
   std::mutex mutex_;
-  std::chrono::time_point<std::chrono::high_resolution_clock> timestamp_;
+  Timestamp timestamp_;
 };

@@ -4,6 +4,6 @@
 std::mutex statusMutex;
 
 Status::Status()
-  : nunCombinationsChecked(0)
+  : nCombinationsChecked(0)
 {
 }

@@ -6,20 +6,20 @@ Component::Component()
 {
 }
 
-Component::Component(const std::string &_packageName, const Via &_pin0AbsPos)
+Component::Component(const std::string& _packageName, const Via& _pin0AbsPos)
   : packageName(_packageName), pin0AbsPos(_pin0AbsPos)
 {
 }
 
 // Connections
 
-ConnectionPoint::ConnectionPoint(const std::string &_componentName, int _pinIdx)
+ConnectionPoint::ConnectionPoint(const std::string& _componentName, int _pinIdx)
   : componentName(_componentName), pinIdx(_pinIdx)
 {
 }
 
-Connection::Connection(const ConnectionPoint &_start,
-                       const ConnectionPoint &_end)
+Connection::Connection(const ConnectionPoint& _start,
+                       const ConnectionPoint& _end)
   : start(_start), end(_end)
 {
 }
@@ -30,21 +30,21 @@ Circuit::Circuit()
 {
 }
 
-bool Circuit::hasParserError()
+bool Circuit::hasParserError() const
 {
   return parserErrorVec.size() > 0UL;
 }
 
-ConnectionViaVec Circuit::genConnectionViaVec()
+ConnectionViaVec Circuit::genConnectionViaVec() const
 {
   ConnectionViaVec v;
   for (auto c : connectionVec) {
-    auto startComponent = componentNameToInfoMap[c.start.componentName];
-    auto endComponent = componentNameToInfoMap[c.end.componentName];
+    auto startComponent = componentNameToComponentMap.at(c.start.componentName);
+    auto endComponent = componentNameToComponentMap.at(c.end.componentName);
 
     auto
-      startRelPin = packageToPosMap[startComponent.packageName][c.start.pinIdx];
-    auto endRelPin = packageToPosMap[endComponent.packageName][c.end.pinIdx];
+    startRelPin = packageToPosMap.at(startComponent.packageName).at(c.start.pinIdx);
+    auto endRelPin = packageToPosMap.at(endComponent.packageName).at(c.end.pinIdx);
 
     Via startAbsPin = startRelPin + startComponent.pin0AbsPos;
     Via endAbsPin = endRelPin + endComponent.pin0AbsPos;
@@ -57,10 +57,8 @@ ConnectionViaVec Circuit::genConnectionViaVec()
 StartEndVia Circuit::calcComponentFootprint(std::string componentName) const
 {
   StartEndVia v(Via(INT_MAX, INT_MAX), Via(0, 0));
-  auto component =
-    (const_cast<Circuit *>(this))->componentNameToInfoMap[componentName];
-  for (auto c : (const_cast<Circuit *>(this))->packageToPosMap[component
-    .packageName]) {
+  auto component = componentNameToComponentMap.at(componentName);
+  for (auto c : (packageToPosMap.at(component.packageName))) {
     c += component.pin0AbsPos;
     if (c.x() < v.start.x()) {
       v.start.x() = c.x();
@@ -78,11 +76,11 @@ StartEndVia Circuit::calcComponentFootprint(std::string componentName) const
   return v;
 }
 
-PinViaVec Circuit::calcComponentPins(std::string componentName)
+PinViaVec Circuit::calcComponentPins(std::string componentName) const
 {
   PinViaVec v;
-  const Component component = componentNameToInfoMap[componentName];
-  for (auto c : packageToPosMap[component.packageName]) {
+  const Component component = componentNameToComponentMap.at(componentName);
+  for (auto c : packageToPosMap.at(component.packageName)) {
     c += component.pin0AbsPos;
     v.push_back(c);
   }

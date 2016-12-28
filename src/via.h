@@ -12,11 +12,13 @@ typedef Eigen::Array2f Pos;
 // Hold integer positions
 typedef Eigen::Vector2i IntPos;
 
+//
 // Via
+//
 
 typedef Eigen::Array2i Via;
 
-std::string str(const Via &v);
+std::string str(const Via& v);
 
 //
 // ValidVia
@@ -26,8 +28,8 @@ class ValidVia
 {
 public:
   ValidVia();
-  ValidVia(const Via &);
-  ValidVia(const Via &, bool isValid);
+  ValidVia(const Via&);
+  ValidVia(const Via&, bool isValid);
   Via via;
   bool isValid;
 };
@@ -42,21 +44,21 @@ class LayerVia
 {
 public:
   LayerVia();
-  LayerVia(const LayerVia &);
-  LayerVia(const Via &, bool _isWireLayer);
-  LayerVia(const LayerCostVia &);
+  LayerVia(const LayerVia&);
+  LayerVia(const Via&, bool _isWireLayer);
+  LayerVia(const LayerCostVia&);
   std::string str() const;
   Via via;
   bool isWireLayer;
 };
 
-bool operator<(const LayerVia &l, const LayerVia &r);
-bool operator>(const LayerVia &l, const LayerVia &r);
-bool operator<=(const LayerVia &l, const LayerVia &r);
-bool operator>=(const LayerVia &l, const LayerVia &r);
+bool operator<(const LayerVia& l, const LayerVia& r);
+bool operator>(const LayerVia& l, const LayerVia& r);
+bool operator<=(const LayerVia& l, const LayerVia& r);
+bool operator>=(const LayerVia& l, const LayerVia& r);
 
-bool operator==(const LayerVia &l, const LayerCostVia &r);
-bool operator!=(const LayerVia &l, const LayerCostVia &r);
+bool operator==(const LayerVia& l, const LayerCostVia& r);
+bool operator!=(const LayerVia& l, const LayerCostVia& r);
 
 //
 // LayerCostVia
@@ -66,13 +68,13 @@ class LayerCostVia: public LayerVia
 {
 public:
   LayerCostVia();
-  LayerCostVia(const LayerVia &viaLayerIn, int costIn);
+  LayerCostVia(const LayerVia& viaLayerIn, int costIn);
   LayerCostVia(int xIn, int yIn, bool isWireLayerIn, int costIn);
   std::string str();
   int cost;
 };
 
-bool operator<(const LayerCostVia &l, const LayerCostVia &r);
+bool operator<(const LayerCostVia& l, const LayerCostVia& r);
 
 //
 // StartEndVia
@@ -82,7 +84,7 @@ class StartEndVia
 {
 public:
   StartEndVia();
-  StartEndVia(const Via &_start, const Via &_end);
+  StartEndVia(const Via& _start, const Via& _end);
   Via start;
   Via end;
 };
@@ -95,7 +97,7 @@ class LayerStartEndVia
 {
 public:
   LayerStartEndVia();
-  LayerStartEndVia(const LayerVia &startIn, const LayerVia &endIn);
+  LayerStartEndVia(const LayerVia& startIn, const LayerVia& endIn);
   LayerVia start;
   LayerVia end;
 };

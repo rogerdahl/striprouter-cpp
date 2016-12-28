@@ -13,13 +13,13 @@
 const std::string SHADERS_DIR_PATH = "./shaders/";
 
 
-void compileAndCheckShader(const char *path, GLuint shaderId);
+void compileAndCheckShader(const char* path, GLuint shaderId);
 void printInfoLog(GLuint shaderId, bool isShader);
-std::string loadFile(const char *path);
+std::string loadFile(const char* path);
 
 
-GLuint createProgram(const char *vertexShaderFileName,
-                     const char *fragmentShaderFileName)
+GLuint createProgram(const char* vertexShaderFileName,
+                     const char* fragmentShaderFileName)
 {
   std::string vertexShaderPath = joinPath(SHADERS_DIR_PATH, vertexShaderFileName);
   std::string fragmentShaderPath = joinPath(SHADERS_DIR_PATH, fragmentShaderFileName);
@@ -52,7 +52,7 @@ GLuint createProgram(const char *vertexShaderFileName,
   return programId;
 }
 
-void compileAndCheckShader(const char *path, GLuint shaderId)
+void compileAndCheckShader(const char* path, GLuint shaderId)
 {
 //    cout << "Compiling shader: " << path << endl;
 
@@ -84,14 +84,14 @@ void printInfoLog(GLuint id, bool isShader)
     std::vector<GLchar> logVec(logLen);
     auto glGetInfoLog = isShader ? glGetShaderInfoLog : glGetProgramInfoLog;
     glGetInfoLog(id, logLen, NULL, &logVec[0]);
-    for (auto const &c : logVec) {
+    for (auto const& c : logVec) {
       std::cout << c;
     }
     std::cout << std::endl;
   }
 }
 
-std::string loadFile(const char *path)
+std::string loadFile(const char* path)
 {
   std::ifstream inStream(path, std::ios::in);
   if (inStream.fail()) {

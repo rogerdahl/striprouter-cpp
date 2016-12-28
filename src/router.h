@@ -22,37 +22,39 @@ typedef std::chrono::duration<double> TimeDuration;
 class Router
 {
 public:
-  Router(Layout &, ThreadStop &, Layout& inputLayout, Layout& currentLayout, const TimeDuration& _maxRenderDelay);
+  Router(Layout&, ThreadStop&, Layout& inputLayout, Layout& currentLayout, const TimeDuration& _maxRenderDelay);
   bool route();
   // Interface for Uniform Cost Search
   bool
-  isAvailable(const LayerVia &via, const Via &startVia, const Via &targetVia);
-  bool isTarget(const LayerVia &via, const Via &targetVia);
-  bool isTargetPin(const LayerVia &via, const Via &targetVia);
-  bool isAnyPin(const LayerVia &via);
-  ValidVia &wireToViaRef(const Via &via);
+  isAvailable(const LayerVia& via, const Via& startVia, const Via& targetVia);
+  bool isTarget(const LayerVia& via, const Via& targetVia);
+  bool isTargetPin(const LayerVia& via, const Via& targetVia);
+  bool isAnyPin(const Via& via);
+  ValidVia& wireToViaRef(const Via& via);
 
 private:
   bool routeAll();
-  void findCompleteRoute(const StartEndVia &);
-  bool findRoute(Via &shortcutEndVia, const StartEndVia &viaStartEnd);
-  RouteSectionVec condenseRoute(const RouteStepVec &routeStepVec);
+  void findCompleteRoute(const StartEndVia&);
+  bool findRoute(Via& shortcutEndVia, const StartEndVia& viaStartEnd);
+  RouteSectionVec condenseRoute(const RouteStepVec& routeStepVec);
+  StripCutVec findStripCuts();
+
   // Wire layer blocking
   void blockComponentFootprints();
-  void blockRoute(const RouteStepVec &routeStepVec);
-  void block(const Via &via);
-  bool isBlocked(const Via &via);
+  void blockRoute(const RouteStepVec& routeStepVec);
+  void block(const Via& via);
+  bool isBlocked(const Via& via);
   // Nets
   void joinAllConnections();
-  void registerAllComponentPins();
-  void addWireJumps(const RouteSectionVec &routeSectionVec);
+  void registerActiveComponentPins();
+  void addWireJumps(const RouteSectionVec& routeSectionVec);
 
-  Layout &layout_;
-  Layout &inputLayout_;
-  Layout &currentLayout_;
+  Layout& layout_;
+  Layout& inputLayout_;
+  Layout& currentLayout_;
 
   Nets nets_;
-  ThreadStop &threadStop_;
+  ThreadStop& threadStop_;
 
   WireLayerViaVec viaTraceVec_;
   ViaSet allPinSet_;

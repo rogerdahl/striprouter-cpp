@@ -5,4 +5,4 @@
 
 
 GLuint
-createProgram(const char *vertexShaderPath, const char *fragmentShaderPath);
+createProgram(const char* vertexShaderPath, const char* fragmentShaderPath);

@@ -5,6 +5,7 @@
 #include <utility>
 #include <map>
 #include <mutex>
+#include <set>
 
 #include <Eigen/Core>
 
@@ -18,23 +19,26 @@ typedef std::map<std::string, PackageRelPosVec> PackageToPosMap;
 
 // Components
 
+typedef std::set<int> DontCarePinIdxSet;
+
 class Component
 {
 public:
   Component();
-  Component(const std::string &, const Via &);
+  Component(const std::string&, const Via&);
   std::string packageName;
   Via pin0AbsPos;
+  DontCarePinIdxSet dontCarePinIdxSet;
 };
 
-typedef std::map<std::string, Component> ComponentNameToInfoMap;
+typedef std::map<std::string, Component> ComponentNameToComponentMap;
 
 // Connections
 
 class ConnectionPoint
 {
 public:
-  ConnectionPoint(const std::string &, int _pinIdx);
+  ConnectionPoint(const std::string&, int _pinIdx);
   std::string componentName;
   int pinIdx;
 };
@@ -42,7 +46,7 @@ public:
 class Connection
 {
 public:
-  Connection(const ConnectionPoint &_start, const ConnectionPoint &_end);
+  Connection(const ConnectionPoint& _start, const ConnectionPoint& _end);
   ConnectionPoint start;
   ConnectionPoint end;
 };
@@ -58,14 +62,12 @@ class Circuit
 {
 public:
   Circuit();
-  bool hasParserError();
-
-  ConnectionViaVec genConnectionViaVec();
+  bool hasParserError() const;
+  ConnectionViaVec genConnectionViaVec() const;
   StartEndVia calcComponentFootprint(std::string componentName) const;
-  PinViaVec calcComponentPins(std::string componentName);
-
+  PinViaVec calcComponentPins(std::string componentName) const;
   PackageToPosMap packageToPosMap;
-  ComponentNameToInfoMap componentNameToInfoMap;
+  ComponentNameToComponentMap componentNameToComponentMap;
   ConnectionVec connectionVec;
   StringVec parserErrorVec;
 };
