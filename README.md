@@ -128,14 +128,7 @@ Planned functionality:
 
 ### Technologies
 
-* C++
-* NanoGUI
-* OpenGL
-* fmt
-* FreeType2
-* GLEW
-* glm
-
+* C++14, fmt, FreeType2, GLEW, GLFW 3, glm, GLU, libpng, NanoGUI, OpenGL, png++, simple_svg
 
 ### Example circuit description
 
