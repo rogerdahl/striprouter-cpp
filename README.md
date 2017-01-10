@@ -2,9 +2,9 @@
 
 <img align="right" width="50%" src="./screenshot.png">
 
-**Note**: Beta software, but should be ready for testing in real projects. Tested on Windows 10 64-bit, Linux Mint 18 64-bit and Raspberry Pi 3 running the PIXEL OS. See [Releases](https://github.com/rogerdahl/striprouter/releases) for Windows and Linux binaries.
-
 This is a cross-platform program that, given a description of a circuit, searches for the best way to create the required connections on a [stripboard](https://en.wikipedia.org/wiki/Stripboard).
+
+Tested on Windows 10 64-bit, Linux Mint 18 64-bit and Raspberry Pi 3 running the PIXEL OS. See [Releases](https://github.com/rogerdahl/striprouter/releases) for Windows and Linux binaries.
 
 The output is a description of where to place and solder wires and where to cut the copper traces on the stripboard in order to create the connections.
 
