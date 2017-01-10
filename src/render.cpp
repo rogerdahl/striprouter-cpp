@@ -157,7 +157,8 @@ void Render::drawComponents()
     for (auto pinVia : const_cast<Layout&>(*layout_).circuit
          .calcComponentPins(componentName)) {
       auto isDontCarePin = component.dontCarePinIdxSet.count(pinIdx) > 0;
-      RGBA rgba = isDontCarePin ? RGBA(0.0f, .784f, 0.0f, 1.0f) : RGBA(.784f, 0.0f, 0.0f, 1.0f);
+      RGBA rgba = isDontCarePin ? RGBA(0.0f, .784f, 0.0f, 1.0f) : RGBA(.784f, 0.0f,
+                  0.0f, 1.0f);
       if (isPin0) {
         isPin0 = false;
         auto start = pinVia.cast<float>() - VIA_RADIUS;
@@ -211,14 +212,15 @@ void Render::drawStripCuts()
     auto halfCutH = 0.08f / 2.0f;
     Pos start(v.x() - halfStripW, v.y() - halfCutH);
     Pos end(v.x() + halfStripW, v.y() + halfCutH);
-    drawFilledRectangle(start - Pos(0, 0.5f), end - Pos(0, 0.5f), RGBA(0, 0.8f, 0.8f, 1));
+    drawFilledRectangle(start - Pos(0, 0.5f), end - Pos(0, 0.5f), RGBA(0, 0.8f,
+                        0.8f, 1));
   }
 }
 
 void Render::drawRatsNest(bool showOnlyFailedBool)
 {
   auto& routedConVec = layout_->routeStatusVec;
-  auto allConVec = const_cast<Layout&>(*layout_).circuit.genConnectionViaVec();
+  auto allConVec = layout_->circuit.genConnectionViaVec();
   int i = 0;
   for (auto c : allConVec) {
     auto blueRgba = RGBA(0, .392f, .784f, 0.5f); // not yet routed
@@ -325,15 +327,12 @@ void Render::drawDiag()
     auto idx = layout_->idx(v.via);
     printNotation(mouseBoardPos_, nLine++, fmt::format("{}", str(v.via)));
     const auto& viaCost = layout_->diagCostVec[idx];
-    printNotation(mouseBoardPos_,
-                  nLine++,
+    printNotation(mouseBoardPos_, nLine++,
                   fmt::format("wireCost: {}", viaCost.wireCost));
-    printNotation(mouseBoardPos_,
-                  nLine++,
+    printNotation(mouseBoardPos_, nLine++,
                   fmt::format("stripCost: {}", viaCost.stripCost));
     const auto& viaTrace = layout_->diagTraceVec[idx];
-    printNotation(mouseBoardPos_,
-                  nLine++,
+    printNotation(mouseBoardPos_, nLine++,
                   fmt::format("wireBlocked: {}", viaTrace.isWireSideBlocked));
     // Nets
     printNotation(mouseBoardPos_, nLine++, fmt::format(""));
@@ -343,11 +342,9 @@ void Render::drawDiag()
 //                  fmt::format("setIdxSize: {}", setIdxSize));
     if (setIdxSize) {
       auto setIdx = layout_->setIdxVec[idx];
-      printNotation(mouseBoardPos_,
-                    nLine++,
+      printNotation(mouseBoardPos_, nLine++,
                     fmt::format("setIdx: {}", setIdx));
-      printNotation(mouseBoardPos_,
-                    nLine++,
+      printNotation(mouseBoardPos_, nLine++,
                     fmt::format("setSize: {}",
                                 layout_->viaSetVec[setIdx].size()));
     }
@@ -439,9 +436,9 @@ void Render::addFilledCircle(const Pos& center, float radius)
 
 void Render::drawFilledCircleBuffer(const RGBA& rgba)
 {
-	if (!triVec.size()) {
-		return;
-	}
+  if (!triVec.size()) {
+    return;
+  }
   setColor(rgba);
   glEnableVertexAttribArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, vertexBufId_);
@@ -565,6 +562,4 @@ ViaSet& Render::getMouseNet()
     return layout_->viaSetVec[setIdx];
   }
 }
-
-
 

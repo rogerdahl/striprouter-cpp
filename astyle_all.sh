@@ -17,6 +17,7 @@ astyle \
 --indent-switches \
 --indent-cases \
 --indent-namespaces \
+--indent-continuation=1 \
 --min-conditional-indent=0 \
 --max-instatement-indent=40 \
 --align-pointer=type \
@@ -25,10 +26,12 @@ astyle \
 --add-one-line-brackets \
 --convert-tabs \
 --close-templates \
+--max-code-length=80 \
 --unpad-paren \
 --pad-header \
 --pad-oper \
 \
+--suffix=none \
 --recursive \
 "./src/*.cpp" "./src/*.h"
 

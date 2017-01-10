@@ -31,7 +31,8 @@ public:
   void openGLInit();
   void openGLFree();
   void setFontH(int fontH);
-  void print(glm::tmat4x4<float>& projMat, int x, int y, int nLine, const std::string& str, bool drawBackground = true);
+  void print(glm::tmat4x4<float>& projMat, int x, int y, int nLine,
+             const std::string& str, bool drawBackground = true);
   int calcStringWidth(const std::string& str);
   int getLineHeight();
 

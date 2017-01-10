@@ -3,12 +3,14 @@
 #include <fmt/format.h>
 
 
-Pos boardToScrPos(const Pos& boardPos, const float zoom, const Pos& boardScreenOffset)
+Pos boardToScrPos(const Pos& boardPos, const float zoom,
+                  const Pos& boardScreenOffset)
 {
   return boardPos * zoom + boardScreenOffset;
 }
 
-Pos screenToBoardPos(const Pos& scrPos, const float zoom, const Pos& boardScreenOffset)
+Pos screenToBoardPos(const Pos& scrPos, const float zoom,
+                     const Pos& boardScreenOffset)
 {
   return (scrPos - boardScreenOffset) / zoom ;
 }
@@ -18,7 +20,8 @@ Pos getMouseScrPos(const IntPos& intMousePos)
   return intMousePos.cast<float>();
 }
 
-Pos getMouseBoardPos(const IntPos& intMousePos, const float zoom, const Pos& boardScreenOffset)
+Pos getMouseBoardPos(const IntPos& intMousePos, const float zoom,
+                     const Pos& boardScreenOffset)
 {
   return screenToBoardPos(getMouseScrPos(intMousePos), zoom, boardScreenOffset);
 }

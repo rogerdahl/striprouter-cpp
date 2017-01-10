@@ -62,7 +62,8 @@ void OglText::setFontH(int fontH)
 }
 
 
-void OglText::print(glm::tmat4x4<float>& projMat, int x, int y, int nLine, const std::string& str, bool drawBackground)
+void OglText::print(glm::tmat4x4<float>& projMat, int x, int y, int nLine,
+                    const std::string& str, bool drawBackground)
 {
   assert(oglInitialized_); // Call openGLInit() after creating an OpenGL context
   glDisable(GL_DEPTH_TEST);
@@ -72,7 +73,8 @@ void OglText::print(glm::tmat4x4<float>& projMat, int x, int y, int nLine, const
 
   if (drawBackground) {
     glUseProgram(textBackgroundProgramId);
-    GLint projectionId = glGetUniformLocation(textBackgroundProgramId, "projection");
+    GLint projectionId = glGetUniformLocation(textBackgroundProgramId,
+                         "projection");
     glUniformMatrix4fv(projectionId, 1, GL_FALSE, glm::value_ptr(projMat));
     drawTextBackground(x, y, nLine, str);
   }
@@ -294,7 +296,8 @@ void OglText::drawText(int x, int y, int nLine, const std::string& str)
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
 }
 
-void OglText::drawTextBackground(int x, int y, int nLine, const std::string& str)
+void OglText::drawTextBackground(int x, int y, int nLine,
+                                 const std::string& str)
 {
   auto strW = calcStringWidth(str);
 

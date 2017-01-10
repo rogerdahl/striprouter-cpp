@@ -11,8 +11,6 @@
 #include <sys/stat.h>
 #endif
 
-//#include <ext/glad/include/glad/glad.h>
-//#include <GL/glew.h>
 #include <nanogui/opengl.h>
 
 // OpenGL
@@ -38,21 +36,20 @@ public:
   ~ExclusiveFileLock();
   void release();
 private:
-	bool isLocked;
+  bool isLocked;
   FileHandle fileHandle_;
 };
 
-
-// Keep track of recent rendering times in order to display average
-// frames per second.
-class averageSec
+// Keep track of recent values in order to calculate average.
+class TrackAverage
 {
 public:
-  averageSec();
-  ~averageSec();
-  void addSec(double);
+  TrackAverage(int maxSize);
+  ~TrackAverage();
+  void addValue(double);
   double calcAverage();
 private:
+  int maxSize_;
   std::deque<double> doubleDeque_;
 };
 

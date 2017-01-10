@@ -22,7 +22,8 @@ GLuint createProgram(const char* vertexShaderFileName,
                      const char* fragmentShaderFileName)
 {
   std::string vertexShaderPath = joinPath(SHADERS_DIR_PATH, vertexShaderFileName);
-  std::string fragmentShaderPath = joinPath(SHADERS_DIR_PATH, fragmentShaderFileName);
+  std::string fragmentShaderPath = joinPath(SHADERS_DIR_PATH,
+                                   fragmentShaderFileName);
 
   GLuint vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
   compileAndCheckShader(vertexShaderPath.c_str(), vertexShaderId);

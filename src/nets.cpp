@@ -52,7 +52,6 @@ void Nets::connectRoute(const RouteStepVec& routeStepVec)
       first = false;
       continue;
     }
-    // TODO: Equivalents don't keep track of layers, so skip steps where we only step through to the other layer.
     if (!c.isWireLayer) {
       connect(routeStepVec[0].via, c.via);
     }
@@ -60,7 +59,8 @@ void Nets::connectRoute(const RouteStepVec& routeStepVec)
   assert(isConnected(routeStepVec[0].via, routeStepVec[1].via));
 }
 
-// Register a single via as an equivalent to itself to simplify later checking for equivalents.
+// Register a single via as an equivalent to itself to simplify later checking
+// for equivalents.
 void Nets::registerPin(const Via& via)
 {
   int setIdx = getViaSetIdx(via);
@@ -122,6 +122,4 @@ int Nets::getViaSetIdx(const Via& via)
   int traceIdx = layout_.idx(via);
   return setIdxVec_[traceIdx];
 }
-
-
 

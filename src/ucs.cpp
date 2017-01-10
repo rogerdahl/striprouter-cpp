@@ -4,11 +4,13 @@
 #include "router.h"
 
 
-UniformCostSearch::UniformCostSearch(Router& router,
-                                     Layout& layout,
-                                     Nets& nets,
-                                     Via& shortcutEndVia,
-                                     const StartEndVia& viaStartEnd)
+UniformCostSearch::UniformCostSearch(
+  Router& router,
+  Layout& layout,
+  Nets& nets,
+  Via& shortcutEndVia,
+  const StartEndVia& viaStartEnd
+)
   : router_(router),
     layout_(layout),
     nets_(nets),
@@ -83,22 +85,14 @@ bool UniformCostSearch::findCosts(Via& shortcutEndVia)
     node.cost = getCost(node);
 
     if (router_.isTarget(node, end.via)) {
-
-//      if (nets_.isConnected(node.via, end.via)) {
-//        shortcutEndVia = node.via;
-//      }
-
 #ifndef NDEBUG
       layout_.diagCostVec = viaCostVec_;
 #endif
       return true;
     }
-
     exploredSet.insert(node);
-
     // Only nodes that pass isAvailable() can become <node> here, from which
     // new exploration can take place.
-
     if (node.isWireLayer) {
       exploreNeighbour(node, LayerCostVia(stepLeft(node), settings.wire_cost));
       exploreNeighbour(node, LayerCostVia(stepRight(node), settings.wire_cost));
@@ -150,8 +144,9 @@ void UniformCostSearch::exploreFrontier(LayerCostVia& node, LayerCostVia n)
   }
 }
 
-RouteStepVec
-UniformCostSearch::backtraceLowestCostRoute(const StartEndVia& viaStartEnd)
+RouteStepVec UniformCostSearch::backtraceLowestCostRoute(
+  const StartEndVia& viaStartEnd
+)
 {
   int routeCost = 0;
   auto start = LayerVia(viaStartEnd.start, false);
@@ -166,9 +161,10 @@ UniformCostSearch::backtraceLowestCostRoute(const StartEndVia& viaStartEnd)
 
   while (!((c.via == start.via).all() && c.isWireLayer == start.isWireLayer)) {
     if (checkStuckCnt++ > layout_.gridW * layout_.gridH) {
-      layout_.errorStringVec.push_back(fmt::format(
-                                         "Error: backtraceLowestCostRoute() stuck at {}",
-                                         c.str()));
+      layout_.errorStringVec.push_back(
+        fmt::format(
+          "Error: backtraceLowestCostRoute() stuck at {}",
+          c.str()));
       layout_.diagStartVia = start.via;
       layout_.diagEndVia = end.via;
       layout_.diagRouteStepVec = routeStepVec;

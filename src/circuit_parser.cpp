@@ -8,7 +8,8 @@
 #include "utils.h"
 
 
-const auto rxFlags = std::regex_constants::ECMAScript | std::regex_constants::icase;
+const auto rxFlags = std::regex_constants::ECMAScript |
+                     std::regex_constants::icase;
 
 
 CircuitFileParser::CircuitFileParser(Layout& _layout)
@@ -24,10 +25,12 @@ void CircuitFileParser::parse(std::string& circuitFilePath)
 {
   auto fileLockScope = ExclusiveFileLock(circuitFilePath);
   std::ifstream fin(circuitFilePath);
-	if (!fin.good()) {
-		layout_.circuit.parserErrorVec.push_back(fmt::format("Cannot read .circuit file: {}", circuitFilePath));
-		return;
-	}
+  if (!fin.good()) {
+    layout_.circuit.parserErrorVec.push_back(
+      fmt::format("Cannot read .circuit file: {}", circuitFilePath)
+    );
+    return;
+  }
   std::string lineStr;
   int lineIdx = 0;
   while (std::getline(fin, lineStr)) {
@@ -41,7 +44,8 @@ void CircuitFileParser::parse(std::string& circuitFilePath)
     }
     catch (std::string errorStr) {
       layout_.circuit.parserErrorVec
-      .push_back(fmt::format("Error on line {:n}: {}: {}", lineIdx, lineStr, errorStr));
+      .push_back(fmt::format("Error on line {:n}: {}: {}", lineIdx, lineStr,
+                             errorStr));
     }
   }
   layout_.isReadyForRouting = !layout_.circuit.hasParserError();
@@ -155,14 +159,17 @@ bool CircuitFileParser::parseComponent(std::string& lineStr)
   auto packageName = m[2].str();
   auto x = std::stoi(m[3]);
   auto y = std::stoi(m[4]);
-  if (layout_.circuit.packageToPosMap.find(packageName) == layout_.circuit.packageToPosMap.end()) {
+  if (layout_.circuit.packageToPosMap.find(packageName) ==
+      layout_.circuit.packageToPosMap.end()) {
     throw fmt::format("Unknown package: {}", packageName);
   }
   Via p = Via(x, y) + offset_;
   auto i = 0;
   for (auto& v : layout_.circuit.packageToPosMap[packageName]) {
-    if (p.x() + v.x() < 0 || p.x() + v.x() >= layout_.gridW || p.y() + v.y() < 0 || p.y() + v.y() >= layout_.gridH) {
-      throw fmt::format("Component pin outside of board: {}.{}", componentName, i + 1);
+    if (p.x() + v.x() < 0 || p.x() + v.x() >= layout_.gridW || p.y() + v.y() < 0
+        || p.y() + v.y() >= layout_.gridH) {
+      throw fmt::format("Component pin outside of board: {}.{}", componentName,
+                        i + 1);
     }
     ++i;
   }
@@ -175,7 +182,6 @@ bool CircuitFileParser::parseComponent(std::string& lineStr)
 // <component name> <list of pin indexes>
 bool CircuitFileParser::parseDontCare(std::string& lineStr)
 {
-  // Had to remove optional whitespace around comma to work around memory error in regex engine on Windows.
   static std::regex dontCareFullRx("^(\\w+) (\\d+(,|$))+", rxFlags);
   static std::regex dontCarePinIdxRx("(\\d+)(,|$)", rxFlags);
   std::smatch m;
@@ -198,7 +204,8 @@ bool CircuitFileParser::parseDontCare(std::string& lineStr)
     std::string s = *iter;
     regex_match(s, m, dontCarePinIdxRx);
     auto dontCarePinIdx = stoi(m[1]);
-    if (dontCarePinIdx < 1 || dontCarePinIdx > static_cast<int>(packagePosVec.size())) {
+    if (dontCarePinIdx < 1
+        || dontCarePinIdx > static_cast<int>(packagePosVec.size())) {
       throw fmt::format(
         "Invalid \"Don't Care\" pin number for {}: {}. Must be between 1 and {} (including)",
         componentName,
@@ -230,10 +237,12 @@ bool CircuitFileParser::parseConnection(std::string& lineStr)
   return true;
 }
 
-void CircuitFileParser::checkConnectionPoint(const ConnectionPoint& connectionPoint)
+void CircuitFileParser::checkConnectionPoint(const ConnectionPoint&
+    connectionPoint)
 {
   auto
-  componentItr = layout_.circuit.componentNameToComponentMap.find(connectionPoint.componentName);
+  componentItr = layout_.circuit.componentNameToComponentMap.find(
+                   connectionPoint.componentName);
   if (componentItr == layout_.circuit.componentNameToComponentMap.end()) {
     throw fmt::format("Unknown component: {}", connectionPoint.componentName);
   }

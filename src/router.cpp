@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <chrono>
-#include <random>
 
 #include <fmt/format.h>
 
@@ -8,10 +7,13 @@
 #include "ucs.h"
 
 
-
-Router::Router(Layout& _layout, ThreadStop& threadStop, Layout& _inputLayout, Layout& _currentLayout,
-               const TimeDuration& _maxRenderDelay)
+Router::Router(
+  Layout& _layout, ConnectionIdxVec& connectionIdxVec,
+  ThreadStop& threadStop, Layout& _inputLayout, Layout& _currentLayout,
+  const TimeDuration& _maxRenderDelay
+)
   : layout_(_layout),
+    connectionIdxVec_(connectionIdxVec),
     inputLayout_(_inputLayout),
     currentLayout_(_currentLayout),
     nets_(_layout),
@@ -35,7 +37,8 @@ bool Router::route()
   registerActiveComponentPins();
   auto isAborted = routeAll();
   layout_.stripCutVec = findStripCuts();
-  layout_.cost += layout_.settings.cut_cost * static_cast<int>(layout_.stripCutVec.size());
+  layout_.cost += layout_.settings.cut_cost * static_cast<int>
+                  (layout_.stripCutVec.size());
   layout_.isReadyForEval = true;
   if (layout_.hasError) {
     layout_.diagTraceVec = viaTraceVec_;
@@ -49,22 +52,14 @@ bool Router::route()
 
 bool Router::routeAll()
 {
-#ifdef NDEBUG
-  random_shuffle(layout_.circuit.connectionVec.begin(),
-                 layout_.circuit.connectionVec.end());
-#endif
-
-//  // Testing random costs, to vary how the best path is selected
-//  std::default_random_engine generator;
-//  std::uniform_int_distribution<int> distribution(1,100);
-//  layout_.settings.strip_cost = distribution(generator);
-//  layout_.settings.wire_cost = distribution(generator);
-//  layout_.settings.via_cost = distribution(generator);
-
   bool isAborted = false;
   auto startTime = std::chrono::steady_clock::now();
-  for (auto viaStartEnd : layout_.circuit.genConnectionViaVec()) {
-    findCompleteRoute(viaStartEnd);
+  auto connectionViaVec = layout_.circuit.genConnectionViaVec();
+  layout_.routeStatusVec.resize(connectionViaVec.size(), false);
+  for (auto connectionIdx : connectionIdxVec_) {
+    auto viaStartEnd = connectionViaVec[connectionIdx];
+    auto routeWasFound = findCompleteRoute(viaStartEnd);
+    layout_.routeStatusVec[connectionIdx] = routeWasFound;
 
 #ifndef NDEBUG
     // For debugging, exit router after a given number of routes.
@@ -113,30 +108,24 @@ bool Router::routeAll()
 // I've currently implemented (2). I'm not sure if (1) would create any
 // different routes.
 
-void Router::findCompleteRoute(const StartEndVia& viaStartEnd)
+bool Router::findCompleteRoute(const StartEndVia& viaStartEnd)
 {
   Via shortcutEndVia;
   auto routeWasFound = findRoute(shortcutEndVia, viaStartEnd);
   if (routeWasFound) {
     ++layout_.nCompletedRoutes;
-    layout_.routeStatusVec.push_back(true);
   }
   else {
     ++layout_.nFailedRoutes;
-    layout_.routeStatusVec.push_back(false);
   }
+  return routeWasFound;
 }
 
 bool Router::findRoute(Via& shortcutEndVia, const StartEndVia& viaStartEnd)
 {
   UniformCostSearch ucs(*this, layout_, nets_, shortcutEndVia, viaStartEnd);
   auto routeStepVec = ucs.findLowestCostRoute();
-  if (layout_.hasError) {
-    return false;
-  }
-  if (!routeStepVec.size()) {
-    // Push an empty routeSectionVec so that it and the values in routeStatusVec line up.
-    layout_.routeVec.push_back(RouteSectionVec());
+  if (layout_.hasError || !routeStepVec.size()) {
     return false;
   }
   blockRoute(routeStepVec);
@@ -174,12 +163,12 @@ RouteSectionVec Router::condenseRoute(const RouteStepVec& routeStepVec)
 
 // Transitions
 // Cuts at:
-// - used <> other used
-// - used <> other pin
+// - used <-> other used
+// - used <-> other pin
 // Cuts NOT at:
-// - unused <> used
-// - unused <> pin
-// - used <> same pin
+// - unused <-> used
+// - unused <-> pin
+// - used <-> same pin
 StripCutVec Router::findStripCuts()
 {
   StripCutVec v;
@@ -206,9 +195,11 @@ StripCutVec Router::findStripCuts()
 // Interface for Uniform Cost Search
 //
 
-bool Router::isAvailable(const LayerVia& via,
-                         const Via& startVia,
-                         const Via& targetVia)
+bool Router::isAvailable(
+  const LayerVia& via,
+  const Via& startVia,
+  const Via& targetVia
+)
 {
   if (via.via.x() < 0 || via.via.y() < 0 || via.via.x() >= layout_.gridW
       || via.via.y() >= layout_.gridH) {

@@ -22,19 +22,16 @@ using namespace std::chrono_literals;
 
 bool saveScreenshot(std::string filename, int w, int h)
 {
-  //This prevents the images getting padded
-  // when the width multiplied by 3 is not a multiple of 4
   glPixelStorei(GL_PACK_ALIGNMENT, 1);
   int nSize = w * h * 3;
-  // First let's create our buffer, 3 channels per Pixel
+
   char* dataBuffer = (char*) malloc(nSize * sizeof(char));
   if (!dataBuffer) {
     return false;
   }
-  // Let's fetch them from the backbuffer
-  // We request the pixels in GL_BGR format, thanks to Berzeger for the tip
+
   glReadPixels(0, 0, w, h, GL_BGR, GL_UNSIGNED_BYTE, dataBuffer);
-  //Now the file creation
+
   FILE* filePtr = fopen(filename.c_str(), "wb");
   if (!filePtr) {
     return false;
@@ -45,10 +42,10 @@ bool saveScreenshot(std::string filename, int w, int h)
     static_cast<unsigned char>(h % 256), static_cast<unsigned char>(h / 256),
     static_cast<unsigned char>(24), static_cast<unsigned char>(0)
   };
-  // We write the headers
+
   fwrite(TGAheader, sizeof(unsigned char), 12, filePtr);
   fwrite(header, sizeof(unsigned char), 6, filePtr);
-  // And finally our image data
+
   fwrite(dataBuffer, sizeof(GLubyte), nSize, filePtr);
   fclose(filePtr);
   free(dataBuffer);
@@ -181,7 +178,8 @@ std::vector<unsigned char> makeTestTextureVector(int w, int h, int border)
 
 double getMtime(const std::string& path)
 {
-  HANDLE hFile = CreateFile(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+  HANDLE hFile = CreateFile(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
+                            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
   FILETIME lastWriteTime;
   GetFileTime(hFile, NULL, NULL, &lastWriteTime);
   double r = static_cast<double>(lastWriteTime.dwLowDateTime);
@@ -244,20 +242,21 @@ std::string GetLastErrorStdStr()
 
 ExclusiveFileLock::ExclusiveFileLock(const std::string filePath)
 {
-	isLocked = false;
+  isLocked = false;
   while (true) {
 #ifndef _WIN32
     fileHandle_ = open(filePath.c_str(), O_RDWR);
     auto result = flock(fileHandle_, LOCK_EX); // blocks
     if (!result) {
-			isLocked = true;
+      isLocked = true;
       return;
     }
     auto errStr = fmt::format("{}", result);
 #else
-    fileHandle_ = CreateFile(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+    fileHandle_ = CreateFile(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
+                             OPEN_EXISTING, 0, NULL);
     if (fileHandle_ != INVALID_HANDLE_VALUE) {
-			isLocked = true;
+      isLocked = true;
       return;
     }
     auto errStr = GetLastErrorStdStr();
@@ -269,9 +268,9 @@ ExclusiveFileLock::ExclusiveFileLock(const std::string filePath)
 
 ExclusiveFileLock::~ExclusiveFileLock()
 {
-	if (isLocked) {
-		release();
-	}
+  if (isLocked) {
+    release();
+  }
 }
 
 void ExclusiveFileLock::release()
@@ -280,13 +279,13 @@ void ExclusiveFileLock::release()
 #ifndef _WIN32
     auto result = flock(fileHandle_, LOCK_UN);
     if (!result) {
-			isLocked = false;
+      isLocked = false;
       return;
     }
     auto errStr = fmt::format("{}", result);
 #else
     if (CloseHandle(fileHandle_)) {
-			isLocked = false;
+      isLocked = false;
       return;
     }
     auto errStr = GetLastErrorStdStr();
@@ -300,30 +299,35 @@ void ExclusiveFileLock::release()
 // Average frames per second
 //
 
-averageSec::averageSec()
-  : doubleDeque_(0.0)
+TrackAverage::TrackAverage(int maxSize)
+  : maxSize_(maxSize)
 {
 }
 
-averageSec::~averageSec()
+TrackAverage::~TrackAverage()
 {
 }
 
-void averageSec::addSec(double s)
+void TrackAverage::addValue(double s)
 {
   doubleDeque_.push_back(s);
-  if (doubleDeque_.size() > 60) {
+  if (static_cast<int>(doubleDeque_.size()) > maxSize_) {
     doubleDeque_.pop_front();
   }
 }
 
-double averageSec::calcAverage()
+double TrackAverage::calcAverage()
 {
-  double sumSec = 0.0;
-  for (double s : doubleDeque_) {
-    sumSec += s;
+  double sum = 0.0;
+  for (double v : doubleDeque_) {
+    sum += v;
   }
-  return sumSec / doubleDeque_.size();
+  if (doubleDeque_.size()) {
+    return sum / doubleDeque_.size();
+  }
+  else {
+    return 0.0;
+  }
 }
 
 //

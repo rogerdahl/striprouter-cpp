@@ -9,6 +9,7 @@
 #include <Eigen/Core>
 
 #include "circuit.h"
+#include "ga_interface.h"
 #include "layout.h"
 #include "nets.h"
 #include "settings.h"
@@ -22,7 +23,8 @@ typedef std::chrono::duration<double> TimeDuration;
 class Router
 {
 public:
-  Router(Layout&, ThreadStop&, Layout& inputLayout, Layout& currentLayout, const TimeDuration& _maxRenderDelay);
+  Router(Layout&, ConnectionIdxVec&, ThreadStop&, Layout& inputLayout,
+         Layout& currentLayout, const TimeDuration& _maxRenderDelay);
   bool route();
   // Interface for Uniform Cost Search
   bool
@@ -34,7 +36,7 @@ public:
 
 private:
   bool routeAll();
-  void findCompleteRoute(const StartEndVia&);
+  bool findCompleteRoute(const StartEndVia&);
   bool findRoute(Via& shortcutEndVia, const StartEndVia& viaStartEnd);
   RouteSectionVec condenseRoute(const RouteStepVec& routeStepVec);
   StripCutVec findStripCuts();
@@ -50,6 +52,7 @@ private:
   void addWireJumps(const RouteSectionVec& routeSectionVec);
 
   Layout& layout_;
+  ConnectionIdxVec& connectionIdxVec_;
   Layout& inputLayout_;
   Layout& currentLayout_;
 

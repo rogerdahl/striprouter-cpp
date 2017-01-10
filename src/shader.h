@@ -4,5 +4,6 @@
 #include <GL/glew.h>
 
 
-GLuint
-createProgram(const char* vertexShaderPath, const char* fragmentShaderPath);
+GLuint createProgram(
+  const char* vertexShaderPath, const char* fragmentShaderPath
+);

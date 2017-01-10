@@ -86,6 +86,11 @@ Layout Layout::threadSafeCopy()
   return l;
 }
 
+// This method of discovering if this layout is locked is potentially
+// problematic and I'm only using it in asserts that are active in debug builds,
+// where I expect the layout to already be locked. The problem is that the
+// function briefly locks the layout, and so can cause other threads that check
+// simultaneously to get a false "true" from isLocked().
 bool Layout::isLocked()
 {
   auto lock = std::unique_lock<std::mutex>(mutex_, std::defer_lock);

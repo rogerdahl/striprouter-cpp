@@ -115,14 +115,19 @@ else ()
   )
 endif ()
 
-
 # simple_svg
 set(SIMPLE_SVG_INCLUDE_DIR ${HEADER_LIBRARIES}/simple_svg)
+
+# CmdParser
+set(CMD_PARSER_INCLUDE_DIR ${HEADER_LIBRARIES}/cmdparser)
+
 
 set(SOURCE_FILES
   ${SOURCE_DIR}/circuit.cpp
   ${SOURCE_DIR}/circuit_parser.cpp
   ${SOURCE_DIR}/circuit_writer.cpp
+  ${SOURCE_DIR}/ga_interface.cpp
+  ${SOURCE_DIR}/ga_core.cpp
   ${SOURCE_DIR}/gl_error.cpp
   ${SOURCE_DIR}/gui.cpp
   ${SOURCE_DIR}/gui_status.cpp
@@ -144,6 +149,7 @@ set(SOURCE_FILES
 )
 
 include_directories(
+  ${CMD_PARSER_INCLUDE_DIR}
   ${EIGEN3_INCLUDE_DIR}
   ${FMT_INCLUDE_DIR}
   ${FREETYPE_INCLUDE_DIRS}
@@ -192,13 +198,5 @@ configure_file(${SHADER_SRC}/text.frag ${SHADER_DST} COPYONLY)
 configure_file(${SHADER_SRC}/text.vert ${SHADER_DST} COPYONLY)
 configure_file(${SHADER_SRC}/fill.frag ${SHADER_DST} COPYONLY)
 configure_file(${SHADER_SRC}/fill.vert ${SHADER_DST} COPYONLY)
-
-# Copy fonts to binary dir
-set(FONT_SRC ${CMAKE_SOURCE_DIR}/fonts)
-set(FONT_DST ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/fonts)
-file(MAKE_DIRECTORY ${FONT_DST})
-configure_file(${FONT_SRC}/LiberationMono-Regular.ttf ${FONT_DST} COPYONLY)
-configure_file(${FONT_SRC}/Roboto-Black.ttf ${FONT_DST} COPYONLY)
-configure_file(${FONT_SRC}/Roboto-Regular.ttf ${FONT_DST} COPYONLY)
 
 add_executable(striprouter ${SOURCE_FILES})

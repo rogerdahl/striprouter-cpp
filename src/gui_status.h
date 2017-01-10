@@ -23,7 +23,7 @@ public:
   float nCheckedPerSec;
 
   int nCurrentCompletedRoutes;
-  int nCurrentFailedRoutes;
+  double nCurrentFailedRoutes;
   double currentCost;
 
   int nBestCompletedRoutes;
@@ -36,7 +36,7 @@ private:
   // String representations with thousands separator
   std::string groupedStrCombinationsChecked;
   std::string groupedStrCurrentCompletedRoutes;
-  std::string groupedStrCurrentFailedRoutes;
+  std::string avgStrCurrentFailedRoutes;
   std::string groupedStrCurrentCost;
   std::string groupedStrBestCompletedRoutes;
   std::string groupedStrBestFailedRoutes;

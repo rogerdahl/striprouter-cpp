@@ -16,7 +16,8 @@ public:
 class CircuitFileWriter
 {
 public:
-  void updateComponentPositions(const std::string circuitFilePath, const Circuit& circuit);
+  void updateComponentPositions(const std::string circuitFilePath,
+                                const Circuit& circuit);
 private:
   ComponentLine parseComponentLine(const std::string& lineStr);
 };

@@ -2,11 +2,13 @@
 
 <img align="right" width="50%" src="./screenshot.png">
 
-**Note**: Beta software, but should be ready for testing in real projects. Tested on Windows 10 64-bit and Linux Mint 18 64-bit. See [Releases](https://github.com/rogerdahl/striprouter/releases) for Windows and Linux binaries.
+**Note**: Beta software, but should be ready for testing in real projects. Tested on Windows 10 64-bit, Linux Mint 18 64-bit and Raspberry Pi 3 running the PIXEL OS. See [Releases](https://github.com/rogerdahl/striprouter/releases) for Windows and Linux binaries.
 
 This is a cross-platform program that, given a description of a circuit, searches for the best way to create the required connections on a [stripboard](https://en.wikipedia.org/wiki/Stripboard).
 
 The output is a description of where to place and solder wires and where to cut the copper traces on the stripboard in order to create the connections.
+
+The router is based on a novel search algorithm that combines topological ordering with a genetic algorithm (GA). I am calling this algorithm "Topo-GA" and have released it to the public domain. See details below.
 
 Costs can be assigned to resources such as stripboard area and solder points in order to direct the router towards preferred layouts.
 
@@ -14,31 +16,30 @@ The program searches only for routes that use non-overlapping wires that cross t
 
 If a good layout is found, the solution can be printed in two separate layers, with the bottom layer showing the required copper trace cuts, and the top layer showing the required wires. The printed sheets are then fastened to the board with paper glue or tape one layer at a time, providing an exact reference while working on the board. Wires can be placed by poking them through the indicated locations on the paper, and traces are cut through the paper.
 
-Currently implemented:
+Features:
 
-* Parse circuit description file 
-* Automatic routing, aware of nets and indirect connections 
-* Visualize circuit and discovered routes
-* GUI controls
-* Move components with mouse
-* Zoom and pan with mouse wheel and drag
+* Automatic routing using novel genetic algorithm
+* Router is aware of and takes advantage of nets and indirect connections 
+* Realtime visual feedback when editing circuit description file 
+* Realtime visual progress and discovered routes
+* GUI controls, move components, zoom and pan with mouse and wheel
 * Highlight connections and nets with mouse hover
 * Find and display the minimally required copper trace cut positions
 * Write component position changes back to the circuit file
-* Write the best solution to .svg (Scalable Vector Grahics) files for 1:1 printing
-
-Planned functionality:
- 
-* Better search algorithm
-* Support components such as resistors and diodes that have variable length connectors
-* Automatic optimization of component locations
+* Write the best solution to `.svg` (Scalable Vector Grahics) files for 1:1 printing
 
 
 ### How to use
 
 * Start the program. You should see it start searching for routes on the included circuit. Typically, there will be several updates over the first few seconds, and then the update frequency will slow down as it becomes harder for the program to find a layout that is better than the current best.
+
+* As the genetic algorithm searches for the best layout, the `Current Layout > Failed Avg` will slowly decrease and, hopefully, `Best Layout > Failed` will at some point drop to zero, indicating that a complete layout has been found. This is also indicated by the absence of any "Rat's Nest" lines in the circuit.
  
-* Move the program to one side of the screen and open the included `circuits/example.circuit` file in a text editor on the other. Start creating your circuit there, using the simple syntax shown in the file. Alternately, the path to another `.circuit` file can be given as a command line argument when starting the program.
+* The program does not have a traditional GUI for creating circuits. Instead, it provides realtime feedback as you edit a text file describing the circuit.
+ 
+    Move the program to one side of the screen and open the included `circuits/example.circuit` file in a text editor on the other. Start creating your circuit there, using the simple syntax shown in the file. Alternately, the path to another `.circuit` file can be given as a command line argument when starting the program.
+    
+    Types of information in the `.circuit` file:
  
     * `Board` The size of the stripboard, specified by number of vias (through holes) horizontally and vertically, as seen when the copper strips run vertically. The board must be large enough that the circuit and routes will fit but should not be larger than necessary, as search speed slows down when board size increases.
 
@@ -56,13 +57,13 @@ Planned functionality:
 
         Board > Package > Offset > Component > Connection > Don't Care
 
-* If you are familiar with the netlists supported by most PCB design software, you will have noticed that the `.circuit` file does not support specifying nets. Instead, the nets are inferred from the point-to-point connections at runtime. In the `.circuit` file, simply reuse pins as often as necessary, as shown for the `vcc` and `gnd` connections in the included example.   
+* If you are familiar with the netlists supported by most PCB design software, you may have noticed that the `.circuit` file does not support specifying nets. Instead, the program infers nets from point-to-point connections at runtime. In the `.circuit` file, simply reuse pins as often as necessary, as shown for the `vcc` and `gnd` connections in the included example.   
 
 * Whenever you want to see the current status of your `.circuit` file, just save it in the editor to display the new version in the router. If there are any problems in the file, a list of errors is shown in the router.
 
 * Components can be moved with the mouse. Clicking `Save to .circuit file` updates the `.circuit` file with the new positions. To avoid losing unsaved changes, save the `.circuit` file in the editor before saving in the router.
 
-* Wait while the program searches for better layouts. Currently, only a simple random search is implemented. As long as `Pause` is not checked, the program keeps searching for a better layout.
+* Wait while the program searches for better layouts. As long as `Pause` is not checked, the program keeps searching for a better layout.
 
 * If no satisfactory layouts are found, click `Rat's Nest` to view the required connections and try moving the components to create more space between them, reduce crossed connections and reduce interference in problem areas with many failed routes. A complete layout can usually be found if there is enough room for routes between the components.
 
@@ -72,7 +73,7 @@ Planned functionality:
 
 * The `.svg` files contain exact physical size information so, when printed, should match the size of the stripboard. The `.cuts.svg` shows the cut locations as seen from the copper stripe side. It's a mirror image as compared to `wires.svg`. That way, the two sheets can be fastened to each side of the board with paper glue or tape. Then the wires and cuts can be done through the paper, reducing the chance of errors.      
 
-* To print the `.svg` files, open them in a graphics editor, such as the excellent [Inkscape](https://inkscape.org/en/), which is free, open source, and available for Linux, Mac and Windows. Make sure that the scale is set to 100% in the printer dialog, since the print will not match the board if the scale is wrong. If the print does not match even when the scale is set to 100%, you may be the unfortunate owner of a printer that does not print to scale. Laser printers are somewhat less reliable than inkjet printers in this regard.
+* Print the `.svg` files from a graphics editor, such as the excellent [Inkscape](https://inkscape.org/en/), which is free, open source, and available for Linux, Mac and Windows. Make sure that the scale is set to 100% in the printer dialog, since the print will not match the board if the scale is wrong. If the print does not match even when the scale is set to 100%, you may be the unfortunate owner of a printer that does not print to scale, and will need to modify the print size. Laser printers are apparently less reliable than inkjet printers in this regard. My laser printer, a Brother HL-L2360D prints exactly to scale.  
 
 
 ### Tips and Tricks
@@ -95,7 +96,31 @@ Planned functionality:
 
 * Bonus: If you zoom in far enough, you get free modern art, such as [this](./art.png) :)
 
+### "Topo-GA" genetic autorouting algorithm
 
+The autorouter is based on an algorithm that combines topological ordering with a genetic algorithm (GA).
+
+As of 2017-01-09, I have not found references to this approach online. If I have any rights to this algorithm as the inventor, I hereby relinquish those rights and release the algorithm, which I call "Topo-GA", to the public domain. The implementation in this repository remains under the MIT license used by this project and shall serve as prior art in the event of a copyright dispute.
+
+The genetic algorithm codes possible routing layouts in the genotypes of organisms and simulates a process of evolution for those organisms. Each organism carries a set of genes, the genotype, with each gene representing a dependency between two electrical connections in a circuit. Each dependency states that one connection should be routed before another, while still allowing an arbitrary number of other connections to be routed between the two. Phenotypes, which express the solutions coded in the genotypes, are then created by using topological ordering to resolve the dependencies. Contradictions in the genotype that cause recursive dependencies (loops) and discontinuities are handled during topological ordering by selecting the lowest available unrouted connection and using it as a new base.
+
+The result is an algorithm that seems to reliably find a good order in which to route the connections for a circuit. A good layout is typically found before 200 generations, using a population of 1000 creatures, which requires 200,000 complete layouts to be routed. The crossover and mutation rates have not been optimized, and are currently set to 0.7 and 0.01 respectively.
+  
+I investigated GA approaches because the number of possible route orderings for the connections is the factorial of the number of connections, which makes it impossible to use a brute force approach to check all possible orderings even for small circuits.
+
+### Command line arguments
+
+```bash
+$ ./striprouter --help
+  -h    --help
+  -n    --nogui         Do not open the GUI window
+  -r    --random        Use random search instead of genetic algorithm
+  -e    --exitcomplete  Print stats and exit when first complete layout is found
+  -a    --exitafter     Print stats and exit after specified number of checks
+  -p    --checkpoint    Print stats at interval
+  -c    --circuit       Path to .circuit file
+```
+  
 ### Implementation
 
 * The program operates with objects called Layouts. Each Layout contains a Circuit object, a Settings object, potentially a set of discovered routes for the circuit, and misc other housekeeping and diagnostics information.
@@ -108,7 +133,7 @@ Planned functionality:
 
 * The parser thread gains exclusive access to the `.circuit` file, parses it to a thread local Circuit and releases the file. It then locks the inputLayout and writes the local Circuit to the inputLayout Circuit. Then monitors the modified time on the `.circuit` file and, if it changes, starts over with gaining exclusive access to the file.
 
-* The router threads compete for a lock on inputLayout. When a thread gets the lock, it creates a thread local copy of inputLayout, called threadLayout and releases the lock. Because the router always uses the lowest cost route for a given connection, only the order in which the routes are created affects the end result. So, as a temporary first approach, a random search is currently implemented by having the thread start by randomly shuffling the order of the connections in its threadLayout. It then creates, or attempts to create, the routes in the shuffled order. The number of ways the connections can be shuffled is the factorial of the number of connections, which makes it impossible to check all possible orderings even for small circuits.
+* The router threads compete for a lock on inputLayout. When a thread gets the lock, it creates a thread local copy of inputLayout, called threadLayout and releases the lock. It then receives a new ordering to check from the GA algorithm, then creates, or attempts to create, the routes in the provided order.
 
     The router is based on a custom implementation of the Uniform Cost Search algorithm and includes a common optimization based on using a set and a priority queue. The search is restricted to find only routes that can be implemented on a stripboard, the most important limitation being that there are two layers, where one layer can have only horizontal connections and the other can have only vertical connections.
 
@@ -128,9 +153,15 @@ Planned functionality:
 
 * For routes that belong to nets, routes that reuse existing sections of earlier routes (instead of creating new sections), are preferred by setting very low costs for the reused sections.
 
+### To do
+
+* Support components such as resistors and diodes that have variable length connectors
+
+* Automatic optimization of component locations
+
 ### Technologies
 
-* C++14, fmt, FreeType2, GLEW, GLFW 3, glm, GLU, libpng, NanoGUI, OpenGL, png++, simple_svg
+* C++14, OpenGL, NanoGUI, GLFW 3, GLEW, glm, GLU, FreeType2, fmt, libpng, png++, simple_svg, cmdparser
 
 ### Example circuit description
 
@@ -247,7 +278,7 @@ rpi.29    7400B.12
 7400B.11  chan8.1
 ```
 
-### Compiling on Linux
+### Building on Linux
 
 * Tested on Linux Mint 18 64-bit.
 
@@ -282,7 +313,7 @@ rpi.29    7400B.12
 * $ `./striprouter`
 
 
-### Compiling on Windows
+### Building on Windows
 
 * Tested on Windows 10 64-bit.
 

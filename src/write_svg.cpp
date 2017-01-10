@@ -10,7 +10,6 @@
 
 // The distance between vias on a stripboard is 0.1 inches (2.54 mm).
 const double VIA_DISTANCE_INCH = 0.1;
-const double SCALE = 1.0;
 // Sizes relative to the distance between two vias.
 const double VIA_RADIUS = 0.2;
 const double CORNER_VIA_RADIUS = 0.3;
@@ -32,10 +31,13 @@ SvgWriter::SvgWriter(const Layout& _layout)
 SvgPathVec SvgWriter::writeFiles(const std::string circuitFilePath)
 {
   auto baseName = circuitFilePath.substr(0, circuitFilePath.find_last_of("."));
-  auto wireSvgPath = fmt::format("{}.{}.{}.{}.{}.svg", baseName,
-                                 layout_.nCompletedRoutes, layout_.nFailedRoutes, layout_.cost, "wires");
-  auto stripCutSvgPath = fmt::format("{}.{}.{}.{}.{}.svg", baseName,
-                                     layout_.nCompletedRoutes, layout_.nFailedRoutes, layout_.cost, "cuts");
+  auto wireSvgPath = fmt::format(
+                       "{}.{}.{}.{}.{}.svg", baseName,
+                       layout_.nCompletedRoutes, layout_.nFailedRoutes, layout_.cost, "wires"
+                     );
+  auto stripCutSvgPath = fmt::format(
+                           "{}.{}.{}.{}.{}.svg", baseName,
+                           layout_.nCompletedRoutes, layout_.nFailedRoutes, layout_.cost, "cuts");
   writeWireSvg(wireSvgPath);
   writeStripCutSvg(stripCutSvgPath);
   SvgPathVec svgPathVec;
@@ -48,22 +50,28 @@ SvgPathVec SvgWriter::writeFiles(const std::string circuitFilePath)
 // Private
 //
 
-svg::Document SvgWriter::initDoc(const std::string& svgPath, const bool drawMirrorImage)
+svg::Document SvgWriter::initDoc(
+  const std::string& svgPath,
+  const bool drawMirrorImage)
 {
   auto physicalWInch = VIA_DISTANCE_INCH * (layout_.gridW + (2.0 * MARGIN));
   auto physicalHInch = VIA_DISTANCE_INCH * (layout_.gridH + (2.0 * MARGIN));
 
   auto virtualUpperLeft = svg::Point(-MARGIN, -MARGIN);
-  auto virtualLowerRight = svg::Point(layout_.gridW + MARGIN, layout_.gridH + MARGIN);
+  auto virtualLowerRight = svg::Point(layout_.gridW + MARGIN,
+                                      layout_.gridH + MARGIN);
 
   auto physicalWStr = fmt::format("{:f}in", physicalWInch);
   auto physicalHStr = fmt::format("{:f}in", physicalHInch);
 
   auto origin = drawMirrorImage ? svg::Layout::TopRight : svg::Layout::TopLeft;
-  auto originOffset = drawMirrorImage ? svg::Point(2.0 * MARGIN, 0) : svg::Point(0, 0);
+  auto originOffset = drawMirrorImage ? svg::Point(2.0 * MARGIN,
+                      0) : svg::Point(0, 0);
 
-  svg::Dimensions dimensions(physicalWStr, physicalHStr, virtualUpperLeft, virtualLowerRight);
-  return svg::Document(svgPath, svg::Layout(dimensions, origin, 1.0, originOffset));
+  svg::Dimensions dimensions(physicalWStr, physicalHStr, virtualUpperLeft,
+                             virtualLowerRight);
+  return svg::Document(svgPath, svg::Layout(dimensions, origin, 1.0,
+                       originOffset));
 }
 
 void SvgWriter::writeWireSvg(const std::string wireSvgPath)
@@ -91,7 +99,8 @@ void SvgWriter::writeStripCutSvg(const std::string cutSvgPath)
 void SvgWriter::drawBackground(svg::Document& doc)
 {
   svg::Polygon background(svg::Fill(WHITE), svg::Stroke(0.0, WHITE));
-  background << svg::Point(-MARGIN, -MARGIN) << svg::Point(layout_.gridW + MARGIN, -MARGIN)
+  background << svg::Point(-MARGIN, -MARGIN) << svg::Point(
+               layout_.gridW + MARGIN, -MARGIN)
              << svg::Point(layout_.gridW + MARGIN, layout_.gridH + MARGIN)
              << svg::Point(-MARGIN, layout_.gridH + MARGIN);
   doc << background;
@@ -109,10 +118,14 @@ void SvgWriter::drawBoardOutline(svg::Document& doc)
 
 void SvgWriter::drawCorners(svg::Document& doc)
 {
-  doc << svg::Circle(svg::Point(0, 0), CORNER_VIA_RADIUS, svg::Fill(BLACK), svg::Stroke(CORNER_VIA_RADIUS, BLACK));
-  doc << svg::Circle(svg::Point(layout_.gridW - 1, 0), CORNER_VIA_RADIUS, svg::Fill(BLACK), svg::Stroke(CORNER_VIA_RADIUS, BLACK));
-  doc << svg::Circle(svg::Point(layout_.gridW - 1, layout_.gridH - 1), CORNER_VIA_RADIUS, svg::Fill(BLACK), svg::Stroke(CORNER_VIA_RADIUS, BLACK));
-  doc << svg::Circle(svg::Point(0, layout_.gridH - 1), CORNER_VIA_RADIUS, svg::Fill(BLACK), svg::Stroke(CORNER_VIA_RADIUS, BLACK));
+  doc << svg::Circle(svg::Point(0, 0), CORNER_VIA_RADIUS, svg::Fill(BLACK),
+                     svg::Stroke(CORNER_VIA_RADIUS, BLACK));
+  doc << svg::Circle(svg::Point(layout_.gridW - 1, 0), CORNER_VIA_RADIUS,
+                     svg::Fill(BLACK), svg::Stroke(CORNER_VIA_RADIUS, BLACK));
+  doc << svg::Circle(svg::Point(layout_.gridW - 1, layout_.gridH - 1),
+                     CORNER_VIA_RADIUS, svg::Fill(BLACK), svg::Stroke(CORNER_VIA_RADIUS, BLACK));
+  doc << svg::Circle(svg::Point(0, layout_.gridH - 1), CORNER_VIA_RADIUS,
+                     svg::Fill(BLACK), svg::Stroke(CORNER_VIA_RADIUS, BLACK));
 }
 
 void SvgWriter::drawVias(svg::Document& doc)
@@ -157,11 +170,14 @@ void SvgWriter::drawStripCuts(svg::Document& doc)
 
 void SvgWriter::drawTitle(svg::Document& doc, const std::string& titleStr)
 {
-  doc << svg::Text(svg::Point(0.0, -2.0), titleStr, BLACK, svg::Font(2.0, "Arial"));
+  doc << svg::Text(svg::Point(0.0, -2.0), titleStr, BLACK, svg::Font(2.0,
+                   "Arial"));
 }
 
-void SvgWriter::drawTitleMirror(svg::Document& doc, const std::string& titleStr)
+void SvgWriter::drawTitleMirror(svg::Document& doc,
+                                const std::string& titleStr)
 {
-  doc << svg::Text(svg::Point(layout_.gridW - 1, -2.0), titleStr, BLACK, svg::Font(2.0, "Arial"));
+  doc << svg::Text(svg::Point(layout_.gridW - 1, -2.0), titleStr, BLACK,
+                   svg::Font(2.0, "Arial"));
 }
 

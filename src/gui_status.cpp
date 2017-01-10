@@ -20,7 +20,7 @@ void GuiStatus::reset()
   nCheckedPerSec = 0.0f;
 
   nCurrentCompletedRoutes = 0;
-  nCurrentFailedRoutes = 0;
+  nCurrentFailedRoutes = 0.0;
   currentCost = 0;
 
   nBestCompletedRoutes = 0;
@@ -30,7 +30,7 @@ void GuiStatus::reset()
   groupedStrCombinationsChecked = "";
 
   groupedStrCurrentCompletedRoutes = "";
-  groupedStrCurrentFailedRoutes = "";
+  avgStrCurrentFailedRoutes = "";
   groupedStrCurrentCost = "";
 
   groupedStrBestCompletedRoutes = "";
@@ -43,14 +43,14 @@ void GuiStatus::init(nanogui::Screen* screen)
   screen_ = screen;
 
   form_ = new nanogui::FormHelper(screen_);
-	IntPos p(10, 10);
+  IntPos p(10, 10);
   formWin_ = form_->addWindow(p, "Status");
 
   form_->addGroup("Render");
   {
     auto w = form_->addVariable("ms/frame", msPerFrame);
     w->setEditable(false);
-    w->setFixedWidth(80);
+    w->setFixedWidth(70);
     w->numberFormat("%.2f");
   }
 
@@ -58,51 +58,51 @@ void GuiStatus::init(nanogui::Screen* screen)
   {
     auto w = form_->addVariable("Checked", groupedStrCombinationsChecked);
     w->setEditable(false);
-    w->setFixedWidth(80);
+    w->setFixedWidth(70);
     w->setAlignment(nanogui::TextBox::Alignment::Right);
   }
   {
     auto w = form_->addVariable("Checked/s", nCheckedPerSec);
     w->setEditable(false);
-    w->setFixedWidth(80);
+    w->setFixedWidth(70);
     w->numberFormat("%.2f");
   }
   form_->addGroup("Current Layout");
   {
     auto w = form_->addVariable("Completed", groupedStrCurrentCompletedRoutes);
     w->setEditable(false);
-    w->setFixedWidth(80);
+    w->setFixedWidth(70);
     w->setAlignment(nanogui::TextBox::Alignment::Right);
   }
   {
-    auto w = form_->addVariable("Failed", groupedStrCurrentFailedRoutes);
+    auto w = form_->addVariable("Failed Avg", avgStrCurrentFailedRoutes);
     w->setEditable(false);
-    w->setFixedWidth(80);
+    w->setFixedWidth(70);
     w->setAlignment(nanogui::TextBox::Alignment::Right);
   }
   {
     auto w = form_->addVariable("Cost", groupedStrCurrentCost);
     w->setEditable(false);
-    w->setFixedWidth(80);
+    w->setFixedWidth(70);
     w->setAlignment(nanogui::TextBox::Alignment::Right);
   }
   form_->addGroup("Best Layout");
   {
     auto w = form_->addVariable("Completed", groupedStrBestCompletedRoutes);
     w->setEditable(false);
-    w->setFixedWidth(80);
+    w->setFixedWidth(70);
     w->setAlignment(nanogui::TextBox::Alignment::Right);
   }
   {
     auto w = form_->addVariable("Failed", groupedStrBestFailedRoutes);
     w->setEditable(false);
-    w->setFixedWidth(80);
+    w->setFixedWidth(70);
     w->setAlignment(nanogui::TextBox::Alignment::Right);
   }
   {
     auto w = form_->addVariable("Cost", groupedStrBestCost);
     w->setEditable(false);
-    w->setFixedWidth(80);
+    w->setFixedWidth(70);
     w->setAlignment(nanogui::TextBox::Alignment::Right);
   }
 }
@@ -117,7 +117,7 @@ void GuiStatus::refresh()
   groupedStrCombinationsChecked = groupThousands(nCombinationsChecked);
 
   groupedStrCurrentCompletedRoutes = groupThousands(nCurrentCompletedRoutes);
-  groupedStrCurrentFailedRoutes = groupThousands(nCurrentFailedRoutes);
+  avgStrCurrentFailedRoutes = fmt::format("{:.2f}", nCurrentFailedRoutes);
   groupedStrCurrentCost = groupThousands(currentCost);
 
   groupedStrBestCompletedRoutes = groupThousands(nBestCompletedRoutes);
