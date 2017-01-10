@@ -1,6 +1,6 @@
 ## Stripboard Autorouter
 
-<img align="right" width="50%" src="./screenshot.png">
+<img align="right" width="60%" src="./screenshot.png">
 
 This is a cross-platform program that, given a description of a circuit, searches for the best way to create the required connections on a [stripboard](https://en.wikipedia.org/wiki/Stripboard).
 
