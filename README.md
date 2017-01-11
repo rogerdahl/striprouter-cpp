@@ -170,12 +170,12 @@ This is the circuit description used in the screenshot.
 ```
 # Raspberry Pi WS2812B NeoPixel LED level shifter and 8-channel multiplexer
 #
-# NOTE! This circuit has not been tested yet.
+# NOTE: This circuit has not been tested yet.
 #
 # RPi pins
 #
-# 5V   02
-# GND  06
+# 5V   02 04
+# GND  25 39
 #
 # PWM0 32
 # GEN0 11
@@ -189,42 +189,37 @@ This is the circuit description used in the screenshot.
 # GEN6 22
 # GP05 29
 
-# Board params (currently just size)
-# board <number of horizontal vias> , <number of vertical vias>
+# Stripboard
+# board <width>,<height>
 
-board 60,60
+board 60,40
 
 # Packages
 # <package name> <pin coordinates relative to pin 0>
 
 dip14       0,0 1,0 2,0 3,0 4,0 5,0 6,0 6,-3 5,-3 4,-3 3,-3 2,-3 1,-3 0,-3
-header2x20  0,0 0,-1 1,0 1,-1 2,0 2,-1 3,0 3,-1 4,0 4,-1 5,0 5,-1 6,0 6,-1 7,0 7,-1 8,0 8,-1 9,0 9,-1 10,0 10,-1 11,0 11,-1 12,0 12,-1 13,0 13,-1 14,0 14,-1 15,0 15,-1 16,0 16,-1 17,0 17,-1 18,0 18,-1 19,0 19,-1
+header2x20mirror 19,0 19,-1  18,0 18,-1  17,0 17,-1  16,0 16,-1  15,0 15,-1  14,0 14,-1  13,0 13,-1  12,0 12,-1  11,0 11,-1  10,0 10,-1  9,0 9,-1  8,0 8,-1  7,0 7,-1  6,0 6,-1  5,0 5,-1  4,0 4,-1  3,0 3,-1  2,0 2,-1  1,0 1,-1  0,0 0,-1
 hpad2x2     0,0 1,0 0,-1 1,-1
-
-# Component position offset. Can be used multiple times to adjust section of
-# circuit. Adds the given offset to the positions of components defined below.
-# To disable, set to 0,0.
-# offset <relative x pos>, <relative y pos>
 
 # Components
 # <component name> <package name> <absolute position of component pin 0>
 
-rpi     header2x20  19,18
+rpi     header2x20mirror  19,17
 
-vcc     hpad2x2     17,37
-gnd     hpad2x2     37,37
+vcc     hpad2x2     19,6
+gnd     hpad2x2     19,11
 
-7400A   dip14       25,27
-chan1   hpad2x2     17,25
-chan2   hpad2x2     17,28
-chan3   hpad2x2     17,31
-chan4   hpad2x2     17,34
+7400A   dip14       20,28
+chan1   hpad2x2     23,6
+chan2   hpad2x2     23,11
+chan3   hpad2x2     27,6
+chan4   hpad2x2     27,11
 
-7400B   dip14       25,35
-chan5   hpad2x2     37,25
-chan6   hpad2x2     37,28
-chan7   hpad2x2     37,31
-chan8   hpad2x2     37,34
+7400B   dip14       31,28
+chan5   hpad2x2     31,6
+chan6   hpad2x2     31,11
+chan7   hpad2x2     36,6
+chan8   hpad2x2     36,11
 
 # "Don't Care" pins
 # <component name> <comma separated list of pin indexes>
@@ -233,11 +228,16 @@ rpi 1, 3, 5, 7, 9, 17, 19, 21, 23, 27, 31, 35, 37
 # Connections
 # <from component name>.<pin index> <to component name>.<pin index>
 
-# 7400A
+# Powering the RPi from the GPIO header instead of USB
 
 vcc.1     rpi.2
+vcc.1     rpi.4
+gnd.1     rpi.25
+gnd.1     rpi.39
+
+# 7400A
+
 vcc.1     7400A.14
-gnd.1     rpi.6
 gnd.1     7400A.7
 
 rpi.32    7400A.1
@@ -257,9 +257,7 @@ rpi.15    7400A.12
 
 # 7400B
 
-vcc.1     rpi.4
 vcc.1     7400B.14
-gnd.1     rpi.14
 gnd.1     7400B.7
 
 rpi.33    7400B.1
