@@ -386,7 +386,10 @@ Copy `bin\Release\x64\glew32.dll` to `striprouter\bin`.
 git clone --recursive https://github.com/wjakob/nanogui.git
 
 * Open in cmake > Configure
-* Select only: NANOGUI_USE_GLAD, USE_MSVC_RUNTIME_LIBRARY_DLL
+* Select only
+  * CMAKE_CONFIGURATION_TYPES: Release
+  * NANOGUI_USE_GLAD
+  * USE_MSVC_RUNTIME_LIBRARY_DLL
 * Generate
 * Open NanoGUI.sln
 * Layout Configurations (toolbar) > Release

@@ -5,6 +5,7 @@
 #include <chrono>
 #include <climits>
 #include <cstdio>
+#include <ctime>
 #include <iostream>
 #include <mutex>
 #include <string>
@@ -12,6 +13,7 @@
 #include <vector>
 
 #if defined(_WIN32)
+#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #include <Windows.h>
 #undef min
 #undef max
@@ -141,6 +143,7 @@ ThreadStop threadStopApp;
 void runHeadless();
 void runGui();
 void exitApp();
+volatile bool isParserPaused = true;
 
 // Command line args
 void parseCommandLineArgs(int argc, char** argv);
@@ -805,6 +808,10 @@ void parserThread()
   static double prevMtime = 0.0;
   static double curMtime = 0.0;
   while (!threadStopParser.isStopped()) {
+		if (isParserPaused) {
+			std::this_thread::sleep_for(100ms);
+			continue;
+		}
     try {
       curMtime = getMtime(circuitFilePath);
     }
@@ -914,6 +921,7 @@ void parseCommandLineArgs(int argc, char** argv)
 
 void runHeadless()
 {
+	isParserPaused = false;
   while (!threadStopApp.isStopped()) {
     std::this_thread::sleep_for(100ms);
   }
@@ -926,10 +934,11 @@ void runGui()
   nanogui::ref<Application> app = new Application();
   app->setVisible(true);
   setWindowIcon("./icons/48x48.png");
+	isParserPaused = false;
 
-  nanogui::mainloop();
+	nanogui::mainloop();
 
-  delete form;
+	delete form;
   guiStatus.free();
   nanogui::shutdown();
 }
