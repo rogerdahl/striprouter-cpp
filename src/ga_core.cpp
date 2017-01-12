@@ -230,12 +230,25 @@ OrganismIdx Population::tournamentSelect(int nCandidates)
     OrganismIdx organismIdx = randomOrganismSelector_.getRandomInt();
 
     auto& organism = organismVec[organismIdx];
-    auto hasMoreCompletedRoutes = organism.nCompletedRoutes >
-                                  nHighestCompletedRoutes;
+
+    auto hasMoreCompletedRoutes =
+      organism.nCompletedRoutes > nHighestCompletedRoutes;
+
+//    auto hasEqualCompletedRoutes =
+//      organism.nCompletedRoutes == nHighestCompletedRoutes;
+//
+//    auto hasLowerCost =
+//      organism.completedRouteCost < lowestCompletedRouteCost;
+//
+//    auto isRandomPick = getNormalizedRandom() > 0.5;
+
     auto hasEqualRoutesAndLowerCost =
       organism.nCompletedRoutes == nHighestCompletedRoutes
-      && organism.completedRouteCost < lowestCompletedRouteCost;
-    if (hasMoreCompletedRoutes || hasEqualRoutesAndLowerCost) {
+        && organism.completedRouteCost < lowestCompletedRouteCost;
+
+//    if (hasMoreCompletedRoutes || (hasEqualCompletedRoutes && isRandomPick)) {
+
+    if (hasMoreCompletedRoutes | hasEqualRoutesAndLowerCost) {
       bestOrganismIdx = organismIdx;
       lowestCompletedRouteCost = organism.completedRouteCost;
       nHighestCompletedRoutes = organism.nCompletedRoutes;
