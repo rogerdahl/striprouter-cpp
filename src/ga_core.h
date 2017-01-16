@@ -1,11 +1,9 @@
 #pragma once
 
-
 #include <mutex>
+#include <random>
 #include <thread>
 #include <vector>
-#include <random>
-
 
 //
 // Random
@@ -15,12 +13,13 @@ typedef int GeneIdx;
 
 class RandomIntGenerator
 {
-public:
+  public:
   RandomIntGenerator();
   RandomIntGenerator(int min, int max);
   void setRange(int min, int max);
   int getRandomInt();
-private:
+
+  private:
   std::default_random_engine randomEngine_;
   std::uniform_int_distribution<> uniformIntDistribution_;
 };
@@ -34,7 +33,7 @@ typedef std::vector<Gene> GeneVec;
 
 class GeneDependency
 {
-public:
+  public:
   GeneDependency(Gene gene, Gene geneDependency);
 
   Gene gene;
@@ -47,7 +46,7 @@ public:
 
 class Organism
 {
-public:
+  public:
   Organism(int nGenes, RandomIntGenerator& randomGeneSelector);
   void createRandom();
   GeneIdx getRandomCrossoverPoint();
@@ -59,7 +58,8 @@ public:
   long completedRouteCost;
 
   GeneVec geneVec;
-private:
+
+  private:
   GeneVec topoSort();
 
   int nGenes_;
@@ -72,7 +72,7 @@ private:
 
 class OrganismPair
 {
-public:
+  public:
   OrganismPair(Organism& a, Organism& b);
   Organism& a;
   Organism& b;
@@ -84,14 +84,15 @@ typedef std::vector<Organism> OrganismVec;
 
 class Population
 {
-public:
-  Population(int nOrganismsInPopulation, double crossoverRate,
-             double mutationRate);
+  public:
+  Population(
+      int nOrganismsInPopulation, double crossoverRate, double mutationRate);
   void reset(int nGenesPerOrganism);
   void nextGeneration();
 
   OrganismVec organismVec;
-private:
+
+  private:
   void createRandomPopulation();
   void crossover(OrganismPair& pair);
   OrganismPair selectPairTournament(int nCandidates);
@@ -105,4 +106,3 @@ private:
   RandomIntGenerator randomGeneSelector_;
   RandomIntGenerator randomOrganismSelector_;
 };
-

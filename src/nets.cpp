@@ -75,7 +75,6 @@ void Nets::registerPin(const Via& via)
   }
 }
 
-
 bool Nets::isConnected(const Via& currentVia, const Via& targetVia)
 {
   auto viaSetIdx = setIdxVec_[layout_.idx(currentVia)];
@@ -106,13 +105,9 @@ ViaSet& Nets::getViaSet(const Via& via)
 
 int Nets::createViaSet()
 {
-  viaSetVec_.push_back(ViaSet([](const Via & a, const Via & b) -> bool {
-    return std::lexicographical_compare(a.data(),
-    a.data() + a
-    .size(),
-    b.data(),
-    b.data() + b
-    .size());
+  viaSetVec_.push_back(ViaSet([](const Via& a, const Via& b) -> bool {
+    return std::lexicographical_compare(
+        a.data(), a.data() + a.size(), b.data(), b.data() + b.size());
   }));
   return static_cast<int>(viaSetVec_.size()) - 1;
 }
@@ -122,4 +117,3 @@ int Nets::getViaSetIdx(const Via& via)
   int traceIdx = layout_.idx(via);
   return setIdxVec_[traceIdx];
 }
-

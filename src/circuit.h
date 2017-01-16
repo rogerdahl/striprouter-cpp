@@ -1,16 +1,15 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <utility>
 #include <map>
 #include <mutex>
 #include <set>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include <Eigen/Core>
 
 #include "via.h"
-
 
 // Packages
 
@@ -23,7 +22,7 @@ typedef std::set<int> DontCarePinIdxSet;
 
 class Component
 {
-public:
+  public:
   Component();
   Component(const std::string&, const Via&);
   std::string packageName;
@@ -37,7 +36,7 @@ typedef std::map<std::string, Component> ComponentNameToComponentMap;
 
 class ConnectionPoint
 {
-public:
+  public:
   ConnectionPoint(const std::string&, int _pinIdx);
   std::string componentName;
   int pinIdx;
@@ -45,7 +44,7 @@ public:
 
 class Connection
 {
-public:
+  public:
   Connection(const ConnectionPoint& _start, const ConnectionPoint& _end);
   ConnectionPoint start;
   ConnectionPoint end;
@@ -60,7 +59,7 @@ typedef std::vector<Via> PinViaVec;
 
 class Circuit
 {
-public:
+  public:
   Circuit();
   bool hasParserError() const;
   ConnectionViaVec genConnectionViaVec() const;

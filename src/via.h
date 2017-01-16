@@ -5,7 +5,6 @@
 
 #include <Eigen/Core>
 
-
 // Hold floating point screen and board positions
 typedef Eigen::Array2f Pos;
 
@@ -26,7 +25,7 @@ std::string str(const Via& v);
 
 class ValidVia
 {
-public:
+  public:
   ValidVia();
   ValidVia(const Via&);
   ValidVia(const Via&, bool isValid);
@@ -42,7 +41,7 @@ class LayerCostVia;
 
 class LayerVia
 {
-public:
+  public:
   LayerVia();
   LayerVia(const LayerVia&);
   LayerVia(const Via&, bool _isWireLayer);
@@ -64,9 +63,9 @@ bool operator!=(const LayerVia& l, const LayerCostVia& r);
 // LayerCostVia
 //
 
-class LayerCostVia: public LayerVia
+class LayerCostVia : public LayerVia
 {
-public:
+  public:
   LayerCostVia();
   LayerCostVia(const LayerVia& viaLayerIn, int costIn);
   LayerCostVia(int xIn, int yIn, bool isWireLayerIn, int costIn);
@@ -82,7 +81,7 @@ bool operator<(const LayerCostVia& l, const LayerCostVia& r);
 
 class StartEndVia
 {
-public:
+  public:
   StartEndVia();
   StartEndVia(const Via& _start, const Via& _end);
   Via start;
@@ -95,7 +94,7 @@ public:
 
 class LayerStartEndVia
 {
-public:
+  public:
   LayerStartEndVia();
   LayerStartEndVia(const LayerVia& startIn, const LayerVia& endIn);
   LayerVia start;
@@ -108,7 +107,7 @@ public:
 
 class WireLayerVia
 {
-public:
+  public:
   WireLayerVia();
   bool isWireSideBlocked;
   ValidVia wireToVia;
@@ -122,7 +121,7 @@ typedef std::vector<WireLayerVia> WireLayerViaVec;
 
 class CostVia
 {
-public:
+  public:
   CostVia();
   int wireCost;
   int stripCost;

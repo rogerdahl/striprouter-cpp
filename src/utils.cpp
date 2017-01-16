@@ -13,7 +13,6 @@
 #include "shader.h"
 #include "utils.h"
 
-
 using namespace std::chrono_literals;
 
 //
@@ -25,7 +24,7 @@ bool saveScreenshot(std::string filename, int w, int h)
   glPixelStorei(GL_PACK_ALIGNMENT, 1);
   int nSize = w * h * 3;
 
-  char* dataBuffer = (char*) malloc(nSize * sizeof(char));
+  char* dataBuffer = (char*)malloc(nSize * sizeof(char));
   if (!dataBuffer) {
     return false;
   }
@@ -36,12 +35,13 @@ bool saveScreenshot(std::string filename, int w, int h)
   if (!filePtr) {
     return false;
   }
-  unsigned char TGAheader[12] = {0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-  unsigned char header[6] = {
-    static_cast<unsigned char>(w % 256), static_cast<unsigned char>(w / 256),
-    static_cast<unsigned char>(h % 256), static_cast<unsigned char>(h / 256),
-    static_cast<unsigned char>(24), static_cast<unsigned char>(0)
-  };
+  unsigned char TGAheader[12] = { 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+  unsigned char header[6] = { static_cast<unsigned char>(w % 256),
+                              static_cast<unsigned char>(w / 256),
+                              static_cast<unsigned char>(h % 256),
+                              static_cast<unsigned char>(h / 256),
+                              static_cast<unsigned char>(24),
+                              static_cast<unsigned char>(0) };
 
   fwrite(TGAheader, sizeof(unsigned char), 12, filePtr);
   fwrite(header, sizeof(unsigned char), 6, filePtr);
@@ -62,14 +62,12 @@ void showTexture(int windowW, int windowH, GLuint textureId)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glActiveTexture(GL_TEXTURE0);
 
-  auto projection = glm::ortho(0.0f,
-                               static_cast<float>(windowW),
-                               static_cast<float>(windowH),
-                               0.0f,
-                               0.0f,
-                               100.0f);
-//    auto projection = glm::ortho(0.0f, static_cast<float>(1024), static_cast<float>(1024),
-//                                       0.0f, 0.0f, 100.0f);
+  auto projection = glm::ortho(
+      0.0f, static_cast<float>(windowW), static_cast<float>(windowH), 0.0f,
+      0.0f, 100.0f);
+  //    auto projection = glm::ortho(0.0f, static_cast<float>(1024),
+  //    static_cast<float>(1024),
+  //                                       0.0f, 0.0f, 100.0f);
 
   glUseProgram(programId);
   GLint projectionId = glGetUniformLocation(programId, "projection");
@@ -82,56 +80,56 @@ void showTexture(int windowW, int windowH, GLuint textureId)
   float h = static_cast<float>(windowH);
   float w = static_cast<float>(windowW);
 
-  triVec.insert(triVec.end(), {0.0f, 0.0f, 0.0f});
-  triVec.insert(triVec.end(), {0.0f, h, 0.0f});
-  triVec.insert(triVec.end(), {w, h, 0.0f});
+  triVec.insert(triVec.end(), { 0.0f, 0.0f, 0.0f });
+  triVec.insert(triVec.end(), { 0.0f, h, 0.0f });
+  triVec.insert(triVec.end(), { w, h, 0.0f });
 
-  triVec.insert(triVec.end(), {0.0f, 0.0f, 0.0f});
-  triVec.insert(triVec.end(), {w, h, 0.0f});
-  triVec.insert(triVec.end(), {w, 0.0f, 0.0f});
+  triVec.insert(triVec.end(), { 0.0f, 0.0f, 0.0f });
+  triVec.insert(triVec.end(), { w, h, 0.0f });
+  triVec.insert(triVec.end(), { w, 0.0f, 0.0f });
 
-  texVec.insert(texVec.end(), {0, 0});
-  texVec.insert(texVec.end(), {0, 1});
-  texVec.insert(texVec.end(), {1, 1});
+  texVec.insert(texVec.end(), { 0, 0 });
+  texVec.insert(texVec.end(), { 0, 1 });
+  texVec.insert(texVec.end(), { 1, 1 });
 
-  texVec.insert(texVec.end(), {0, 0});
-  texVec.insert(texVec.end(), {1, 1});
-  texVec.insert(texVec.end(), {1, 0});
+  texVec.insert(texVec.end(), { 0, 0 });
+  texVec.insert(texVec.end(), { 1, 1 });
+  texVec.insert(texVec.end(), { 1, 0 });
 
   glEnableVertexAttribArray(0);
 
   GLuint vertexBufId;
   glGenBuffers(1, &vertexBufId);
   glBindBuffer(GL_ARRAY_BUFFER, vertexBufId);
-  glBufferData(GL_ARRAY_BUFFER,
-               triVec.size() * sizeof(GLfloat),
-               &triVec[0],
-               GL_STATIC_DRAW);
-  glVertexAttribPointer(0,         // attribute
-                        3,         // size
-                        GL_FLOAT,  // type
-                        GL_FALSE,  // normalized?
-                        0,         // stride
-                        (void*) 0    // array buffer offset
-                       );
+  glBufferData(
+      GL_ARRAY_BUFFER, triVec.size() * sizeof(GLfloat), &triVec[0],
+      GL_STATIC_DRAW);
+  glVertexAttribPointer(
+      0, // attribute
+      3, // size
+      GL_FLOAT, // type
+      GL_FALSE, // normalized?
+      0, // stride
+      (void*)0 // array buffer offset
+      );
 
   glEnableVertexAttribArray(1);
 
   GLuint texBufId;
   glGenBuffers(1, &texBufId);
   glBindBuffer(GL_ARRAY_BUFFER, texBufId);
-  glBufferData(GL_ARRAY_BUFFER,
-               texVec.size() * sizeof(GLfloat),
-               &texVec[0],
-               GL_STATIC_DRAW);
+  glBufferData(
+      GL_ARRAY_BUFFER, texVec.size() * sizeof(GLfloat), &texVec[0],
+      GL_STATIC_DRAW);
 
-  glVertexAttribPointer(1,         // attribute
-                        2,         // size
-                        GL_FLOAT,  // type
-                        GL_TRUE,  // normalized?
-                        0,         // stride
-                        (void*) 0    // array buffer offset
-                       );
+  glVertexAttribPointer(
+      1, // attribute
+      2, // size
+      GL_FLOAT, // type
+      GL_TRUE, // normalized?
+      0, // stride
+      (void*)0 // array buffer offset
+      );
 
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
 
@@ -178,8 +176,9 @@ std::vector<unsigned char> makeTestTextureVector(int w, int h, int border)
 
 double getMtime(const std::string& path)
 {
-  HANDLE hFile = CreateFile(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
-                            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+  HANDLE hFile = CreateFile(
+      path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
+      FILE_ATTRIBUTE_NORMAL, NULL);
   FILETIME lastWriteTime;
   GetFileTime(hFile, NULL, NULL, &lastWriteTime);
   double r = static_cast<double>(lastWriteTime.dwLowDateTime);
@@ -196,7 +195,7 @@ double getMtime(const std::string& path)
   if (ret == -1) {
     throw fmt::format("Unable to stat file: {}", path);
   }
-  return st.st_mtim.tv_sec + st.st_mtim.tv_nsec / 100'0000'000.0;
+  return st.st_mtim.tv_sec + st.st_mtim.tv_nsec / 100 '0000' 000.0;
 }
 
 #endif
@@ -207,7 +206,7 @@ std::string joinPath(const std::string& a, const std::string& b)
     return a + b;
   }
   else {
-    return a + std::string("/")  + b;
+    return a + std::string("/") + b;
   }
 }
 
@@ -220,14 +219,10 @@ std::string GetLastErrorStdStr()
   if (error) {
     LPVOID lpMsgBuf;
     DWORD bufLen = FormatMessage(
-                     FORMAT_MESSAGE_ALLOCATE_BUFFER |
-                     FORMAT_MESSAGE_FROM_SYSTEM |
-                     FORMAT_MESSAGE_IGNORE_INSERTS,
-                     NULL,
-                     error,
-                     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                     (LPTSTR)&lpMsgBuf,
-                     0, NULL);
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM
+            | FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPTSTR)&lpMsgBuf, 0, NULL);
     if (bufLen) {
       LPCSTR lpMsgStr = (LPCSTR)lpMsgBuf;
       std::string result(lpMsgStr, lpMsgStr + bufLen);
@@ -253,8 +248,9 @@ ExclusiveFileLock::ExclusiveFileLock(const std::string filePath)
     }
     auto errStr = fmt::format("{}", result);
 #else
-    fileHandle_ = CreateFile(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
-                             OPEN_EXISTING, 0, NULL);
+    fileHandle_ = CreateFile(
+        filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0,
+        NULL);
     if (fileHandle_ != INVALID_HANDLE_VALUE) {
       isLocked = true;
       return;
@@ -299,8 +295,7 @@ void ExclusiveFileLock::release()
 // Average frames per second
 //
 
-TrackAverage::TrackAverage(int maxSize)
-  : maxSize_(maxSize)
+TrackAverage::TrackAverage(int maxSize) : maxSize_(maxSize)
 {
 }
 
@@ -336,9 +331,11 @@ double TrackAverage::calcAverage()
 
 std::string trim(const std::string& s)
 {
-  auto wsfront = std::find_if_not(s.begin(), s.end(), [](int c)
-  { return std::isspace(c); });
-  auto wsback = std::find_if_not(s.rbegin(), s.rend(), [](int c)
-  { return std::isspace(c); }).base();
+  auto wsfront = std::find_if_not(s.begin(), s.end(), [](int c) {
+    return std::isspace(c);
+  });
+  auto wsback = std::find_if_not(s.rbegin(), s.rend(), [](int c) {
+                  return std::isspace(c);
+                }).base();
   return (wsback <= wsfront ? std::string() : std::string(wsfront, wsback));
 }

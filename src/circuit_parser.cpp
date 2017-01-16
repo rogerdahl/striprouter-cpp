@@ -7,10 +7,8 @@
 #include "circuit_parser.h"
 #include "utils.h"
 
-
-const auto rxFlags = std::regex_constants::ECMAScript |
-                     std::regex_constants::icase;
-
+const auto rxFlags =
+    std::regex_constants::ECMAScript | std::regex_constants::icase;
 
 CircuitFileParser::CircuitFileParser(Layout& _layout)
   : layout_(_layout), offset_(Via(0, 0))
@@ -27,8 +25,7 @@ void CircuitFileParser::parse(std::string& circuitFilePath)
   std::ifstream fin(circuitFilePath);
   if (!fin.good()) {
     layout_.circuit.parserErrorVec.push_back(
-      fmt::format("Cannot read .circuit file: {}", circuitFilePath)
-    );
+        fmt::format("Cannot read .circuit file: {}", circuitFilePath));
     return;
   }
   std::string lineStr;
@@ -41,11 +38,9 @@ void CircuitFileParser::parse(std::string& circuitFilePath)
     lineStr = trim(std::regex_replace(lineStr, stripCommaWhitespace, ","));
     try {
       parseLine(lineStr);
-    }
-    catch (std::string errorStr) {
-      layout_.circuit.parserErrorVec
-      .push_back(fmt::format("Error on line {:n}: {}: {}", lineIdx, lineStr,
-                             errorStr));
+    } catch (std::string errorStr) {
+      layout_.circuit.parserErrorVec.push_back(
+          fmt::format("Error on line {:n}: {}: {}", lineIdx, lineStr, errorStr));
     }
   }
   layout_.isReadyForRouting = !layout_.circuit.hasParserError();
@@ -134,9 +129,8 @@ bool CircuitFileParser::parsePackage(std::string& lineStr)
   }
   std::string pkgName = m[1];
   PackageRelPosVec v;
-  for (auto iter = std::sregex_token_iterator(lineStr.begin(),
-                   lineStr.end(),
-                   pkgRelativePosRx);
+  for (auto iter = std::sregex_token_iterator(
+           lineStr.begin(), lineStr.end(), pkgRelativePosRx);
        iter != std::sregex_token_iterator(); ++iter) {
     std::string s = *iter;
     regex_match(s, m, pkgPosValuesRx);
@@ -159,8 +153,8 @@ bool CircuitFileParser::parseComponent(std::string& lineStr)
   auto packageName = m[2].str();
   auto x = std::stoi(m[3]);
   auto y = std::stoi(m[4]);
-  if (layout_.circuit.packageToPosMap.find(packageName) ==
-      layout_.circuit.packageToPosMap.end()) {
+  if (layout_.circuit.packageToPosMap.find(packageName)
+      == layout_.circuit.packageToPosMap.end()) {
     throw fmt::format("Unknown package: {}", packageName);
   }
   Via p = Via(x, y) + offset_;
@@ -168,8 +162,8 @@ bool CircuitFileParser::parseComponent(std::string& lineStr)
   for (auto& v : layout_.circuit.packageToPosMap[packageName]) {
     if (p.x() + v.x() < 0 || p.x() + v.x() >= layout_.gridW || p.y() + v.y() < 0
         || p.y() + v.y() >= layout_.gridH) {
-      throw fmt::format("Component pin outside of board: {}.{}", componentName,
-                        i + 1);
+      throw fmt::format(
+          "Component pin outside of board: {}.{}", componentName, i + 1);
     }
     ++i;
   }
@@ -189,17 +183,16 @@ bool CircuitFileParser::parseDontCare(std::string& lineStr)
     return false;
   }
   auto componentName = m[1].str();
-  auto
-  componentItr = layout_.circuit.componentNameToComponentMap.find(componentName);
+  auto componentItr =
+      layout_.circuit.componentNameToComponentMap.find(componentName);
   if (componentItr == layout_.circuit.componentNameToComponentMap.end()) {
     throw fmt::format("Unknown component: {}", componentName);
   }
   auto& component = componentItr->second;
   auto packagePosVec =
-    layout_.circuit.packageToPosMap.find(component.packageName)->second;
-  for (auto iter = std::sregex_token_iterator(lineStr.begin(),
-                   lineStr.end(),
-                   dontCarePinIdxRx);
+      layout_.circuit.packageToPosMap.find(component.packageName)->second;
+  for (auto iter = std::sregex_token_iterator(
+           lineStr.begin(), lineStr.end(), dontCarePinIdxRx);
        iter != std::sregex_token_iterator(); ++iter) {
     std::string s = *iter;
     regex_match(s, m, dontCarePinIdxRx);
@@ -207,10 +200,9 @@ bool CircuitFileParser::parseDontCare(std::string& lineStr)
     if (dontCarePinIdx < 1
         || dontCarePinIdx > static_cast<int>(packagePosVec.size())) {
       throw fmt::format(
-        "Invalid \"Don't Care\" pin number for {}: {}. Must be between 1 and {} (including)",
-        componentName,
-        dontCarePinIdx,
-        packagePosVec.size());
+          "Invalid \"Don't Care\" pin number for {}: {}. Must be between 1 and "
+          "{} (including)",
+          componentName, dontCarePinIdx, packagePosVec.size());
     }
     component.dontCarePinIdxSet.insert(--dontCarePinIdx);
   }
@@ -237,31 +229,26 @@ bool CircuitFileParser::parseConnection(std::string& lineStr)
   return true;
 }
 
-void CircuitFileParser::checkConnectionPoint(const ConnectionPoint&
-    connectionPoint)
+void CircuitFileParser::checkConnectionPoint(
+    const ConnectionPoint& connectionPoint)
 {
-  auto
-  componentItr = layout_.circuit.componentNameToComponentMap.find(
-                   connectionPoint.componentName);
+  auto componentItr = layout_.circuit.componentNameToComponentMap.find(
+      connectionPoint.componentName);
   if (componentItr == layout_.circuit.componentNameToComponentMap.end()) {
     throw fmt::format("Unknown component: {}", connectionPoint.componentName);
   }
   auto component = componentItr->second;
   auto packagePosVec =
-    layout_.circuit.packageToPosMap.find(component.packageName)->second;
+      layout_.circuit.packageToPosMap.find(component.packageName)->second;
   auto pinIdx1Base = connectionPoint.pinIdx + 1;
   if (pinIdx1Base < 1 || pinIdx1Base > static_cast<int>(packagePosVec.size())) {
     throw fmt::format(
-      "Invalid pin number for {}.{}. Must be between 1 and {} (including)",
-      connectionPoint.componentName,
-      pinIdx1Base,
-      packagePosVec.size());
+        "Invalid pin number for {}.{}. Must be between 1 and {} (including)",
+        connectionPoint.componentName, pinIdx1Base, packagePosVec.size());
   }
   if (component.dontCarePinIdxSet.count(connectionPoint.pinIdx)) {
     throw fmt::format(
-      "Invalid pin number for {}.{}. Pin has been set as \"Don't Care\"",
-      connectionPoint.componentName,
-      pinIdx1Base,
-      packagePosVec.size());
+        "Invalid pin number for {}.{}. Pin has been set as \"Don't Care\"",
+        connectionPoint.componentName, pinIdx1Base, packagePosVec.size());
   }
 }

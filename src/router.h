@@ -1,10 +1,10 @@
 #pragma once
 
-#include <vector>
 #include <map>
 #include <queue>
 #include <set>
 #include <tuple>
+#include <vector>
 
 #include <Eigen/Core>
 
@@ -16,25 +16,24 @@
 #include "thread_stop.h"
 #include "via.h"
 
-
 typedef std::chrono::duration<double> TimeDuration;
-
 
 class Router
 {
-public:
-  Router(Layout&, ConnectionIdxVec&, ThreadStop&, Layout& inputLayout,
-         Layout& currentLayout, const TimeDuration& _maxRenderDelay);
+  public:
+  Router(
+      Layout&, ConnectionIdxVec&, ThreadStop&, Layout& inputLayout,
+      Layout& currentLayout, const TimeDuration& _maxRenderDelay);
   bool route();
   // Interface for Uniform Cost Search
-  bool
-  isAvailable(const LayerVia& via, const Via& startVia, const Via& targetVia);
+  bool isAvailable(
+      const LayerVia& via, const Via& startVia, const Via& targetVia);
   bool isTarget(const LayerVia& via, const Via& targetVia);
   bool isTargetPin(const LayerVia& via, const Via& targetVia);
   bool isAnyPin(const Via& via);
   ValidVia& wireToViaRef(const Via& via);
 
-private:
+  private:
   bool routeAll();
   bool findCompleteRoute(const StartEndVia&);
   bool findRoute(Via& shortcutEndVia, const StartEndVia& viaStartEnd);

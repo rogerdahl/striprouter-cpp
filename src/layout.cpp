@@ -2,7 +2,6 @@
 
 #include "layout.h"
 
-
 Layout::Layout()
   : gridW(0),
     gridH(0),
@@ -98,9 +97,9 @@ bool Layout::isLocked()
   if (!wasLocked) {
     lock.release();
   }
-//  fmt::print("{}\n", isLocked);
-//  return std::unique_lock<std::mutex>::try_lock(mutex_);
-//  return unique_lock_.owns_lock();
+  //  fmt::print("{}\n", isLocked);
+  //  return std::unique_lock<std::mutex>::try_lock(mutex_);
+  //  return unique_lock_.owns_lock();
   return wasLocked;
 }
 
@@ -108,5 +107,3 @@ int Layout::idx(const Via& v)
 {
   return v.x() + gridW * v.y();
 }
-
-

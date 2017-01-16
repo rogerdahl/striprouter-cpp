@@ -1,17 +1,16 @@
 #pragma once
 
-#include <thread>
 #include <mutex>
-
+#include <thread>
 
 class ThreadStop
 {
-public:
+  public:
   ThreadStop();
   void stop();
   bool isStopped();
-private:
+
+  private:
   std::mutex mutex_;
   std::unique_lock<std::mutex> lock_;
 };
-

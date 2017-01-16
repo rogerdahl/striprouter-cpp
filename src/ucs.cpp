@@ -1,16 +1,11 @@
 #include <fmt/format.h>
 
-#include "ucs.h"
 #include "router.h"
-
+#include "ucs.h"
 
 UniformCostSearch::UniformCostSearch(
-  Router& router,
-  Layout& layout,
-  Nets& nets,
-  Via& shortcutEndVia,
-  const StartEndVia& viaStartEnd
-)
+    Router& router, Layout& layout, Nets& nets, Via& shortcutEndVia,
+    const StartEndVia& viaStartEnd)
   : router_(router),
     layout_(layout),
     nets_(nets),
@@ -28,8 +23,8 @@ RouteStepVec UniformCostSearch::findLowestCostRoute()
   layout_.diagCostVec = viaCostVec_;
 #endif
   if (foundRoute) {
-    return backtraceLowestCostRoute(StartEndVia(viaStartEnd_.start,
-                                    shortcutEndVia_));
+    return backtraceLowestCostRoute(
+        StartEndVia(viaStartEnd_.start, shortcutEndVia_));
   }
   else {
     return RouteStepVec();
@@ -69,12 +64,13 @@ bool UniformCostSearch::findCosts(Via& shortcutEndVia)
 
   while (true) {
     if (!frontierPri.size()) {
-//#ifndef NDEBUG
-//      layout_.errorStringVec.push_back(fmt::format("Debug: UniformCostSearch::findCosts() No route found"));
-//      layout_.diagStartVia = start.via;
-//      layout_.diagEndVia = end.via;
-//      layout_.hasError = true;
-//#endif
+      //#ifndef NDEBUG
+      //      layout_.errorStringVec.push_back(fmt::format("Debug:
+      //      UniformCostSearch::findCosts() No route found"));
+      //      layout_.diagStartVia = start.via;
+      //      layout_.diagEndVia = end.via;
+      //      layout_.hasError = true;
+      //#endif
       return false;
     }
 
@@ -96,8 +92,7 @@ bool UniformCostSearch::findCosts(Via& shortcutEndVia)
     if (node.isWireLayer) {
       exploreNeighbour(node, LayerCostVia(stepLeft(node), settings.wire_cost));
       exploreNeighbour(node, LayerCostVia(stepRight(node), settings.wire_cost));
-      exploreNeighbour(node,
-                       LayerCostVia(stepToStrip(node), settings.via_cost));
+      exploreNeighbour(node, LayerCostVia(stepToStrip(node), settings.via_cost));
     }
     else {
       exploreNeighbour(node, LayerCostVia(stepUp(node), settings.strip_cost));
@@ -107,9 +102,9 @@ bool UniformCostSearch::findCosts(Via& shortcutEndVia)
       // Wire jumps
       const auto& wireToVia = router_.wireToViaRef(node.via);
       if (wireToVia.isValid) {
-        exploreFrontier(node,
-                        LayerCostVia(LayerVia(wireToVia.via, false),
-                                     settings.wire_cost));
+        exploreFrontier(
+            node,
+            LayerCostVia(LayerVia(wireToVia.via, false), settings.wire_cost));
       }
     }
   }
@@ -145,8 +140,7 @@ void UniformCostSearch::exploreFrontier(LayerCostVia& node, LayerCostVia n)
 }
 
 RouteStepVec UniformCostSearch::backtraceLowestCostRoute(
-  const StartEndVia& viaStartEnd
-)
+    const StartEndVia& viaStartEnd)
 {
   int routeCost = 0;
   auto start = LayerVia(viaStartEnd.start, false);
@@ -155,16 +149,15 @@ RouteStepVec UniformCostSearch::backtraceLowestCostRoute(
   auto c = end;
   routeStepVec.push_back(c);
 
-  // If there is an error in the uniform cost search, it typically causes the backtrace to get stuck. We check
+  // If there is an error in the uniform cost search, it typically causes the
+  // backtrace to get stuck. We check
   // for the condition and return diagnostics information.
   int checkStuckCnt = 0;
 
   while (!((c.via == start.via).all() && c.isWireLayer == start.isWireLayer)) {
     if (checkStuckCnt++ > layout_.gridW * layout_.gridH) {
       layout_.errorStringVec.push_back(
-        fmt::format(
-          "Error: backtraceLowestCostRoute() stuck at {}",
-          c.str()));
+          fmt::format("Error: backtraceLowestCostRoute() stuck at {}", c.str()));
       layout_.diagStartVia = start.via;
       layout_.diagEndVia = end.via;
       layout_.diagRouteStepVec = routeStepVec;

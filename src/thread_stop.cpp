@@ -2,8 +2,7 @@
 
 #include "thread_stop.h"
 
-ThreadStop::ThreadStop()
-  : lock_(mutex_, std::defer_lock)
+ThreadStop::ThreadStop() : lock_(mutex_, std::defer_lock)
 {
 }
 

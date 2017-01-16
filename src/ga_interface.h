@@ -54,33 +54,31 @@
 
 #pragma once
 
-
 #include <mutex>
 #include <thread>
 #include <vector>
 
 #include "ga_core.h"
 
-
 typedef int ConnectionIdx;
 typedef std::vector<ConnectionIdx> ConnectionIdxVec;
 typedef int OrderingIdx;
 
-
 class GeneticAlgorithm
 {
-public:
-  GeneticAlgorithm(int nOrganismsInPopulation, double crossoverRate,
-                   double mutationRate);
+  public:
+  GeneticAlgorithm(
+      int nOrganismsInPopulation, double crossoverRate, double mutationRate);
   void reset(int nConnectionsInCircuit);
   // Ordering
   OrderingIdx reserveOrdering();
   ConnectionIdxVec getOrdering(OrderingIdx);
-  void releaseOrdering(OrderingIdx, int nCompletedRoutes,
-                       long completedRouteCost);
+  void releaseOrdering(
+      OrderingIdx, int nCompletedRoutes, long completedRouteCost);
   // Locking
   std::unique_lock<std::mutex> scopeLock();
-private:
+
+  private:
   int nOrganismsInPopulation_;
   double crossoverRate_;
   double mutationRate_;

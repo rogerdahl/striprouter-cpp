@@ -9,21 +9,19 @@
 #include "shader.h"
 #include "utils.h"
 
-
 const std::string SHADERS_DIR_PATH = "./shaders/";
-
 
 void compileAndCheckShader(const char* path, GLuint shaderId);
 void printInfoLog(GLuint shaderId, bool isShader);
 std::string loadFile(const char* path);
 
-
-GLuint createProgram(const char* vertexShaderFileName,
-                     const char* fragmentShaderFileName)
+GLuint createProgram(
+    const char* vertexShaderFileName, const char* fragmentShaderFileName)
 {
-  std::string vertexShaderPath = joinPath(SHADERS_DIR_PATH, vertexShaderFileName);
-  std::string fragmentShaderPath = joinPath(SHADERS_DIR_PATH,
-                                   fragmentShaderFileName);
+  std::string vertexShaderPath =
+      joinPath(SHADERS_DIR_PATH, vertexShaderFileName);
+  std::string fragmentShaderPath =
+      joinPath(SHADERS_DIR_PATH, fragmentShaderFileName);
 
   GLuint vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
   compileAndCheckShader(vertexShaderPath.c_str(), vertexShaderId);
@@ -55,7 +53,7 @@ GLuint createProgram(const char* vertexShaderFileName,
 
 void compileAndCheckShader(const char* path, GLuint shaderId)
 {
-//    cout << "Compiling shader: " << path << endl;
+  //    cout << "Compiling shader: " << path << endl;
 
   auto shaderStr = loadFile(path);
   auto shaderStrPtr = shaderStr.c_str();

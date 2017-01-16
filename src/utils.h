@@ -31,11 +31,12 @@ typedef HANDLE FileHandle;
 
 class ExclusiveFileLock
 {
-public:
+  public:
   ExclusiveFileLock(const std::string filePath);
   ~ExclusiveFileLock();
   void release();
-private:
+
+  private:
   bool isLocked;
   FileHandle fileHandle_;
 };
@@ -43,18 +44,19 @@ private:
 // Keep track of recent values in order to calculate average.
 class TrackAverage
 {
-public:
+  public:
   TrackAverage(int maxSize);
   ~TrackAverage();
   void addValue(double);
   double calcAverage();
-private:
+
+  private:
   int maxSize_;
   std::deque<double> doubleDeque_;
 };
 
 // Misc
-template<class T>
+template <class T>
 const T& clamp(const T& v, const T& minValue, const T& maxValue)
 {
   return std::min(maxValue, std::max(minValue, v));

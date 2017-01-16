@@ -19,10 +19,10 @@
 #undef max
 #endif
 
-#include <cmdparser.hpp>
-#include <fmt/format.h>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <cmdparser.hpp>
+#include <fmt/format.h>
 #include <nanogui/nanogui.h>
 
 #include "circuit_parser.h"
@@ -40,9 +40,7 @@
 #include "via.h"
 #include "write_svg.h"
 
-
 using namespace std::chrono_literals;
-
 
 // Fonts
 std::string DIAG_FONT_PATH = "./fonts/Roboto-Regular.ttf";
@@ -123,8 +121,8 @@ const int N_ORGANISMS_IN_POPULATION = 1000;
 #endif
 const double CROSSOVER_RATE = 0.7;
 const double MUTATION_RATE = 0.01;
-GeneticAlgorithm geneticAlgorithm(N_ORGANISMS_IN_POPULATION, CROSSOVER_RATE,
-                                  MUTATION_RATE);
+GeneticAlgorithm geneticAlgorithm(
+    N_ORGANISMS_IN_POPULATION, CROSSOVER_RATE, MUTATION_RATE);
 
 // Misc
 Render render;
@@ -154,17 +152,16 @@ long exitAfterNumChecks;
 long checkpointAtNumChecks;
 std::string circuitFilePath;
 
-
-class Application: public nanogui::Screen
+class Application : public nanogui::Screen
 {
-public:
+  public:
   Application()
     : nanogui::Screen(
-        IntPos(windowW, windowH),
-        "Stripboard Autorouter",
-        /*resizable*/true, /*fullscreen*/false, /*colorBits*/8,
-        /*alphaBits*/8, /*depthBits*/24, /*stencilBits*/8,
-        /*nSamples*/4, /*glMajor*/3, /*glMinor*/3)
+          IntPos(windowW, windowH), "Stripboard Autorouter",
+          /*resizable*/ true, /*fullscreen*/ false,
+          /*colorBits*/ 8,
+          /*alphaBits*/ 8, /*depthBits*/ 24, /*stencilBits*/ 8,
+          /*nSamples*/ 4, /*glMajor*/ 3, /*glMinor*/ 3)
   {
     GLuint mTextureId;
     glGenTextures(1, &mTextureId);
@@ -200,68 +197,64 @@ public:
     form->addGroup("Costs");
     {
       auto w = form->addVariable<int>(
-                 "Wire",
-      [&](int v) {
-        auto lock = inputLayout.scopeLock();
-        inputLayout.settings.wire_cost = v;
-        resetInputLayout();
-      },
-      [&]() {
-        auto lock = inputLayout.scopeLock();
-        return inputLayout.settings.wire_cost;
-      }
-               );
+          "Wire",
+          [&](int v) {
+            auto lock = inputLayout.scopeLock();
+            inputLayout.settings.wire_cost = v;
+            resetInputLayout();
+          },
+          [&]() {
+            auto lock = inputLayout.scopeLock();
+            return inputLayout.settings.wire_cost;
+          });
       w->setSpinnable(true);
       w->setMinValue(1);
       w->setValueIncrement(1);
     }
     {
       auto w = form->addVariable<int>(
-                 "Strip",
-      [&](int v) {
-        auto lock = inputLayout.scopeLock();
-        inputLayout.settings.strip_cost = v;
-        resetInputLayout();
-      },
-      [&]() {
-        auto lock = inputLayout.scopeLock();
-        return inputLayout.settings.strip_cost;
-      }
-               );
+          "Strip",
+          [&](int v) {
+            auto lock = inputLayout.scopeLock();
+            inputLayout.settings.strip_cost = v;
+            resetInputLayout();
+          },
+          [&]() {
+            auto lock = inputLayout.scopeLock();
+            return inputLayout.settings.strip_cost;
+          });
       w->setSpinnable(true);
       w->setMinValue(1);
       w->setValueIncrement(1);
     }
     {
       auto w = form->addVariable<int>(
-                 "Via",
-      [&](int v) {
-        auto lock = inputLayout.scopeLock();
-        inputLayout.settings.via_cost = v;
-        resetInputLayout();
-      },
-      [&]() {
-        auto lock = inputLayout.scopeLock();
-        return inputLayout.settings.via_cost;
-      }
-               );
+          "Via",
+          [&](int v) {
+            auto lock = inputLayout.scopeLock();
+            inputLayout.settings.via_cost = v;
+            resetInputLayout();
+          },
+          [&]() {
+            auto lock = inputLayout.scopeLock();
+            return inputLayout.settings.via_cost;
+          });
       w->setSpinnable(true);
       w->setMinValue(1);
       w->setValueIncrement(1);
     }
     {
       auto w = form->addVariable<int>(
-                 "Cut",
-      [&](int v) {
-        auto lock = inputLayout.scopeLock();
-        inputLayout.settings.cut_cost = v;
-        resetInputLayout();
-      },
-      [&]() {
-        auto lock = inputLayout.scopeLock();
-        return inputLayout.settings.cut_cost;
-      }
-               );
+          "Cut",
+          [&](int v) {
+            auto lock = inputLayout.scopeLock();
+            inputLayout.settings.cut_cost = v;
+            resetInputLayout();
+          },
+          [&]() {
+            auto lock = inputLayout.scopeLock();
+            return inputLayout.settings.cut_cost;
+          });
       w->setSpinnable(true);
       w->setMinValue(1);
       w->setValueIncrement(1);
@@ -278,36 +271,34 @@ public:
       zoomSlider->setFixedWidth(70);
       zoomSlider->setCallback([this](float value) {
         zoomLinear = value;
-        auto
-        upperLeftPos = boardToScrPos(Pos(0.0f, 0.0f), zoom, panOffsetScrPos);
-        auto lowerRightPos =
-          boardToScrPos(Pos(inputLayout.gridW, inputLayout.gridH),
-                        zoom,
-                        panOffsetScrPos);
-        auto
-        centerBoardPos = upperLeftPos + (lowerRightPos - upperLeftPos) / 2.0f;
+        auto upperLeftPos =
+            boardToScrPos(Pos(0.0f, 0.0f), zoom, panOffsetScrPos);
+        auto lowerRightPos = boardToScrPos(
+            Pos(inputLayout.gridW, inputLayout.gridH), zoom, panOffsetScrPos);
+        auto centerBoardPos =
+            upperLeftPos + (lowerRightPos - upperLeftPos) / 2.0f;
         setZoomPan(centerBoardPos);
       });
     }
     form->addGroup("Misc");
     {
       form->addVariable<bool>(
-        "Pause",
-      [&](bool v) {
-        auto lock = inputLayout.scopeLock();
-        inputLayout.settings.pause = v;
-      },
-      [&]() {
-        auto lock = inputLayout.scopeLock();
-        return inputLayout.settings.pause;
-      }
-      );
+          "Pause",
+          [&](bool v) {
+            auto lock = inputLayout.scopeLock();
+            inputLayout.settings.pause = v;
+          },
+          [&]() {
+            auto lock = inputLayout.scopeLock();
+            return inputLayout.settings.pause;
+          });
     }
     form->addGroup("Input Layout");
     {
       saveInputLayoutButton = form->addButton("Save to .circuit file", []() {
         CircuitFileWriter fileWriter;
-        fileWriter.updateComponentPositions(circuitFilePath, inputLayout.circuit);
+        fileWriter.updateComponentPositions(
+            circuitFilePath, inputLayout.circuit);
         saveInputLayoutButton->setEnabled(false);
       });
       saveInputLayoutButton->setEnabled(false);
@@ -323,10 +314,8 @@ public:
           ss << p << "\n";
         }
         new nanogui::MessageDialog(
-          this,
-          nanogui::MessageDialog::Type::Information, "Saved .svg files",
-          ss.str()
-        );
+            this, nanogui::MessageDialog::Type::Information, "Saved .svg files",
+            ss.str());
       });
       saveBestLayoutButton->setEnabled(true);
     }
@@ -340,8 +329,8 @@ public:
 
   // Could not get NanoGUI mouseDragEvent to trigger so rolling my own.
   // See NanoGUI src/window.cpp for example mouseDragEvent handler.
-  virtual bool
-  mouseButtonEvent(const IntPos& p, int button, bool down, int modifiers)
+  virtual bool mouseButtonEvent(
+      const IntPos& p, int button, bool down, int modifiers)
   {
     if (nanogui::Widget::mouseButtonEvent(p, button, down, modifiers)) {
       // Event was handled by NanoGUI.
@@ -353,9 +342,8 @@ public:
       {
         auto lock = inputLayout.scopeLock();
         componentName = getComponentAtBoardPos(
-                          inputLayout.circuit, getMouseBoardPos(mousePos(), zoom,
-                              panOffsetScrPos)
-                        );
+            inputLayout.circuit,
+            getMouseBoardPos(mousePos(), zoom, panOffsetScrPos));
       }
       if (componentName != "") {
         // Start component drag
@@ -364,11 +352,11 @@ public:
         {
           auto lock = inputLayout.scopeLock();
           auto pin0BoardPos =
-            inputLayout.circuit.componentNameToComponentMap[componentName]
-            .pin0AbsPos.cast<float>();
-          dragPin0BoardOffset = getMouseBoardPos(
-                                  mousePos(), zoom,
-                                  panOffsetScrPos) - pin0BoardPos;
+              inputLayout.circuit.componentNameToComponentMap[componentName]
+                  .pin0AbsPos.cast<float>();
+          dragPin0BoardOffset =
+              getMouseBoardPos(mousePos(), zoom, panOffsetScrPos)
+              - pin0BoardPos;
         }
       }
       else {
@@ -403,9 +391,10 @@ public:
     // Mouse wheel zoom towards or away from current mouse position
     setZoomPan(getMouseScrPos(mousePos()));
     // zoom towards center of board
-//    auto lock = inputLayout.scopeLock();
-//    Pos centerBoardPos(inputLayout.gridW / 2.0f, inputLayout.gridH / 2.0f);
-//    setZoomPan(boardToScrPos(centerBoardPos, zoom, panOffsetScrPos));
+    //    auto lock = inputLayout.scopeLock();
+    //    Pos centerBoardPos(inputLayout.gridW / 2.0f, inputLayout.gridH /
+    //    2.0f);
+    //    setZoomPan(boardToScrPos(centerBoardPos, zoom, panOffsetScrPos));
     return true;
   }
 
@@ -416,8 +405,9 @@ public:
     auto beforeMouseBoardPos = screenToBoardPos(scrPos, zoom, panOffsetScrPos);
     zoom = expf(zoomLinear);
     auto afterMouseBoardPos = screenToBoardPos(scrPos, zoom, panOffsetScrPos);
-    panOffsetScrPos -= boardToScrPos(beforeMouseBoardPos, zoom, panOffsetScrPos)
-                       - boardToScrPos(afterMouseBoardPos, zoom, panOffsetScrPos);
+    panOffsetScrPos -=
+        boardToScrPos(beforeMouseBoardPos, zoom, panOffsetScrPos)
+        - boardToScrPos(afterMouseBoardPos, zoom, panOffsetScrPos);
     isZoomPanAdjusted = true;
   }
 
@@ -438,13 +428,8 @@ public:
     windowW = size.x();
     windowH = size.y();
     projMat = glm::ortho(
-                0.0f,
-                static_cast<float>(size.x()),
-                static_cast<float>(size.y()),
-                0.0f,
-                0.0f,
-                100.0f
-              );
+        0.0f, static_cast<float>(size.x()), static_cast<float>(size.y()), 0.0f,
+        0.0f, 100.0f);
     glViewport(0, 0, size.x(), size.y());
     // Move the GUI window to the upper right corner
     auto w = formWin->width();
@@ -466,11 +451,14 @@ public:
       std::lock_guard<std::mutex> lockStatus(statusMutex);
       auto nowTimestamp = std::chrono::high_resolution_clock::now();
       auto layoutElapsed = nowTimestamp - inputLayout.getBaseTimestamp();
-      auto layoutElapsedSec = std::chrono::duration_cast<std::chrono::milliseconds>
-                              (layoutElapsed).count() / 1000.0f;
+      auto layoutElapsedSec =
+          std::chrono::duration_cast<std::chrono::milliseconds>(layoutElapsed)
+              .count()
+          / 1000.0f;
       guiStatus.nCombinationsChecked = status.nCombinationsChecked;
       if (layoutElapsedSec > 0) {
-        guiStatus.nCheckedPerSec = status.nCombinationsChecked / layoutElapsedSec;
+        guiStatus.nCheckedPerSec =
+            status.nCombinationsChecked / layoutElapsedSec;
       }
     }
     // Current
@@ -542,16 +530,10 @@ public:
       if (!layout.circuit.hasParserError()) {
         // Render the selected layout
         render.draw(
-          layout,
-          projMat,
-          panOffsetScrPos,
-          getMouseBoardPos(mousePos(), zoom, panOffsetScrPos),
-          zoom,
-          windowW,
-          windowH,
-          isShowRatsNestEnabled || isComponentDragActive,
-          isShowOnlyFailedEnabled && !isComponentDragActive
-        );
+            layout, projMat, panOffsetScrPos,
+            getMouseBoardPos(mousePos(), zoom, panOffsetScrPos), zoom, windowW,
+            windowH, isShowRatsNestEnabled || isComponentDragActive,
+            isShowOnlyFailedEnabled && !isComponentDragActive);
       }
     }
 
@@ -577,18 +559,20 @@ public:
 
     checkGlError();
 
-//    // Video
-//    // avconv -framerate 60 -i video/frame_%05d.tga -c:v libx264 -pix_fmt yuv420p -r 60 -crf 16 video.mp4
-//    static int frameIdx = 0;
-//    static int intervalIdx = 0;
-//    if (!(intervalIdx++ % 20)) {
-//      auto tgaFileName = fmt::format("./video/frame_{:05d}.tga", frameIdx++);
-//      saveScreenshot(tgaFileName, windowW, windowH);
-//      fmt::print("{} {} {}\n", intervalIdx, frameIdx, tgaFileName);
-//    }
+    //    // Video
+    //    // avconv -framerate 60 -i video/frame_%05d.tga -c:v libx264 -pix_fmt
+    //    yuv420p -r 60 -crf 16 video.mp4
+    //    static int frameIdx = 0;
+    //    static int intervalIdx = 0;
+    //    if (!(intervalIdx++ % 20)) {
+    //      auto tgaFileName = fmt::format("./video/frame_{:05d}.tga",
+    //      frameIdx++);
+    //      saveScreenshot(tgaFileName, windowW, windowH);
+    //      fmt::print("{} {} {}\n", intervalIdx, frameIdx, tgaFileName);
+    //    }
   }
 
-private:
+  private:
   GLuint vertexArrayId;
 };
 
@@ -606,9 +590,9 @@ void handleMouseDragOperations(const IntPos& mousePos)
     auto mouseBoardPos = getMouseBoardPos(mousePos, zoom, panOffsetScrPos);
     Via v = (mouseBoardPos - dragPin0BoardOffset + 0.5f).cast<int>();
     auto component =
-      inputLayout.circuit.componentNameToComponentMap[dragComponentName];
+        inputLayout.circuit.componentNameToComponentMap[dragComponentName];
     auto footprint =
-      inputLayout.circuit.calcComponentFootprint(dragComponentName);
+        inputLayout.circuit.calcComponentFootprint(dragComponentName);
     auto startPin0Offset = component.pin0AbsPos - footprint.start;
     auto endPin0Offset = footprint.end - component.pin0AbsPos;
     if (v.x() + footprint.start.x() - startPin0Offset.x() < 0) {
@@ -637,8 +621,9 @@ void renderDragStatus(const IntPos mouseScrPos)
   if (isComponentDragActive) {
     auto mouseBoardPos = getMouseBoardPos(mouseScrPos, zoom, panOffsetScrPos);
     Via mouseVia = (mouseBoardPos - dragPin0BoardOffset + 0.5f).cast<int>();
-    dragText.print(projMat, mouseScrPos.x(), mouseScrPos.y(), 0,
-                   fmt::format("({},{})", mouseVia.x(), mouseVia.y()));
+    dragText.print(
+        projMat, mouseScrPos.x(), mouseScrPos.y(), 0,
+        fmt::format("({},{})", mouseVia.x(), mouseVia.y()));
   }
 }
 
@@ -647,17 +632,16 @@ void centerBoard()
   if (isZoomPanAdjusted || !inputLayout.isReadyForRouting) {
     return;
   }
-  float zoomW = (windowW - INITIAL_BORDER_PIXELS) / static_cast<float>
-                (inputLayout.gridW);
-  float zoomH = (windowH - INITIAL_BORDER_PIXELS) / static_cast<float>
-                (inputLayout.gridH);
+  float zoomW =
+      (windowW - INITIAL_BORDER_PIXELS) / static_cast<float>(inputLayout.gridW);
+  float zoomH =
+      (windowH - INITIAL_BORDER_PIXELS) / static_cast<float>(inputLayout.gridH);
   zoom = std::min(zoomW, zoomH);
   float boardScreenW = (inputLayout.gridW - 1) * zoom;
   float boardScreenH = (inputLayout.gridH - 1) * zoom;
-  panOffsetScrPos = Pos(
-                      windowW / 2.0f - boardScreenW / 2.0f,
-                      windowH / 2.0f - boardScreenH / 2.0f
-                    );
+  panOffsetScrPos =
+      Pos(windowW / 2.0f - boardScreenW / 2.0f,
+          windowH / 2.0f - boardScreenH / 2.0f);
   zoomLinear = logf(zoom);
 }
 
@@ -698,8 +682,7 @@ void routerThread()
     if (useRandomSearch) {
       for (int i = 0;
            i < static_cast<int>(threadLayout.circuit.connectionVec.size());
-           ++i
-          ) {
+           ++i) {
         connectionIdxVec.push_back(i);
       }
       random_shuffle(connectionIdxVec.begin(), connectionIdxVec.end());
@@ -724,9 +707,9 @@ void routerThread()
       //  layout_.settings.strip_cost = distribution(generator);
       //  layout_.settings.wire_cost = distribution(generator);
       //  layout_.settings.via_cost = distribution(generator);
-      Router
-      router(threadLayout, connectionIdxVec, threadStopRouter, inputLayout,
-             currentLayout, maxRenderDelay);
+      Router router(
+          threadLayout, connectionIdxVec, threadStopRouter, inputLayout,
+          currentLayout, maxRenderDelay);
       auto isAborted = router.route();
       // Ignore result if the routing was aborted or the input has changed.
       if (isAborted || !threadLayout.isBasedOn(inputLayout)) {
@@ -740,9 +723,7 @@ void routerThread()
     if (!useRandomSearch) {
       auto lock = geneticAlgorithm.scopeLock();
       geneticAlgorithm.releaseOrdering(
-        orderingIdx,
-        threadLayout.nCompletedRoutes, threadLayout.cost
-      );
+          orderingIdx, threadLayout.nCompletedRoutes, threadLayout.cost);
     }
     // Update currentLayout
     {
@@ -754,10 +735,10 @@ void routerThread()
       auto inputLock = inputLayout.scopeLock();
       auto bestLock = bestLayout.scopeLock();
       auto hasMoreCompletedRoutes =
-        threadLayout.nCompletedRoutes > bestLayout.nCompletedRoutes;
+          threadLayout.nCompletedRoutes > bestLayout.nCompletedRoutes;
       auto hasEqualRoutesAndBetterScore =
-        threadLayout.nCompletedRoutes == bestLayout.nCompletedRoutes
-        && threadLayout.cost < bestLayout.cost;
+          threadLayout.nCompletedRoutes == bestLayout.nCompletedRoutes
+          && threadLayout.cost < bestLayout.cost;
       auto isBasedOnOtherLayout = !bestLayout.isBasedOn(threadLayout);
       if (hasMoreCompletedRoutes || hasEqualRoutesAndBetterScore
           || isBasedOnOtherLayout) {
@@ -808,14 +789,13 @@ void parserThread()
   static double prevMtime = 0.0;
   static double curMtime = 0.0;
   while (!threadStopParser.isStopped()) {
-		if (isParserPaused) {
-			std::this_thread::sleep_for(100ms);
-			continue;
-		}
+    if (isParserPaused) {
+      std::this_thread::sleep_for(100ms);
+      continue;
+    }
     try {
       curMtime = getMtime(circuitFilePath);
-    }
-    catch (std::string errorMsg) {
+    } catch (std::string errorMsg) {
       {
         auto lock = inputLayout.scopeLock();
         inputLayout = Layout();
@@ -849,14 +829,14 @@ void resetInputLayout()
   guiStatus.reset();
   {
     auto lock = geneticAlgorithm.scopeLock();
-    geneticAlgorithm.reset(static_cast<int>
-                           (inputLayout.circuit.connectionVec.size()));
+    geneticAlgorithm.reset(
+        static_cast<int>(inputLayout.circuit.connectionVec.size()));
   }
 }
 
 int main(int argc, char** argv)
 {
-//  fmt::print("GLFW: {}\n", glfwGetVersionString());
+  //  fmt::print("GLFW: {}\n", glfwGetVersionString());
   std::srand(std::time(0));
 
   parseCommandLineArgs(argc, argv);
@@ -871,8 +851,7 @@ int main(int argc, char** argv)
     else {
       runGui();
     }
-  }
-  catch (const std::runtime_error& e) {
+  } catch (const std::runtime_error& e) {
     auto errorStr = fmt::format("Fatal error: {}", e.what());
     fmt::print(stderr, errorStr + "\n");
 #if defined(_WIN32)
@@ -896,15 +875,17 @@ void parseCommandLineArgs(int argc, char** argv)
   cli::Parser parser(argc, argv);
 
   parser.set_optional<bool>("n", "nogui", false, "Do not open the GUI window");
-  parser.set_optional<bool>("r", "random", false,
-                            "Use random search instead of genetic algorithm");
-  parser.set_optional<bool>("e", "exitcomplete", false,
-                            "Print stats and exit when first complete layout is found");
-  parser.set_optional<long>("a", "exitafter", -1,
-                            "Print stats and exit after specified number of checks");
+  parser.set_optional<bool>(
+      "r", "random", false, "Use random search instead of genetic algorithm");
+  parser.set_optional<bool>(
+      "e", "exitcomplete", false,
+      "Print stats and exit when first complete layout is found");
+  parser.set_optional<long>(
+      "a", "exitafter", -1,
+      "Print stats and exit after specified number of checks");
   parser.set_optional<long>("p", "checkpoint", -1, "Print stats at interval");
-  parser.set_optional<std::string>("c", "circuit", CIRCUIT_FILE_PATH,
-                                   "Path to .circuit file");
+  parser.set_optional<std::string>(
+      "c", "circuit", CIRCUIT_FILE_PATH, "Path to .circuit file");
   // parser.set_required<std::vector<short>>("v", "values", "By using a vector
   // it is possible to receive a multitude of inputs.");
 
@@ -921,7 +902,7 @@ void parseCommandLineArgs(int argc, char** argv)
 
 void runHeadless()
 {
-	isParserPaused = false;
+  isParserPaused = false;
   while (!threadStopApp.isStopped()) {
     std::this_thread::sleep_for(100ms);
   }
@@ -934,11 +915,11 @@ void runGui()
   nanogui::ref<Application> app = new Application();
   app->setVisible(true);
   setWindowIcon("./icons/48x48.png");
-	isParserPaused = false;
+  isParserPaused = false;
 
-	nanogui::mainloop();
+  nanogui::mainloop();
 
-	delete form;
+  delete form;
   guiStatus.free();
   nanogui::shutdown();
 }
@@ -954,10 +935,8 @@ void printStats()
   auto inputLock = inputLayout.scopeLock();
   auto bestLock = bestLayout.scopeLock();
   fmt::print(
-    "search={} nChecks={:n} Best: nCompletedRoutes={:n} nFailedRoutes={:n} cost={:n}\n",
-    useRandomSearch ? "random" : "GA",
-    status.nCombinationsChecked,
-    bestLayout.nCompletedRoutes,
-    bestLayout.nFailedRoutes,
-    bestLayout.cost);
+      "search={} nChecks={:n} Best: nCompletedRoutes={:n} nFailedRoutes={:n} "
+      "cost={:n}\n",
+      useRandomSearch ? "random" : "GA", status.nCombinationsChecked,
+      bestLayout.nCompletedRoutes, bestLayout.nFailedRoutes, bestLayout.cost);
 }

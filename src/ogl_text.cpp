@@ -7,12 +7,10 @@
 #include "ogl_text.h"
 #include "shader.h"
 
-
 const int MAX_TEXTURE_SIZE_W_H = 1024 * 1024;
 // FT returns some values in 1/64th of pixel size.
 const int FT_SIZE_FACTOR = 64;
 const int BACKGROUND_PADDING_PIXELS = 0;
-
 
 OglText::OglText(const std::string& fontPath, int fontH)
   : oglInitialized_(false),
@@ -38,7 +36,7 @@ void OglText::openGLInit()
 {
   textProgramId_ = createProgram("text.vert", "text.frag");
   textBackgroundProgramId =
-    createProgram("text_background.vert", "text_background.frag");
+      createProgram("text_background.vert", "text_background.frag");
   glGenBuffers(1, &vertexBufId_);
   glGenBuffers(1, &texBufId_);
   glGenTextures(1, &textureId_);
@@ -61,9 +59,9 @@ void OglText::setFontH(int fontH)
   }
 }
 
-
-void OglText::print(glm::tmat4x4<float>& projMat, int x, int y, int nLine,
-                    const std::string& str, bool drawBackground)
+void OglText::print(
+    glm::tmat4x4<float>& projMat, int x, int y, int nLine,
+    const std::string& str, bool drawBackground)
 {
   assert(oglInitialized_); // Call openGLInit() after creating an OpenGL context
   glDisable(GL_DEPTH_TEST);
@@ -73,8 +71,8 @@ void OglText::print(glm::tmat4x4<float>& projMat, int x, int y, int nLine,
 
   if (drawBackground) {
     glUseProgram(textBackgroundProgramId);
-    GLint projectionId = glGetUniformLocation(textBackgroundProgramId,
-                         "projection");
+    GLint projectionId =
+        glGetUniformLocation(textBackgroundProgramId, "projection");
     glUniformMatrix4fv(projectionId, 1, GL_FALSE, glm::value_ptr(projMat));
     drawTextBackground(x, y, nLine, str);
   }
@@ -116,8 +114,10 @@ void OglText::createFreeType(const std::string& fontPath)
     exit(0);
   }
   else if (error) {
-    fmt::print(stderr,
-               "Error: The font file could not be opened, could not be read or is broken\n");
+    fmt::print(
+        stderr,
+        "Error: The font file could not be opened, could not be read or is "
+        "broken\n");
     exit(0);
   }
 }
@@ -130,9 +130,8 @@ void OglText::createFontTexture()
 {
   int error = FT_Set_Pixel_Sizes(face_, 0, fontH_);
   if (error) {
-    fmt::print(stderr,
-               "Error: Could not set the pixel size. font_h={}\n",
-               fontH_);
+    fmt::print(
+        stderr, "Error: Could not set the pixel size. font_h={}\n", fontH_);
     exit(0);
   }
   std::vector<unsigned char> fontVec;
@@ -148,9 +147,9 @@ void OglText::createFontTexture()
   }
   if (!fitOk) {
     fmt::print(
-      "Error: Unable to fit font into texture. font_h={} MAX_TEXTURE_SIZE_W_H={}\n",
-      fontH_,
-      MAX_TEXTURE_SIZE_W_H);
+        "Error: Unable to fit font into texture. font_h={} "
+        "MAX_TEXTURE_SIZE_W_H={}\n",
+        fontH_, MAX_TEXTURE_SIZE_W_H);
     exit(0);
   }
 
@@ -159,23 +158,19 @@ void OglText::createFontTexture()
 
   glBindTexture(GL_TEXTURE_2D, textureId_);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexImage2D(GL_TEXTURE_2D,
-               0,
-               GL_R8,
-               texWH_,
-               texWH_,
-               0,
-               GL_RED,
-               GL_UNSIGNED_BYTE,
-               &fontVec[0]);
+  glTexImage2D(
+      GL_TEXTURE_2D, 0, GL_R8, texWH_, texWH_, 0, GL_RED, GL_UNSIGNED_BYTE,
+      &fontVec[0]);
 
-//  fmt::print("Info: New font texture size: {0}x{0}\n", texWH_);
+  //  fmt::print("Info: New font texture size: {0}x{0}\n", texWH_);
 }
 
 bool OglText::renderFont(std::vector<unsigned char>& fontVec)
 {
-  // Iterate over all the printable ASCII characters, which span from ASCII 32 to 126. 32 is space, which typically
-  // renders as a 0x0 texture. We include it anyway, so that we can get the advance metadata, which says how wide
+  // Iterate over all the printable ASCII characters, which span from ASCII 32
+  // to 126. 32 is space, which typically
+  // renders as a 0x0 texture. We include it anyway, so that we can get the
+  // advance metadata, which says how wide
   // the space is in the particular font.
   bool fitOk = true;
   int tex_x = 0;
@@ -183,9 +178,9 @@ bool OglText::renderFont(std::vector<unsigned char>& fontVec)
   for (int i = 32; i <= 126; ++i) {
     int error = FT_Load_Char(face_, i, FT_LOAD_RENDER); //  | FT_LOAD_MONOCHROME
     if (error) {
-      fmt::print(stderr,
-                 "Warn: Skipping character that couldn't be rendered. ASCII={}\n",
-                 i);
+      fmt::print(
+          stderr,
+          "Warn: Skipping character that couldn't be rendered. ASCII={}\n", i);
       continue;
     }
 
@@ -208,16 +203,15 @@ bool OglText::renderFont(std::vector<unsigned char>& fontVec)
     for (unsigned int y = 0; y < glyph_bitmap.rows; ++y) {
       for (unsigned int x = 0; x < glyph_bitmap.width; ++x) {
         fontVec[tex_x + x + (tex_y + y) * texWH_] =
-          glyph_bitmap.buffer[x + y * glyph_bitmap.pitch];
+            glyph_bitmap.buffer[x + y * glyph_bitmap.pitch];
       }
     }
 
-    charMeta_.push_back({tex_x, tex_y, static_cast<int>(glyph_bitmap.width),
-                         static_cast<int>(glyph_bitmap.rows), -slot->bitmap_top,
-                         slot
-                         ->bitmap_left, // Negate Y since FT uses cartesian coords.
-                         static_cast<int>(slot->advance.x / FT_SIZE_FACTOR)
-                        });
+    charMeta_.push_back(
+        { tex_x, tex_y, static_cast<int>(glyph_bitmap.width),
+          static_cast<int>(glyph_bitmap.rows), -slot->bitmap_top,
+          slot->bitmap_left, // Negate Y since FT uses cartesian coords.
+          static_cast<int>(slot->advance.x / FT_SIZE_FACTOR) });
 
     tex_x += glyph_bitmap.width;
   }
@@ -241,63 +235,62 @@ void OglText::drawText(int x, int y, int nLine, const std::string& str)
     float x2 = x1 + c.tex_w;
     float y2 = y1 + c.tex_h;
 
-    triVec.insert(triVec.end(), {x1, y1, 0.0f});
-    triVec.insert(triVec.end(), {x1, y2, 0.0f});
-    triVec.insert(triVec.end(), {x2, y2, 0.0f});
+    triVec.insert(triVec.end(), { x1, y1, 0.0f });
+    triVec.insert(triVec.end(), { x1, y2, 0.0f });
+    triVec.insert(triVec.end(), { x2, y2, 0.0f });
 
-    triVec.insert(triVec.end(), {x1, y1, 0.0f});
-    triVec.insert(triVec.end(), {x2, y2, 0.0f});
-    triVec.insert(triVec.end(), {x2, y1, 0.0f});
+    triVec.insert(triVec.end(), { x1, y1, 0.0f });
+    triVec.insert(triVec.end(), { x2, y2, 0.0f });
+    triVec.insert(triVec.end(), { x2, y1, 0.0f });
 
     float tx1 = c.tex_x;
     float ty1 = c.tex_y;
     float tx2 = tx1 + c.tex_w;
     float ty2 = ty1 + c.tex_h;
 
-    texVec.insert(texVec.end(), {tx1, ty1});
-    texVec.insert(texVec.end(), {tx1, ty2});
-    texVec.insert(texVec.end(), {tx2, ty2});
+    texVec.insert(texVec.end(), { tx1, ty1 });
+    texVec.insert(texVec.end(), { tx1, ty2 });
+    texVec.insert(texVec.end(), { tx2, ty2 });
 
-    texVec.insert(texVec.end(), {tx1, ty1});
-    texVec.insert(texVec.end(), {tx2, ty2});
-    texVec.insert(texVec.end(), {tx2, ty1});
+    texVec.insert(texVec.end(), { tx1, ty1 });
+    texVec.insert(texVec.end(), { tx2, ty2 });
+    texVec.insert(texVec.end(), { tx2, ty1 });
 
     screen_x += c.advance;
   }
 
   glEnableVertexAttribArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, vertexBufId_);
-  glBufferData(GL_ARRAY_BUFFER,
-               triVec.size() * sizeof(GLfloat),
-               &triVec[0],
-               GL_STATIC_DRAW);
-  glVertexAttribPointer(0,         // attribute
-                        3,         // size
-                        GL_FLOAT,  // type
-                        GL_FALSE,  // normalized?
-                        0,         // stride
-                        (void*) 0    // array buffer offset
-                       );
+  glBufferData(
+      GL_ARRAY_BUFFER, triVec.size() * sizeof(GLfloat), &triVec[0],
+      GL_STATIC_DRAW);
+  glVertexAttribPointer(
+      0, // attribute
+      3, // size
+      GL_FLOAT, // type
+      GL_FALSE, // normalized?
+      0, // stride
+      (void*)0 // array buffer offset
+      );
 
   glEnableVertexAttribArray(1);
   glBindBuffer(GL_ARRAY_BUFFER, texBufId_);
-  glBufferData(GL_ARRAY_BUFFER,
-               texVec.size() * sizeof(GLfloat),
-               &texVec[0],
-               GL_STATIC_DRAW);
-  glVertexAttribPointer(1,         // attribute
-                        2,         // size
-                        GL_FLOAT,  // type
-                        GL_FALSE,  // normalized?
-                        0,         // stride
-                        (void*) 0    // array buffer offset
-                       );
+  glBufferData(
+      GL_ARRAY_BUFFER, texVec.size() * sizeof(GLfloat), &texVec[0],
+      GL_STATIC_DRAW);
+  glVertexAttribPointer(
+      1, // attribute
+      2, // size
+      GL_FLOAT, // type
+      GL_FALSE, // normalized?
+      0, // stride
+      (void*)0 // array buffer offset
+      );
 
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
 }
 
-void OglText::drawTextBackground(int x, int y, int nLine,
-                                 const std::string& str)
+void OglText::drawTextBackground(int x, int y, int nLine, const std::string& str)
 {
   auto strW = calcStringWidth(str);
 
@@ -312,26 +305,26 @@ void OglText::drawTextBackground(int x, int y, int nLine,
 
   std::vector<GLfloat> triVec;
 
-  triVec.insert(triVec.end(), {x1, y1, 0.0f});
-  triVec.insert(triVec.end(), {x1, y2, 0.0f});
-  triVec.insert(triVec.end(), {x2, y2, 0.0f});
+  triVec.insert(triVec.end(), { x1, y1, 0.0f });
+  triVec.insert(triVec.end(), { x1, y2, 0.0f });
+  triVec.insert(triVec.end(), { x2, y2, 0.0f });
 
-  triVec.insert(triVec.end(), {x1, y1, 0.0f});
-  triVec.insert(triVec.end(), {x2, y2, 0.0f});
-  triVec.insert(triVec.end(), {x2, y1, 0.0f});
+  triVec.insert(triVec.end(), { x1, y1, 0.0f });
+  triVec.insert(triVec.end(), { x2, y2, 0.0f });
+  triVec.insert(triVec.end(), { x2, y1, 0.0f });
 
   glEnableVertexAttribArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, vertexBufId_);
-  glBufferData(GL_ARRAY_BUFFER,
-               triVec.size() * sizeof(GLfloat),
-               &triVec[0],
-               GL_STATIC_DRAW);
-  glVertexAttribPointer(0,         // attribute
-                        3,         // size
-                        GL_FLOAT,  // type
-                        GL_FALSE,  // normalized?
-                        0,         // stride
-                        (void*) 0    // array buffer offset
-                       );
+  glBufferData(
+      GL_ARRAY_BUFFER, triVec.size() * sizeof(GLfloat), &triVec[0],
+      GL_STATIC_DRAW);
+  glVertexAttribPointer(
+      0, // attribute
+      3, // size
+      GL_FLOAT, // type
+      GL_FALSE, // normalized?
+      0, // stride
+      (void*)0 // array buffer offset
+      );
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
 }

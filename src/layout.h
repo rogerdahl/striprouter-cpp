@@ -1,15 +1,14 @@
 #pragma once
 
+#include <chrono>
 #include <mutex>
 #include <set>
 #include <thread>
 #include <vector>
-#include <chrono>
 
 #include "circuit.h"
 #include "settings.h"
 #include "via.h"
-
 
 typedef std::vector<LayerVia> RouteStepVec;
 typedef std::vector<LayerStartEndVia> RouteSectionVec;
@@ -19,7 +18,7 @@ typedef std::vector<bool> RouteStatusVec;
 typedef std::vector<Via> StripCutVec;
 
 // Nets
-typedef std::set<Via, std::function<bool(const Via&, const Via&)>> ViaSet;
+typedef std::set<Via, std::function<bool(const Via&, const Via&)> > ViaSet;
 typedef std::vector<ViaSet> ViaSetVec;
 typedef std::vector<int> SetIdxVec;
 
@@ -27,7 +26,7 @@ typedef std::chrono::time_point<std::chrono::high_resolution_clock> Timestamp;
 
 class Layout
 {
-public:
+  public:
   Layout();
   Layout(const Layout&);
   Layout& operator=(const Layout&);
@@ -74,7 +73,7 @@ public:
   WireLayerViaVec diagTraceVec;
   StringVec errorStringVec;
 
-private:
+  private:
   void copy(const Layout& s);
   std::mutex mutex_;
   Timestamp timestamp_;

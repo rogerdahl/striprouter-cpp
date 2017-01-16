@@ -1,12 +1,11 @@
 #pragma once
 
-#include <set>
 #include <queue>
+#include <set>
 
 #include "layout.h"
-#include "via.h"
 #include "nets.h"
-
+#include "via.h"
 
 typedef std::priority_queue<LayerCostVia> FrontierPri;
 typedef std::set<LayerVia> FrontierSet;
@@ -16,14 +15,13 @@ class Router;
 
 class UniformCostSearch
 {
-public:
-  UniformCostSearch(Router& router,
-                    Layout& layout,
-                    Nets& nets,
-                    Via& shortcutEndVia,
-                    const StartEndVia& viaStartEnd);
+  public:
+  UniformCostSearch(
+      Router& router, Layout& layout, Nets& nets, Via& shortcutEndVia,
+      const StartEndVia& viaStartEnd);
   RouteStepVec findLowestCostRoute();
-private:
+
+  private:
   bool findCosts(Via& shortcutEndVia);
   void exploreNeighbour(LayerCostVia& node, LayerCostVia n);
   void exploreFrontier(LayerCostVia& node, LayerCostVia n);

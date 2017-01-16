@@ -17,13 +17,11 @@ std::string str(const Via& v)
 // ValidVia
 //
 
-ValidVia::ValidVia()
-  : via(-1, -1), isValid(false)
+ValidVia::ValidVia() : via(-1, -1), isValid(false)
 {
 }
 
-ValidVia::ValidVia(const Via& _via)
-  : via(_via), isValid(true)
+ValidVia::ValidVia(const Via& _via) : via(_via), isValid(true)
 {
 }
 
@@ -36,8 +34,7 @@ ValidVia::ValidVia(const Via& _via, bool _isValid)
 // LayerVia
 //
 
-LayerVia::LayerVia()
-  : via(-1, -1), isWireLayer(false)
+LayerVia::LayerVia() : via(-1, -1), isWireLayer(false)
 {
 }
 
@@ -94,8 +91,7 @@ std::string LayerVia::str() const
 // LayerCostVia
 //
 
-LayerCostVia::LayerCostVia()
-  : ::LayerVia(), cost(0)
+LayerCostVia::LayerCostVia() : ::LayerVia(), cost(0)
 {
 }
 
@@ -124,8 +120,7 @@ bool operator<(const LayerCostVia& l, const LayerCostVia& r)
 // StartEndVia
 //
 
-StartEndVia::StartEndVia()
-  : start(-1, -1), end(-1, -1)
+StartEndVia::StartEndVia() : start(-1, -1), end(-1, -1)
 {
 }
 
@@ -142,8 +137,8 @@ LayerStartEndVia::LayerStartEndVia()
 {
 }
 
-LayerStartEndVia::LayerStartEndVia(const LayerVia& startIn,
-                                   const LayerVia& endIn)
+LayerStartEndVia::LayerStartEndVia(
+    const LayerVia& startIn, const LayerVia& endIn)
   : start(startIn), end(endIn)
 {
 }
@@ -152,8 +147,7 @@ LayerStartEndVia::LayerStartEndVia(const LayerVia& startIn,
 // WireLayerVia
 //
 
-WireLayerVia::WireLayerVia()
-  : isWireSideBlocked(false)
+WireLayerVia::WireLayerVia() : isWireSideBlocked(false)
 {
 }
 
@@ -161,8 +155,6 @@ WireLayerVia::WireLayerVia()
 // CostVia
 //
 
-CostVia::CostVia()
-  : wireCost(INT_MAX), stripCost(INT_MAX)
+CostVia::CostVia() : wireCost(INT_MAX), stripCost(INT_MAX)
 {
 }
-

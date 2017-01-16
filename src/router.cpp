@@ -6,26 +6,21 @@
 #include "router.h"
 #include "ucs.h"
 
-
 Router::Router(
-  Layout& _layout, ConnectionIdxVec& connectionIdxVec,
-  ThreadStop& threadStop, Layout& _inputLayout, Layout& _currentLayout,
-  const TimeDuration& _maxRenderDelay
-)
+    Layout& _layout, ConnectionIdxVec& connectionIdxVec, ThreadStop& threadStop,
+    Layout& _inputLayout, Layout& _currentLayout,
+    const TimeDuration& _maxRenderDelay)
   : layout_(_layout),
     connectionIdxVec_(connectionIdxVec),
     inputLayout_(_inputLayout),
     currentLayout_(_currentLayout),
     nets_(_layout),
     threadStop_(threadStop),
-    allPinSet_(
-      ViaSet([](const Via & a, const Via & b) -> bool {
-  return std::lexicographical_compare(a.data(),
-  a.data() + a.size(),
-  b.data(),
-  b.data() + b.size());
-})),
-maxRenderDelay_(_maxRenderDelay)
+    allPinSet_(ViaSet([](const Via& a, const Via& b) -> bool {
+      return std::lexicographical_compare(
+          a.data(), a.data() + a.size(), b.data(), b.data() + b.size());
+    })),
+    maxRenderDelay_(_maxRenderDelay)
 {
   viaTraceVec_ = WireLayerViaVec(layout_.gridW * layout_.gridH);
 }
@@ -37,8 +32,8 @@ bool Router::route()
   registerActiveComponentPins();
   auto isAborted = routeAll();
   layout_.stripCutVec = findStripCuts();
-  layout_.cost += layout_.settings.cut_cost * static_cast<int>
-                  (layout_.stripCutVec.size());
+  layout_.cost +=
+      layout_.settings.cut_cost * static_cast<int>(layout_.stripCutVec.size());
   layout_.isReadyForEval = true;
   if (layout_.hasError) {
     layout_.diagTraceVec = viaTraceVec_;
@@ -62,11 +57,12 @@ bool Router::routeAll()
     layout_.routeStatusVec[connectionIdx] = routeWasFound;
 
 #ifndef NDEBUG
-    // For debugging, exit router after a given number of routes.
+// For debugging, exit router after a given number of routes.
 //  static int breakIdx = 0;
 //    if (++breakIdx == 3) {
 //      layout_.hasError = true;
-//      layout_.errorStringVec.push_back(fmt::format("Forced exit after route {}", breakIdx));
+//      layout_.errorStringVec.push_back(fmt::format("Forced exit after route
+//      {}", breakIdx));
 //    }
 #endif
 
@@ -155,8 +151,8 @@ RouteSectionVec Router::condenseRoute(const RouteStepVec& routeStepVec)
     }
   }
   if (startSection != routeStepVec.end() - 1) {
-    routeSectionVec
-    .push_back(LayerStartEndVia(*startSection, *(routeStepVec.end() - 1)));
+    routeSectionVec.push_back(
+        LayerStartEndVia(*startSection, *(routeStepVec.end() - 1)));
   }
   return routeSectionVec;
 }
@@ -196,10 +192,7 @@ StripCutVec Router::findStripCuts()
 //
 
 bool Router::isAvailable(
-  const LayerVia& via,
-  const Via& startVia,
-  const Via& targetVia
-)
+    const LayerVia& via, const Via& startVia, const Via& targetVia)
 {
   if (via.via.x() < 0 || via.via.y() < 0 || via.via.x() >= layout_.gridW
       || via.via.y() >= layout_.gridH) {
@@ -212,8 +205,7 @@ bool Router::isAvailable(
   }
   else {
     // If it has an equivalent, it must be our equivalent
-    if (nets_.hasConnection(via.via)
-        && !nets_.isConnected(via.via, startVia)) {
+    if (nets_.hasConnection(via.via) && !nets_.isConnected(via.via, startVia)) {
       return false;
     }
     // Can go to component pin only if it's our equivalent.
@@ -222,7 +214,6 @@ bool Router::isAvailable(
         return false;
       }
     }
-
   }
   // Can go there!
   return true;
@@ -302,7 +293,6 @@ void Router::joinAllConnections()
   }
 }
 
-
 void Router::registerActiveComponentPins()
 {
   for (auto& ci : layout_.circuit.componentNameToComponentMap) {
@@ -331,4 +321,3 @@ void Router::addWireJumps(const RouteSectionVec& routeSectionVec)
     }
   }
 }
-

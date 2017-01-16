@@ -2,12 +2,11 @@
 
 #include <mutex>
 
-
 extern std::mutex statusMutex;
 
 class Status
 {
-public:
+  public:
   Status();
   int nCombinationsChecked;
 };

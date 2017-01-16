@@ -17,7 +17,7 @@
 
 class Nets
 {
-public:
+  public:
   Nets(Layout&);
   void connect(const Via& viaA, const Via& viaB);
   void connectRoute(const RouteStepVec& routeStepVec);
@@ -26,7 +26,8 @@ public:
   bool hasConnection(const Via& via);
   ViaSet& getViaSet(const Via& via);
   int getViaSetIdx(const Via& via);
-private:
+
+  private:
   int createViaSet();
   Layout& layout_;
   SetIdxVec& setIdxVec_;

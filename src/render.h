@@ -9,34 +9,26 @@
 #include <glm/gtx/string_cast.hpp>
 
 #include "circuit.h"
+#include "circuit_parser.h"
 #include "layout.h"
 #include "ogl_text.h"
-#include "circuit_parser.h"
 #include "router.h"
-
 
 typedef Eigen::Array4f RGBA;
 
 class Render
 {
-public:
+  public:
   Render(); // float zoom
   ~Render();
   void openGLInit();
   void openGLFree();
   void draw(
-    Layout& layout,
-    glm::tmat4x4<float>& projMat,
-    const Pos& boardScreenOffset,
-    const Pos& mouseBoardPos,
-    float zoom,
-    int windowW,
-    int windowH,
-    bool showRatsNestBool,
-    bool showOnlyFailedBool
-  );
+      Layout& layout, glm::tmat4x4<float>& projMat,
+      const Pos& boardScreenOffset, const Pos& mouseBoardPos, float zoom,
+      int windowW, int windowH, bool showRatsNestBool, bool showOnlyFailedBool);
 
-private:
+  private:
   void drawUsedStrips();
   void drawWireSections();
   void drawComponents();
@@ -49,8 +41,8 @@ private:
   void drawFilledCircle(const Pos& center, float radius, const RGBA&);
   void addFilledCircle(const Pos& center, float radius);
   void drawFilledCircleBuffer(const RGBA& rgba);
-  void
-  drawThickLine(const Pos& start, const Pos& end, float radius, const RGBA&);
+  void drawThickLine(
+      const Pos& start, const Pos& end, float radius, const RGBA&);
   void printNotation(Pos p, int nLine, std::string msg);
   void setColor(const RGBA&);
   bool isPointOutsideScreen(const Pos& p);

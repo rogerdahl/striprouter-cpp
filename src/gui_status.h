@@ -4,10 +4,9 @@
 
 #include <nanogui/nanogui.h>
 
-
 class GuiStatus
 {
-public:
+  public:
   GuiStatus();
   ~GuiStatus();
   void reset();
@@ -29,7 +28,8 @@ public:
   int nBestCompletedRoutes;
   int nBestFailedRoutes;
   double bestCost;
-private:
+
+  private:
   nanogui::Screen* screen_;
   nanogui::FormHelper* form_;
   nanogui::Window* formWin_;

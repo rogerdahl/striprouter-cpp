@@ -8,6 +8,8 @@ The output is a printable indication of where to place and solder wires and wher
 
 Tested on Windows 10 64-bit, Linux Mint 18 64-bit and Raspberry Pi 3 running the PIXEL OS. See [Releases](https://github.com/rogerdahl/striprouter/releases) for Windows and Linux binaries.
 
+If you have any questions, feel free to [create an issue](https://github.com/rogerdahl/ws2812b-neopixel-stuff/issues/new).
+
 The router is based on a novel search algorithm that combines topological ordering with a genetic algorithm (GA). I am calling this algorithm "Topo-GA" and have released it to the public domain. See details below.
 
 Costs can be assigned to resources such as stripboard area and solder points in order to direct the router towards preferred layouts.
@@ -102,9 +104,9 @@ The autorouter is based on an algorithm that combines topological ordering with 
 
 As of 2017-01-09, I have not found references to this approach online. If I have any rights to this algorithm as the inventor, I hereby relinquish those rights and release the algorithm, which I call "Topo-GA", to the public domain. The implementation in this repository remains under the MIT license used by this project and shall serve as prior art in the event of a copyright dispute.
 
-The genetic algorithm codes possible routing layouts in the genotypes of organisms and simulates a process of evolution for those organisms. Each organism carries a set of genes, the genotype, with each gene representing a dependency between two electrical connections in a circuit. Each dependency states that one connection should be routed before another, while still allowing an arbitrary number of other connections to be routed between the two. Phenotypes, which express the solutions coded in the genotypes, are then created by using topological ordering to resolve the dependencies. Contradictions in the genotype that cause recursive dependencies (loops) and discontinuities are handled during topological ordering by selecting the lowest available unrouted connection and using it as a new base.
+The genetic algorithm codes possible routing layouts in genotypes and simulates a process of evolution. The genotype is a set of genes, with each gene representing a dependency between two electrical connections in a circuit. Each dependency states that one connection should be routed before another, while still allowing an arbitrary number of other connections to be routed between the two. Phenotypes, which express the solutions coded in the genotypes, are then created by using topological ordering to resolve the dependencies. Contradictions in the genotype that cause recursive dependencies (loops) and discontinuities are handled during topological ordering by selecting the lowest available unrouted connection and using it as a new base.
 
-The result is an algorithm that seems to reliably find a good order in which to route the connections for a circuit. A good layout is typically found before 200 generations, using a population of 1000 creatures, which requires 200,000 complete layouts to be routed. The crossover and mutation rates have not been optimized, and are currently set to 0.7 and 0.01 respectively.
+The result is an algorithm that seems to reliably find a good order in which to route the connections for a circuit. Using a population of 1000 genotypes, a good layout is typically found before 200 generations have been simulated, which requires 200,000 complete layouts to be routed. The crossover and mutation rates have not been optimized, and are currently set to 0.7 and 0.01 respectively.
   
 I investigated GA approaches because the number of possible route orderings for the connections is the factorial of the number of connections, which makes it impossible to use a brute force approach to check all possible orderings even for small circuits.
 
@@ -280,35 +282,42 @@ rpi.29    7400B.12
 
 * Tested on Linux Mint 18 64-bit.
 
+* Should also work on Debian, Ubuntu and other Debian based distributions. 
+
 #### Packaged dependencies
 
-* $ `sudo apt-get install --yes cmake git build-essential libglm-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libglew-dev libfreetype6-dev libglfw3-dev libz3-dev libpng++-dev` 
+    $ sudo apt-get install --yes cmake git build-essential \
+    libglm-dev libxrandr-dev libxinerama-dev libxcursor-dev \
+    libxi-dev libglew-dev libfreetype6-dev libglfw3-dev \
+    libz3-dev libpng++-dev 
 
 #### Striprouter source
 
-* $ `git clone <copy and paste the "Clone with HTTPS " URL from the top of this page>`
+Get the code directly from this repository.
+
+    $ git clone <copy and paste the "Clone with HTTPS " URL from the top of this page>
 
 #### fmt
 
-* $ `cd striprouter/libraries/build`
-* $ `wget https://github.com/fmtlib/fmt/archive/3.0.0.tar.gz`
-* $ `tar xf 3.0.0.tar.gz `
-* $ `cd fmt-3.0.0`
-* $ `cmake -G 'Unix Makefiles'`
-* $ `make`
-* $ `cd ..`
-* $ `cp -r --parents fmt-3.0.0/fmt ../linux`
+    $ cd striprouter/libraries/build
+    $ wget https://github.com/fmtlib/fmt/archive/3.0.0.tar.gz
+    $ tar xf 3.0.0.tar.gz 
+    $ cd fmt-3.0.0
+    $ cmake -G 'Unix Makefiles'
+    $ make
+    $ cd ..
+    $ cp -r --parents fmt-3.0.0/fmt ../linux
 
 #### Build
 
-* $` cd striprouter/build`
-* $ `cmake -G 'Unix Makefiles' ..`
-* $ `make` 
+    $ cd striprouter/build
+    $ cmake -G 'Unix Makefiles' ..
+    $ make 
 
 #### Run
 
-* $` cd striprouter/bin`
-* $ `./striprouter`
+    $ cd striprouter/bin
+    $ ./striprouter
 
 
 ### Building on Windows

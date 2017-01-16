@@ -5,21 +5,20 @@
 
 #include "layout.h"
 
-
 namespace svg
 {
-  class Document;
+class Document;
 }
-
 
 typedef std::vector<std::string> SvgPathVec;
 
 class SvgWriter
 {
-public:
+  public:
   SvgWriter(const Layout& layout);
   SvgPathVec writeFiles(const std::string circuitFilePath);
-private:
+
+  private:
   svg::Document initDoc(const std::string& svgPath, const bool drawMirrorImage);
   void writeWireSvg(const std::string wireSvgPath);
   void writeStripCutSvg(const std::string cutSvgPath);
@@ -33,4 +32,3 @@ private:
   void drawTitleMirror(svg::Document& doc, const std::string& titleStr);
   const Layout& layout_;
 };
-

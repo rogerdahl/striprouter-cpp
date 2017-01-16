@@ -7,9 +7,8 @@
 
 #include "ga_interface.h"
 
-
-GeneticAlgorithm::GeneticAlgorithm(int nOrganismsInPopulation,
-                                   double crossoverRate, double mutationRate)
+GeneticAlgorithm::GeneticAlgorithm(
+    int nOrganismsInPopulation, double crossoverRate, double mutationRate)
   : nOrganismsInPopulation_(nOrganismsInPopulation),
     crossoverRate_(crossoverRate),
     mutationRate_(mutationRate),
@@ -55,8 +54,7 @@ ConnectionIdxVec GeneticAlgorithm::getOrdering(OrderingIdx orderingIdx)
 }
 
 void GeneticAlgorithm::releaseOrdering(
-  OrderingIdx orderingIdx, int nCompletedRoutes, long completedRouteCost
-)
+    OrderingIdx orderingIdx, int nCompletedRoutes, long completedRouteCost)
 {
   population_.organismVec[orderingIdx].nCompletedRoutes = nCompletedRoutes;
   population_.organismVec[orderingIdx].completedRouteCost = completedRouteCost;
@@ -67,4 +65,3 @@ std::unique_lock<std::mutex> GeneticAlgorithm::scopeLock()
 {
   return std::unique_lock<std::mutex>(mutex_);
 }
-

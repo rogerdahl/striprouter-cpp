@@ -1,17 +1,15 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <climits>
 #include <forward_list>
 #include <list>
 #include <random>
 #include <set>
-#include <climits>
 
 #include <fmt/format.h>
 
 #include "ga_core.h"
-
-
 
 GeneDependency::GeneDependency(Gene gene, Gene geneDependency)
   : gene(gene), geneDependency(geneDependency)
@@ -23,14 +21,16 @@ GeneDependency::GeneDependency(Gene gene, Gene geneDependency)
 //
 
 RandomIntGenerator::RandomIntGenerator()
-  : randomEngine_(static_cast<unsigned long>
-                  (std::chrono::system_clock::now().time_since_epoch().count()))
+  : randomEngine_(
+        static_cast<unsigned long>(
+            std::chrono::system_clock::now().time_since_epoch().count()))
 {
 }
 
 RandomIntGenerator::RandomIntGenerator(int min, int max)
-  : randomEngine_(static_cast<unsigned long>
-                  (std::chrono::system_clock::now().time_since_epoch().count()))
+  : randomEngine_(
+        static_cast<unsigned long>(
+            std::chrono::system_clock::now().time_since_epoch().count()))
 {
   setRange(min, max);
 }
@@ -49,9 +49,10 @@ GeneIdx RandomIntGenerator::getRandomInt()
 // Organism
 //
 
-
 Organism::Organism(int nGenes, RandomIntGenerator& randomGeneSelector)
-  : nCompletedRoutes(0), completedRouteCost(0), nGenes_(nGenes),
+  : nCompletedRoutes(0),
+    completedRouteCost(0),
+    nGenes_(nGenes),
     randomGeneSelector_(randomGeneSelector)
 {
 }
@@ -84,8 +85,9 @@ GeneVec Organism::calcConnectionIdxVec()
 
 void Organism::dump()
 {
-  fmt::print("nCompletedRoutes={} completedRouteCost={} nGenes={} genes=",
-             nCompletedRoutes, completedRouteCost, nGenes_);
+  fmt::print(
+      "nCompletedRoutes={} completedRouteCost={} nGenes={} genes=",
+      nCompletedRoutes, completedRouteCost, nGenes_);
   for (auto& v : geneVec) {
     fmt::print(" {}", v);
   }
@@ -100,13 +102,13 @@ GeneVec Organism::topoSort()
 {
   std::list<GeneDependency> geneList;
   int i = 0;
-//  fmt::print("{}\n", geneVec.size());
+  //  fmt::print("{}\n", geneVec.size());
   for (auto geneIdx : geneVec) {
     geneList.push_back(GeneDependency(i, geneIdx));
     ++i;
   }
 
-  geneList.sort([](const GeneDependency & a, const GeneDependency & b) -> bool {
+  geneList.sort([](const GeneDependency& a, const GeneDependency& b) -> bool {
     return a.geneDependency < b.geneDependency;
   });
 
@@ -140,13 +142,12 @@ GeneVec Organism::topoSort()
 // Population
 //
 
-OrganismPair::OrganismPair(Organism& a, Organism& b)
-  : a(a), b(b)
+OrganismPair::OrganismPair(Organism& a, Organism& b) : a(a), b(b)
 {
 }
 
-Population::Population(int nOrganismsInPopulation, double crossoverRate,
-                       double mutationRate)
+Population::Population(
+    int nOrganismsInPopulation, double crossoverRate, double mutationRate)
   : nOrganismsInPopulation_(nOrganismsInPopulation),
     crossoverRate_(crossoverRate),
     mutationRate_(mutationRate),
@@ -161,7 +162,6 @@ void Population::reset(int nGenesPerOrganism)
   randomGeneSelector_.setRange(0, nGenesPerOrganism - 1);
   createRandomPopulation();
 }
-
 
 void Population::nextGeneration()
 {
@@ -232,21 +232,22 @@ OrganismIdx Population::tournamentSelect(int nCandidates)
     auto& organism = organismVec[organismIdx];
 
     auto hasMoreCompletedRoutes =
-      organism.nCompletedRoutes > nHighestCompletedRoutes;
+        organism.nCompletedRoutes > nHighestCompletedRoutes;
 
-//    auto hasEqualCompletedRoutes =
-//      organism.nCompletedRoutes == nHighestCompletedRoutes;
-//
-//    auto hasLowerCost =
-//      organism.completedRouteCost < lowestCompletedRouteCost;
-//
-//    auto isRandomPick = getNormalizedRandom() > 0.5;
+    //    auto hasEqualCompletedRoutes =
+    //      organism.nCompletedRoutes == nHighestCompletedRoutes;
+    //
+    //    auto hasLowerCost =
+    //      organism.completedRouteCost < lowestCompletedRouteCost;
+    //
+    //    auto isRandomPick = getNormalizedRandom() > 0.5;
 
     auto hasEqualRoutesAndLowerCost =
-      organism.nCompletedRoutes == nHighestCompletedRoutes
+        organism.nCompletedRoutes == nHighestCompletedRoutes
         && organism.completedRouteCost < lowestCompletedRouteCost;
 
-//    if (hasMoreCompletedRoutes || (hasEqualCompletedRoutes && isRandomPick)) {
+    //    if (hasMoreCompletedRoutes || (hasEqualCompletedRoutes &&
+    //    isRandomPick)) {
 
     if (hasMoreCompletedRoutes | hasEqualRoutesAndLowerCost) {
       bestOrganismIdx = organismIdx;

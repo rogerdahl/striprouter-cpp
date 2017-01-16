@@ -18,8 +18,8 @@ ConnectionPoint::ConnectionPoint(const std::string& _componentName, int _pinIdx)
 {
 }
 
-Connection::Connection(const ConnectionPoint& _start,
-                       const ConnectionPoint& _end)
+Connection::Connection(
+    const ConnectionPoint& _start, const ConnectionPoint& _end)
   : start(_start), end(_end)
 {
 }
@@ -42,9 +42,10 @@ ConnectionViaVec Circuit::genConnectionViaVec() const
     auto startComponent = componentNameToComponentMap.at(c.start.componentName);
     auto endComponent = componentNameToComponentMap.at(c.end.componentName);
 
-    auto
-    startRelPin = packageToPosMap.at(startComponent.packageName).at(c.start.pinIdx);
-    auto endRelPin = packageToPosMap.at(endComponent.packageName).at(c.end.pinIdx);
+    auto startRelPin =
+        packageToPosMap.at(startComponent.packageName).at(c.start.pinIdx);
+    auto endRelPin =
+        packageToPosMap.at(endComponent.packageName).at(c.end.pinIdx);
 
     Via startAbsPin = startRelPin + startComponent.pin0AbsPos;
     Via endAbsPin = endRelPin + endComponent.pin0AbsPos;
@@ -86,4 +87,3 @@ PinViaVec Circuit::calcComponentPins(std::string componentName) const
   }
   return v;
 }
-

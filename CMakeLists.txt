@@ -125,7 +125,6 @@ set(SIMPLE_SVG_INCLUDE_DIR ${HEADER_LIBRARIES}/simple_svg)
 # CmdParser
 set(CMD_PARSER_INCLUDE_DIR ${HEADER_LIBRARIES}/cmdparser)
 
-
 set(SOURCE_FILES
   ${SOURCE_DIR}/circuit.cpp
   ${SOURCE_DIR}/circuit_parser.cpp

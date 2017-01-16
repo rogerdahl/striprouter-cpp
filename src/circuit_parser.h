@@ -1,19 +1,20 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <utility>
 #include <map>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "layout.h"
 
 class CircuitFileParser
 {
-public:
+  public:
   CircuitFileParser(Layout&);
   ~CircuitFileParser();
   void parse(std::string& circuitFilePath);
-private:
+
+  private:
   void parseLine(std::string lineStr);
   bool parseCommentOrEmpty(std::string& lineStr);
   bool parseBoard(std::string& lineStr);
