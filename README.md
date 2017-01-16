@@ -10,7 +10,7 @@ Tested on Windows 10 64-bit, Linux Mint 18 64-bit and Raspberry Pi 3 running the
 
 If you have any questions, feel free to [create an issue](https://github.com/rogerdahl/ws2812b-neopixel-stuff/issues/new).
 
-The router is based on a novel search algorithm that combines topological ordering with a genetic algorithm (GA). I am calling this algorithm "Topo-GA" and have released it to the public domain. See details below.
+The router is based on a novel search algorithm that combines topological ordering with a genetic algorithm (GA). I am calling this algorithm "Topo-GA" and have released it to the public domain. See [details below](#topo-ga).
 
 Costs can be assigned to resources such as stripboard area and solder points in order to direct the router towards preferred layouts.
 
@@ -97,6 +97,8 @@ If a good layout is found, the solution can be printed in two separate layers, w
     * Determine which pins you will be using on the header and remove the unused pins before soldering the header to the board (making sure to keep enough pins that the header can be fastened properly). Then, configure the removed pins as `Don't Care` in the `.circuit` file. The router will then be able to reach the pins in the outer row by going past the `Don't Care` pins.    
 
 * Bonus: If you zoom in far enough, you get free modern art, such as [this](./art.png) :)
+
+#topo-ga
 
 ### "Topo-GA" genetic autorouting algorithm
 
