@@ -158,7 +158,6 @@ $ ./striprouter --help
 ### To do
 
 * Support components such as resistors and diodes that have variable length connectors
-
 * Automatic optimization of component locations
 
 ### Technologies
@@ -278,10 +277,16 @@ rpi.29    7400B.12
 7400B.11  chan8.1
 ```
 
+### Contributing
+
+If you have suggestions for improvement and/or wish to contribute code, [get in touch](https://github.com/rogerdahl/ws2812b-neopixel-stuff/issues/new).
+
+* Style: http://geosoft.no/development/cppstyle.html
+* Format: See included `_clang-format` and `format-all.sh`
+
 ### Building on Linux
 
 * Tested on Linux Mint 18 64-bit.
-
 * Should also work on Debian, Ubuntu and other Debian based distributions. 
 
 #### Packaged dependencies

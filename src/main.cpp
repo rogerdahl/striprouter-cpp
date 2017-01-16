@@ -1,6 +1,3 @@
-// Style: http://geosoft.no/development/cppstyle.html
-// Format: See included astyle_all.sh.
-
 #include <algorithm>
 #include <chrono>
 #include <climits>
