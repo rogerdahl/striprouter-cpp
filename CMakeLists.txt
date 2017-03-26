@@ -96,7 +96,7 @@ set(NANO_INCLUDE_DIR
 )
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(NANO_LIBRARIES nanogui)
-  set(NANO_LINK_DIR ${LIBRARIES}/nanogui/lib)
+  set(NANO_LINK_DIR ${LIBRARIES}/nanogui/build)
 else ()
   set(NANO_LIBRARIES nanogui.lib)
   set(NANO_LINK_DIR ${LIBRARIES}/nanogui/build/Release)

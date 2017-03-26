@@ -40,7 +40,7 @@
 using namespace std::chrono_literals;
 
 // Fonts
-std::string DIAG_FONT_PATH = "./fonts/Roboto-Regular.ttf";
+std::string DIAG_FONT_PATH = "./fonts/RobotoMono-Regular.ttf";
 const int DIAG_FONT_SIZE = 12;
 const int DRAG_FONT_SIZE = 12;
 OglText diagText(DIAG_FONT_PATH, DIAG_FONT_SIZE);
@@ -65,7 +65,7 @@ int windowH = 1080 - 200;
 bool isShowRatsNestEnabled = true;
 bool isShowOnlyFailedEnabled = true;
 bool isShowCurrentEnabled = false;
-glm::tmat4x4<float> projMat;
+glm::mat4x4 projMat;
 nanogui::FormHelper* form;
 nanogui::Window* formWin;
 nanogui::Button* saveInputLayoutButton;

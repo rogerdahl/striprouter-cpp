@@ -13,6 +13,19 @@ std::string str(const Via& v)
   return fmt::format("{},{}", v.x(), v.y());
 }
 
+namespace std
+{
+bool operator<(const Via& l, const Via& r)
+{
+  return std::tie(l.x(), l.y()) < std::tie(r.x(), r.y());
+}
+
+bool operator==(const Via& l, const Via& r)
+{
+  return l.x() == r.x() && l.y() == r.y();
+}
+}
+
 //
 // ValidVia
 //
@@ -53,33 +66,19 @@ LayerVia::LayerVia(const LayerCostVia& viaLayerCost)
 {
 }
 
+namespace std
+{
+
 bool operator<(const LayerVia& l, const LayerVia& r)
 {
   return std::tie(l.via.x(), l.via.y(), l.isWireLayer)
          < std::tie(r.via.x(), r.via.y(), r.isWireLayer);
 }
 
-bool operator>(const LayerVia& l, const LayerVia& r)
+bool operator==(const LayerVia& l, const LayerVia& r)
 {
-  return r < l;
+  return (l.via == r.via) && l.isWireLayer == r.isWireLayer;
 }
-bool operator<=(const LayerVia& l, const LayerVia& r)
-{
-  return !(l > r);
-}
-bool operator>=(const LayerVia& l, const LayerVia& r)
-{
-  return !(l < r);
-}
-
-bool operator==(const LayerVia& l, const LayerCostVia& r)
-{
-  return (l.via == r.via).all() && l.isWireLayer == r.isWireLayer;
-}
-
-bool operator!=(const LayerVia& l, const LayerCostVia& r)
-{
-  return !(l == r);
 }
 
 std::string LayerVia::str() const
@@ -110,10 +109,18 @@ std::string LayerCostVia::str()
   return fmt::format("{},cost={:n}", LayerVia::str(), cost);
 }
 
+namespace std
+{
 bool operator<(const LayerCostVia& l, const LayerCostVia& r)
 {
   return std::tie(l.cost, l.via.x(), l.via.y(), l.isWireLayer)
          > std::tie(r.cost, r.via.x(), r.via.y(), r.isWireLayer);
+}
+
+bool operator==(const LayerCostVia& l, const LayerCostVia& r)
+{
+  return l.cost == r.cost && l.via == r.via && l.isWireLayer == r.isWireLayer;
+}
 }
 
 //

@@ -19,6 +19,21 @@ typedef Eigen::Array2i Via;
 
 std::string str(const Via& v);
 
+namespace std
+{
+template <>
+struct hash<Via>
+{
+  std::size_t operator()(const Via& l) const
+  {
+    return l.x() ^ l.y();
+  }
+};
+
+bool operator<(const Via& l, const Via& r);
+bool operator==(const Via& l, const Via& r);
+}
+
 //
 // ValidVia
 //
@@ -34,7 +49,7 @@ class ValidVia
 };
 
 //
-// LayerCostVia
+// LayerVia
 //
 
 class LayerCostVia;
@@ -51,13 +66,20 @@ class LayerVia
   bool isWireLayer;
 };
 
-bool operator<(const LayerVia& l, const LayerVia& r);
-bool operator>(const LayerVia& l, const LayerVia& r);
-bool operator<=(const LayerVia& l, const LayerVia& r);
-bool operator>=(const LayerVia& l, const LayerVia& r);
+namespace std
+{
+template <>
+struct hash<LayerVia>
+{
+  std::size_t operator()(const LayerVia& l) const
+  {
+    return l.via.x() ^ l.via.y() ^ (l.isWireLayer ? 1 : 0);
+  }
+};
 
-bool operator==(const LayerVia& l, const LayerCostVia& r);
-bool operator!=(const LayerVia& l, const LayerCostVia& r);
+bool operator<(const LayerVia& l, const LayerVia& r);
+bool operator==(const LayerVia& l, const LayerVia& r);
+}
 
 //
 // LayerCostVia
@@ -73,7 +95,11 @@ class LayerCostVia : public LayerVia
   int cost;
 };
 
+namespace std
+{
 bool operator<(const LayerCostVia& l, const LayerCostVia& r);
+bool operator==(const LayerCostVia& l, const LayerCostVia& r);
+}
 
 //
 // StartEndVia

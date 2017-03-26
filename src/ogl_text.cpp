@@ -60,8 +60,8 @@ void OglText::setFontH(int fontH)
 }
 
 void OglText::print(
-    glm::tmat4x4<float>& projMat, int x, int y, int nLine,
-    const std::string& str, bool drawBackground)
+    glm::mat4x4& projMat, int x, int y, int nLine, const std::string& str,
+    bool drawBackground)
 {
   assert(oglInitialized_); // Call openGLInit() after creating an OpenGL context
   glDisable(GL_DEPTH_TEST);

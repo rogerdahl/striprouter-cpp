@@ -53,7 +53,7 @@ void Render::openGLFree()
 }
 
 void Render::draw(
-    Layout& layout, glm::tmat4x4<float>& projMat, const Pos& boardScreenOffset,
+    Layout& layout, glm::mat4x4& projMat, const Pos& boardScreenOffset,
     const Pos& mouseBoardPos, float zoom, int windowW, int windowH,
     bool showRatsNestBool, bool showOnlyFailedBool)
 {

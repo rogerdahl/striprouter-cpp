@@ -195,7 +195,7 @@ double getMtime(const std::string& path)
   if (ret == -1) {
     throw fmt::format("Unable to stat file: {}", path);
   }
-  return st.st_mtim.tv_sec + st.st_mtim.tv_nsec / 100 '0000' 000.0;
+  return st.st_mtim.tv_sec + st.st_mtim.tv_nsec / 1000000000.0;
 }
 
 #endif

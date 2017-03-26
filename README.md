@@ -172,6 +172,12 @@ $ ./striprouter --help
 
 * For routes that belong to nets, routes that reuse existing sections of earlier routes (instead of creating new sections), are preferred by setting very low costs for the reused sections.
 
+### Troubleshooting
+
+* If the UI elements are too small, try:
+    * `$ gsettings set org.gnome.desktop.interface scaling-factor 2`
+    * Restart the app.
+
 ### To do
 
 * Support components such as resistors and diodes that have variable length connectors

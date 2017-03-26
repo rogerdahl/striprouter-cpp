@@ -16,10 +16,7 @@ Router::Router(
     currentLayout_(_currentLayout),
     nets_(_layout),
     threadStop_(threadStop),
-    allPinSet_(ViaSet([](const Via& a, const Via& b) -> bool {
-      return std::lexicographical_compare(
-          a.data(), a.data() + a.size(), b.data(), b.data() + b.size());
-    })),
+    allPinSet_(ViaSet()),
     maxRenderDelay_(_maxRenderDelay)
 {
   viaTraceVec_ = WireLayerViaVec(layout_.gridW * layout_.gridH);

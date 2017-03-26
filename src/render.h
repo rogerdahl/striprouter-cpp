@@ -24,9 +24,9 @@ class Render
   void openGLInit();
   void openGLFree();
   void draw(
-      Layout& layout, glm::tmat4x4<float>& projMat,
-      const Pos& boardScreenOffset, const Pos& mouseBoardPos, float zoom,
-      int windowW, int windowH, bool showRatsNestBool, bool showOnlyFailedBool);
+      Layout& layout, glm::mat4x4& projMat, const Pos& boardScreenOffset,
+      const Pos& mouseBoardPos, float zoom, int windowW, int windowH,
+      bool showRatsNestBool, bool showOnlyFailedBool);
 
   private:
   void drawUsedStrips();
@@ -55,7 +55,7 @@ class Render
   OglText notationText_;
 
   Layout* layout_;
-  glm::tmat4x4<float> projMat_;
+  glm::mat4x4 projMat_;
   Pos boardScreenOffset_;
   Pos mouseBoardPos_;
   float zoom_;

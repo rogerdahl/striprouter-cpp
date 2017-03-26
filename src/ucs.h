@@ -1,15 +1,18 @@
 #pragma once
 
 #include <queue>
-#include <set>
+//#include <set>
+#include <unordered_set>
 
 #include "layout.h"
 #include "nets.h"
 #include "via.h"
 
 typedef std::priority_queue<LayerCostVia> FrontierPri;
-typedef std::set<LayerVia> FrontierSet;
-typedef std::set<LayerVia> ExploredSet;
+// typedef std::set<LayerVia> FrontierSet;
+// typedef std::set<LayerVia> ExploredSet;
+typedef std::unordered_set<LayerVia> FrontierSet;
+typedef std::unordered_set<LayerVia> ExploredSet;
 
 class Router;
 

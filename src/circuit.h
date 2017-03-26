@@ -2,8 +2,9 @@
 
 #include <map>
 #include <mutex>
-#include <set>
+//#include <set>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -18,7 +19,7 @@ typedef std::map<std::string, PackageRelPosVec> PackageToPosMap;
 
 // Components
 
-typedef std::set<int> DontCarePinIdxSet;
+typedef std::unordered_set<int> DontCarePinIdxSet;
 
 class Component
 {

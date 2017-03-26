@@ -1,0 +1,1 @@
+avg_sec=8.54 repeats=10 cpu="AMD FX(tm)-8320 Eight-Core Processor" actual_hz="3516006191000000"

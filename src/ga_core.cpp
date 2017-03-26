@@ -5,7 +5,7 @@
 #include <forward_list>
 #include <list>
 #include <random>
-#include <set>
+#include <unordered_set>
 
 #include <fmt/format.h>
 
@@ -113,7 +113,7 @@ GeneVec Organism::topoSort()
   });
 
   GeneVec geneVec;
-  std::set<int> dependencySet;
+  std::unordered_set<int> dependencySet;
 
   while (geneList.size()) {
     bool found = false;

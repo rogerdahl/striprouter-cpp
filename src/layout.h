@@ -2,8 +2,8 @@
 
 #include <chrono>
 #include <mutex>
-#include <set>
 #include <thread>
+#include <unordered_set>
 #include <vector>
 
 #include "circuit.h"
@@ -18,7 +18,8 @@ typedef std::vector<bool> RouteStatusVec;
 typedef std::vector<Via> StripCutVec;
 
 // Nets
-typedef std::set<Via, std::function<bool(const Via&, const Via&)> > ViaSet;
+// typedef std::set<Via, std::function<bool(const Via&, const Via&)> > ViaSet;
+typedef std::unordered_set<Via> ViaSet;
 typedef std::vector<ViaSet> ViaSetVec;
 typedef std::vector<int> SetIdxVec;
 

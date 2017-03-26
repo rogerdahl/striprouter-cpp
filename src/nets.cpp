@@ -105,10 +105,7 @@ ViaSet& Nets::getViaSet(const Via& via)
 
 int Nets::createViaSet()
 {
-  viaSetVec_.push_back(ViaSet([](const Via& a, const Via& b) -> bool {
-    return std::lexicographical_compare(
-        a.data(), a.data() + a.size(), b.data(), b.data() + b.size());
-  }));
+  viaSetVec_.push_back(ViaSet());
   return static_cast<int>(viaSetVec_.size()) - 1;
 }
 
