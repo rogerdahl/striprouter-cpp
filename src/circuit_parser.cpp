@@ -120,21 +120,28 @@ bool CircuitFileParser::parseOffset(std::string& lineStr)
 // dip8 0,0 1,0 2,0 3,0 4,0 5,0 6,0 7,0 7,-2 6,-2 5,-2 4,-2 3,-2 2,-2 1,-2
 bool CircuitFileParser::parsePackage(std::string& lineStr)
 {
-  static std::regex pkgFull("^(\\w+)( (-?\\d+),(-?\\d+))+$", rxFlags);
-  static std::regex pkgRelativePosRx("( (-?\\d+),(-?\\d+))", rxFlags);
-  static std::regex pkgPosValuesRx(" (-?\\d+),(-?\\d+)", rxFlags);
+  static std::regex pkgNameRx("^(\\w+)\\s(.*)", rxFlags);
+  static std::regex pkgSepRx("\\s+", rxFlags);
+  static std::regex pkgPosRx("(-?\\d+),(-?\\d+)", rxFlags);
   std::smatch m;
-  if (!regex_match(lineStr, m, pkgFull)) {
+  if (!regex_match(lineStr, m, pkgNameRx)) {
     return false;
   }
   std::string pkgName = m[1];
+  std::string pkgPos = m[2];
   PackageRelPosVec v;
-  for (auto iter = std::sregex_token_iterator(
-           lineStr.begin(), lineStr.end(), pkgRelativePosRx);
-       iter != std::sregex_token_iterator(); ++iter) {
+  for (
+	  auto iter = std::sregex_token_iterator(pkgPos.begin(), pkgPos.end(), pkgSepRx, -1);
+       iter != std::sregex_token_iterator(); 
+	  ++iter
+	) {
     std::string s = *iter;
-    regex_match(s, m, pkgPosValuesRx);
-    v.push_back(Via(stoi(m[1]), stoi(m[2])));
+	if (regex_match(s, m, pkgPosRx)) {
+		v.push_back(Via(stoi(m[1]), stoi(m[2])));
+	}
+	else {
+		return false;
+	}
   }
   layout_.circuit.packageToPosMap[pkgName] = v;
   return true;
