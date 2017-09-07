@@ -356,76 +356,162 @@ Include and library files need to be moved into the locations set up in CMakeLis
 
 #### Visual Studio Community 2015
 
-https://go.microsoft.com/fwlink/?LinkId=691978&clcid=0x409
+* Download
+    * https://go.microsoft.com/fwlink/?LinkId=691978&clcid=0x409
 * Chose the type of installation: Custom
 * Unselect everything
 * Select: Programming Languages > Visual C++ > Common Tools for Visual C++ 2015
 
 #### CMake
 
-https://cmake.org/download/ > `cmake-3.6.3-win64-x64.msi`
+* Download
+    * https://cmake.org/download/
+        cmake-3.6.3-win64-x64.msi
 
 #### FreeType2
 
-https://sourceforge.net/projects/freetype/ > ft263.zip (2.6.3)
-* Open the CMake GUI and browse to the source.
-* Use default native compilers
-* Source: ft263/freetype-2.6.3
-* Build: ft263/freetype-2.6.3/builds
-* If "already exists" error: File > Delete Cache
-* Click Configure
-* Specify the generator for this project > Visual Studio 14 2015 Win64
-* Ignore error: "Could NOT find PkgConfig (missing:  PKG_CONFIG_EXECUTABLE)"
-* Click Generate
-* Open freetype-2.6.3\builds\freetype.sln
-* Layout Configurations > Release
-* Build > Build Layout
+* Download
+    * https://sourceforge.net/projects/freetype/
+        * ft263.zip (2.6.3)
+* Download the .zip and unzip it
+* In the CMake GUI:
+    * Browse to the source
+        * Source: ft263/freetype-2.6.3
+        * Build: ft263/freetype-2.6.3/builds
+    * Click Configure
+        * Specify the generator for this project > Visual Studio 15 2017 Win64
+        * Use default native compilers
+        * Click Finish
+    * Set options:
+        * CMAKE_CONFIGURATION_TYPES: Debug;Release
+            * Remove the other types
+    * Click Generate
+    * Click Open Project    
+        * Select Visual Studio 2017 (if prompted)
+* In Visual Studio:
+    * Solution configurations > Release
+	* Build > Build Solution
 
 #### GLFW
 
-http://www.glfw.org/download.html > 64-bit Windows binaries
+* Download 
+    * http://www.glfw.org/download.html
+        * 64-bit Windows binaries
 
 #### fmt
 
-https://github.com/cppformat/cppformat/releases > 3.0.1
-* Open the CMake GUI and browse to the source.
-* Use default native compilers
-* Source: fmt-3.0.1
-* Build: fmt-3.0.1/builds (create the builds dir)
-* Click Configure
-* Select only: FMT_INSTALL, FMT_USE_CPP11
-* Click Generate
-* Open libraries\win64\fmt-3.0.1\builds\FMT.sln
-* Probably no longer required: Right click Layout "FMT" > Retarget solution
-* Layout Configurations > Release
-* Build > Build Layout
+* Download
+    * https://github.com/cppformat/cppformat/releases
+        * 4.0.0
+* Download the .zip and unzip it
+* In the CMake GUI:
+    * Browse to the source
+        * Source: fmt-4.0.0
+        * Build: fmt-4.0.0/builds
+            Create the builds dir
+    * Click Configure
+        * Specify the generator for this project > Visual Studio 15 2017 Win64
+        * Use default native compilers
+        * Click Finish
+    * Set options:
+        * CMAKE_CONFIGURATION_TYPES = Debug;Release
+            * Remove the other types
+        * Checkmark only: FMT_INSTALL, FMT_USE_CPP11
+    * Click Generate
+    * Click Open Project    
+        * Select Visual Studio 2017 (if prompted)
+* In Visual Studio:
+	* Build > Build Solution
 
 #### glm
 
-https://github.com/g-truc/glm/releases > 0.9.7.4
-
-glm is header only. Just move into place.
+* Download
+    * https://github.com/g-truc/glm/releases
+        * 0.9.8.5
+* Download the .zip and unzip it
+* glm is header only. Just move into place.
 
 #### GLEW
 
-https://sourceforge.net/projects/glew/ > 1.13.0
-
-Copy `bin\Release\x64\glew32.dll` to `striprouter\bin`.
-
-`glew32.dll` is the 64-bit DLL despite the conflicting name.
-
-`lib\Release\x64\glew32.lib` is the corresponding 64-bit lib.
+* Download 
+    * https://sourceforge.net/projects/glew
+        * glew-2.1.0-win32.zip
+* Copy bin\Release\x64\glew32.dll to striprouter\bin
+    * glew32.dll is the **64-bit** DLL despite the conflicting name
+* Copy lib\Release\x64\glew32.lib to striprouter\libraries\win64\lib
+    * glew32.lib is the corresponding **64-bit** lib
 
 #### NanoGUI
 
-git clone --recursive https://github.com/wjakob/nanogui.git
+* Download 
+    * $ git clone --recursive https://github.com/wjakob/nanogui.git
+* In the CMake GUI:
+    * Browse to the source
+        * Source: nanogui
+        * Build: nanogui/builds
+            Create the builds dir
+    * Click Configure
+        * Specify the generator for this project > Visual Studio 15 2017 Win64
+        * Use default native compilers
+        * Click Finish
+    * Set options:
+        * CMAKE_CONFIGURATION_TYPES: Debug;Release
+            * Remove the other types
+        * Checkmark only: 
+            * NANOGUI_USE_GLAD
+            * USE_MSVC_RUNTIME_LIBRARY_DLL
+    * Click Generate
+    * Click Open Project    
+        * Select Visual Studio 2017 (if prompted)
+* In Visual Studio:
+	* Build > Build Solution
 
-* Open in cmake > Configure
-* Select only
-  * CMAKE_CONFIGURATION_TYPES: Release
-  * NANOGUI_USE_GLAD
-  * USE_MSVC_RUNTIME_LIBRARY_DLL
-* Generate
-* Open NanoGUI.sln
-* Layout Configurations (toolbar) > Release
-* Build > Build Layout
+#### libpng
+
+* Download
+    * https://sourceforge.net/projects/libpng/files
+        * libpng16 > 1.6.32 > lpng1632.zip
+* Build Debug and Release versions according to instructions
+    * https://github.com/winlibs/libpng/tree/master/projects/vstudio
+
+
+#### png++
+
+* Download
+    * http://download.savannah.nongnu.org/releases/pngpp
+        * png++-0.2.9.tar.gz
+
+#### simple-svg
+
+* Download
+    * https://github.com/adishavit/simple-svg
+        * simple_svg_1.0.0.hpp
+
+#### CmdParser
+
+* Download
+    * https://github.com/FlorianRappl/CmdParser
+        * cmdparser.hpp
+
+#### Striprouter
+
+* Download
+    * $ git clone https://github.com/rogerdahl/striprouter.git
+* In the CMake GUI:
+    * Browse to the source
+        * Source: striprouter
+        * Build: striprouter/builds
+            Create the builds dir
+    * Click Configure
+        * Specify the generator for this project > Visual Studio 15 2017 Win64
+        * Use default native compilers
+        * Click Finish
+    * Set options:
+        * CMAKE_CONFIGURATION_TYPES: Debug;Release
+            * Remove the other types
+    * Click Generate
+    * Click Open Project    
+        * Select Visual Studio 2017 (if prompted)
+* In Visual Studio:
+    * Solution configurations > Release
+	* Build > Build Solution
