@@ -1,4 +1,4 @@
-#include "simple_svg_1.0.0.hpp"
+#include "simple_svg.hpp"
 
 #include "fmt/format.h"
 
@@ -62,8 +62,12 @@ svg::Document SvgWriter::initDoc(
   auto originOffset =
       drawMirrorImage ? svg::Point(2.0 * MARGIN, 0) : svg::Point(0, 0);
 
-  svg::Dimensions dimensions(
-      physicalWStr, physicalHStr, virtualUpperLeft, virtualLowerRight);
+// TODO
+//  svg::Dimensions dimensions(
+//      physicalWStr, physicalHStr, virtualUpperLeft, virtualLowerRight);
+
+  svg::Dimensions dimensions(0, 0);
+
   return svg::Document(
       svgPath, svg::Layout(dimensions, origin, 1.0, originOffset));
 }
