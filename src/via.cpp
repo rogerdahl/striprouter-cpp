@@ -24,7 +24,7 @@ bool operator==(const Via& l, const Via& r)
 {
   return l.x() == r.x() && l.y() == r.y();
 }
-}
+} // namespace std
 
 //
 // ValidVia
@@ -79,7 +79,7 @@ bool operator==(const LayerVia& l, const LayerVia& r)
 {
   return (l.via == r.via) && l.isWireLayer == r.isWireLayer;
 }
-}
+} // namespace std
 
 std::string LayerVia::str() const
 {
@@ -121,7 +121,7 @@ bool operator==(const LayerCostVia& l, const LayerCostVia& r)
 {
   return l.cost == r.cost && l.via == r.via && l.isWireLayer == r.isWireLayer;
 }
-}
+} // namespace std
 
 //
 // StartEndVia

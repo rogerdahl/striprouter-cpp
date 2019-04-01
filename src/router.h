@@ -6,7 +6,7 @@
 #include <tuple>
 #include <vector>
 
-#include <Eigen/Core>
+#include <eigen3/Eigen/Core>
 
 #include "circuit.h"
 #include "ga_interface.h"

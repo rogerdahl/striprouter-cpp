@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include <Eigen/Core>
+#include <eigen3/Eigen/Core>
 
 // Hold floating point screen and board positions
 typedef Eigen::Array2f Pos;
@@ -32,7 +32,7 @@ struct hash<Via>
 
 bool operator<(const Via& l, const Via& r);
 bool operator==(const Via& l, const Via& r);
-}
+} // namespace std
 
 //
 // ValidVia
@@ -79,7 +79,7 @@ struct hash<LayerVia>
 
 bool operator<(const LayerVia& l, const LayerVia& r);
 bool operator==(const LayerVia& l, const LayerVia& r);
-}
+} // namespace std
 
 //
 // LayerCostVia
@@ -99,7 +99,7 @@ namespace std
 {
 bool operator<(const LayerCostVia& l, const LayerCostVia& r);
 bool operator==(const LayerCostVia& l, const LayerCostVia& r);
-}
+} // namespace std
 
 //
 // StartEndVia

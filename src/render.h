@@ -2,11 +2,10 @@
 
 #include <vector>
 
-#include <Eigen/Core>
+#include <eigen3/Eigen/Core>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/string_cast.hpp>
 
 #include "circuit.h"
 #include "circuit_parser.h"

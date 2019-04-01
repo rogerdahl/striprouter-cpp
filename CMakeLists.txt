@@ -28,13 +28,12 @@ endif ()
 # fmt
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(FMT_LIBRARIES fmt)
-  set(FMT_INCLUDE_DIR ${LIBRARIES}/fmt-3.0.1)
-  set(FMT_LINK_DIR ${LIBRARIES}/fmt-3.0.1/fmt)
+  set(FMT_INCLUDE_DIR "")
+  set(FMT_LINK_DIR "")
 else ()
   set(FMT_LIBRARIES fmt.lib)
   set(FMT_INCLUDE_DIR ${LIBRARIES}/include)
   set(FMT_LINK_DIR ${LIBRARIES}/lib/Release)
-  #set(FMT_LINK_DIR ${LIBRARIES}/fmt-3.0.1/builds/fmt/Debug)
 endif ()
 
 # FreeType2
@@ -65,6 +64,7 @@ else ()
 endif ()
 
 # OpenGL and GLU
+set(OpenGL_GL_PREFERENCE "GLVND")
 find_package(OpenGL REQUIRED)
 
 # X
@@ -92,12 +92,11 @@ endif ()
 # NanoGUI
 set(NANO_INCLUDE_DIR
   ${LIBRARIES}/nanogui/include
-#  ${LIBRARIES}/nanogui/ext/eigen
-#  ${LIBRARIES}/nanogui/ext/nanovg/src
+  ${LIBRARIES}/nanogui/ext/nanovg/src
 )
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(NANO_LIBRARIES nanogui)
-  set(NANO_LINK_DIR ${LIBRARIES}/nanogui/build)
+  set(NANO_LINK_DIR ${LIBRARIES}/nanogui)
 else ()
   set(NANO_LIBRARIES nanogui.lib)
   set(NANO_LINK_DIR ${LIBRARIES}/lib/Release)
@@ -105,7 +104,7 @@ else ()
 endif ()
 
 # Eigen
-#find_package(Eigen3 REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 # libpng
 # png++

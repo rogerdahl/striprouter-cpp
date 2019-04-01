@@ -130,18 +130,16 @@ bool CircuitFileParser::parsePackage(std::string& lineStr)
   std::string pkgName = m[1];
   std::string pkgPos = m[2];
   PackageRelPosVec v;
-  for (
-	  auto iter = std::sregex_token_iterator(pkgPos.begin(), pkgPos.end(), pkgSepRx, -1);
-       iter != std::sregex_token_iterator(); 
-	  ++iter
-	) {
+  for (auto iter = std::sregex_token_iterator(
+           pkgPos.begin(), pkgPos.end(), pkgSepRx, -1);
+       iter != std::sregex_token_iterator(); ++iter) {
     std::string s = *iter;
-	if (regex_match(s, m, pkgPosRx)) {
-		v.push_back(Via(stoi(m[1]), stoi(m[2])));
-	}
-	else {
-		return false;
-	}
+    if (regex_match(s, m, pkgPosRx)) {
+      v.push_back(Via(stoi(m[1]), stoi(m[2])));
+    }
+    else {
+      return false;
+    }
   }
   layout_.circuit.packageToPosMap[pkgName] = v;
   return true;

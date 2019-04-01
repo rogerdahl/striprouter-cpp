@@ -592,15 +592,19 @@ void handleMouseDragOperations(const IntPos& mousePos)
         inputLayout.circuit.calcComponentFootprint(dragComponentName);
     auto startPin0Offset = component.pin0AbsPos - footprint.start;
     auto endPin0Offset = footprint.end - component.pin0AbsPos;
+    // Left
     if (v.x() + footprint.start.x() - startPin0Offset.x() < 0) {
       v.x() = startPin0Offset.x();
     }
+    // Top
     if (v.y() + footprint.start.y() - startPin0Offset.y() < 0) {
       v.y() = startPin0Offset.y();
     }
+    // Right
     if (v.x() + endPin0Offset.x() >= inputLayout.gridW) {
-      v.x() = inputLayout.gridH - endPin0Offset.x() - 1;
+      v.x() = inputLayout.gridW - endPin0Offset.x() - 1;
     }
+    // Bottom
     if (v.y() + endPin0Offset.y() >= inputLayout.gridH) {
       v.y() = inputLayout.gridH - endPin0Offset.y() - 1;
     }

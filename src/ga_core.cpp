@@ -21,16 +21,14 @@ GeneDependency::GeneDependency(Gene gene, Gene geneDependency)
 //
 
 RandomIntGenerator::RandomIntGenerator()
-  : randomEngine_(
-        static_cast<unsigned long>(
-            std::chrono::system_clock::now().time_since_epoch().count()))
+  : randomEngine_(static_cast<unsigned long>(
+        std::chrono::system_clock::now().time_since_epoch().count()))
 {
 }
 
 RandomIntGenerator::RandomIntGenerator(int min, int max)
-  : randomEngine_(
-        static_cast<unsigned long>(
-            std::chrono::system_clock::now().time_since_epoch().count()))
+  : randomEngine_(static_cast<unsigned long>(
+        std::chrono::system_clock::now().time_since_epoch().count()))
 {
   setRange(min, max);
 }
