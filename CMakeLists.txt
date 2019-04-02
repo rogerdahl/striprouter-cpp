@@ -4,6 +4,13 @@ project(striprouter)
 # https://cmake.org/cmake/help/v3.0/policy/CMP0015.html
 cmake_policy(SET "CMP0015" "NEW")
 
+# Set default build to Release
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set(SOURCE_DIR ${CMAKE_SOURCE_DIR}/src)
 
@@ -14,7 +21,6 @@ else ()
 endif ()
 
 set(HEADER_LIBRARIES ${CMAKE_SOURCE_DIR}/libraries/header_only)
-
 
 # GLFW
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")

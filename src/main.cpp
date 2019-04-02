@@ -62,6 +62,8 @@ nanogui::Slider* zoomSlider;
 // GUI settings
 int windowW = 1920 / 2;
 int windowH = 1080 - 200;
+const int WINDOW_WIDTH_MIN = 500;
+const int WINDOW_HEIGHT_MIN = 500;
 bool isShowRatsNestEnabled = true;
 bool isShowOnlyFailedEnabled = true;
 bool isShowCurrentEnabled = false;
@@ -103,7 +105,7 @@ Pos dragPin0BoardOffset;
 std::string dragComponentName;
 OglText dragText(DIAG_FONT_PATH, DRAG_FONT_SIZE);
 void handleMouseDragOperations(const IntPos& mouseScrPos);
-void renderDragStatus(const IntPos mouseScrPos);
+void renderDragStatus(IntPos mouseScrPos);
 
 // Shared objects
 Layout inputLayout;
@@ -321,8 +323,7 @@ class Application : public nanogui::Screen
   }
 
   ~Application()
-  {
-  }
+  = default;
 
   // Could not get NanoGUI mouseDragEvent to trigger so rolling my own.
   // See NanoGUI src/window.cpp for example mouseDragEvent handler.
@@ -422,16 +423,16 @@ class Application : public nanogui::Screen
 
   virtual bool resizeEvent(const IntPos& size)
   {
-    windowW = size.x();
-    windowH = size.y();
+    windowW = std::max(size.x(), WINDOW_WIDTH_MIN);
+    windowH = std::max(size.y(), WINDOW_HEIGHT_MIN);
     projMat = glm::ortho(
         0.0f, static_cast<float>(size.x()), static_cast<float>(size.y()), 0.0f,
         0.0f, 100.0f);
-    glViewport(0, 0, size.x(), size.y());
-    // Move the GUI window to the upper right corner
+//    glViewport(0, 0, size.x(), size.y());
+    // Move settings window to the upper right corner.
     auto w = formWin->width();
     formWin->setPosition(IntPos(size.x() - w, 0));
-    // Status window
+    // Move status window to upper left corner.
     guiStatus.moveToUpperLeft();
     return false;
   }

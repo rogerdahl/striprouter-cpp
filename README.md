@@ -312,14 +312,12 @@ If you have suggestions for improvement and/or wish to contribute code, [get in 
 * Tested on Linux Mint 19 64-bit.
 * Should also work on Ubuntu 18.04, Debian and other Debian based distributions.
 
-#### Packaged dependencies
+Install packaged dependencies:
 
     $ sudo apt-get install --yes \
       build-essential cmake git libeigen3-dev libfmt-dev libfreetype6-dev libglew-dev \
       libglfw3-dev libglm-dev libpng++-dev libxcursor-dev libxi-dev libxinerama-dev \
       libxrandr-dev libz3-dev xorg-dev
-
-#### Build
 
 Get the code directly from this repository:
 

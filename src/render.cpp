@@ -20,7 +20,7 @@ const char* CIRCUIT_FONT_PATH = "./fonts/Roboto-Regular.ttf";
 const int NOTATION_FONT_SIZE = 10;
 const float SET_DIM = 0.3f;
 const int NUM_VIA_TRIANGLES = 16;
-const float CUT_W = 0.83f;
+const float CUT_WIDTH = 0.83f;
 const float VIA_RADIUS = 0.2f;
 const float WIRE_WIDTH = 0.125f;
 const float RATS_NEST_WIRE_WIDTH = 0.1f;
@@ -180,8 +180,8 @@ void Render::drawStripboardSection(const StartEndVia& viaStartEnd)
   if (y1 > y2) {
     std::swap(y1, y2);
   }
-  Pos start(viaStartEnd.start.x() - CUT_W / 2.0f, y1 - 0.40f);
-  Pos end(viaStartEnd.start.x() + CUT_W / 2.0f, y2 + 0.40f);
+  Pos start(viaStartEnd.start.x() - CUT_WIDTH / 2.0f, y1 - 0.40f);
+  Pos end(viaStartEnd.start.x() + CUT_WIDTH / 2.0f, y2 + 0.40f);
   auto f = setAlpha(viaStartEnd.start);
   drawFilledRectangle(start, end, RGBA(.85f * f, .565f * f, .345f * f, 1.0f));
   // Vias
@@ -194,7 +194,7 @@ void Render::drawStripboardSection(const StartEndVia& viaStartEnd)
 void Render::drawStripCuts()
 {
   for (auto& v : layout_->stripCutVec) {
-    auto halfStripW = CUT_W / 2.0f;
+    auto halfStripW = CUT_WIDTH / 2.0f;
     auto halfCutH = 0.08f / 2.0f;
     Pos start(v.x() - halfStripW, v.y() - halfCutH);
     Pos end(v.x() + halfStripW, v.y() + halfCutH);

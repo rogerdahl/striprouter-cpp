@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 
-rm -rf cmake-release-symbol cmake-release cmake-debug
+rm -rf cmake-build-*
 
-mkdir cmake-release-symbol
-mkdir cmake-release
-mkdir cmake-debug
-
-cd cmake-release-symbol
-cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
-
-cd ../cmake-release
+mkdir -p cmake-build-release
+pushd cmake-build-release
 cmake -DCMAKE_BUILD_TYPE=Release ..
+popd
 
-cd ../cmake-debug
+mkdir -p cmake-build-release-symbol
+pushd cmake-build-release-symbol
+cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
+popd
+
+mkdir -p cmake-build-debug
+pushd cmake-build-debug
 cmake -DCMAKE_BUILD_TYPE=Debug ..
+popd
