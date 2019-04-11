@@ -87,11 +87,15 @@ If a good layout is found, the solution can be printed in two separate layers, w
 
 * Click `Current` to see the current layouts as they are being tested. Most layouts are dropped after routing due to having lower scores than the best layout found so far.
 
-* If you find a layout that you wish to use, click `Save to .svg files`. This will save two files in Scalable Vector Graphics format. The files are stored in the same folder as the currently open `.circuit` file, with filenames that match the `.circuit` file. The file named `.wires.svg` shows the required wire connections and the file named `.cuts.svg` shows the required copper strip cuts. The names include number of completed and failed routes for the solution, and the score for the completed routes.
+* When you find a layout that you wish to use, click `Save to .svg files`. This will save two files in Scalable Vector Graphics format. The files are stored in the same folder as the currently open `.circuit` file, with filenames that match the `.circuit` file. The file named `.wires.svg` shows the required wire connections and the file named `.cuts.svg` shows the required copper strip cuts. The names include number of completed and failed routes for the solution, and the score for the completed routes.
 
-* The `.svg` files contain exact physical size information so, when printed, should match the size of the stripboard. The `.cuts.svg` shows the cut locations as seen from the copper stripe side. It's a mirror image as compared to `wires.svg`. That way, the two sheets can be fastened to each side of the board with paper glue or tape. Then the wires and cuts can be done through the paper, reducing the chance of errors.
+* The `.svg` files contain exact physical size information so, when printed, should match the size of the stripboard. The `.cuts.svg` shows the copper strip cut locations as seen from the copper stripe side. It's a mirror image as compared to `wires.svg`, allowing it to be used directly on the copper side of the board.
 
-* Print the `.svg` files from a graphics editor, such as the excellent [Inkscape](https://inkscape.org/en/), which is free, open source, and available for Linux, Mac and Windows. Make sure that the scale is set to 100% in the printer dialog, since the print will not match the board if the scale is wrong. If the print does not match even when the scale is set to 100%, you may be the unfortunate owner of a printer that does not print to scale, and will need to modify the print size. Laser printers are apparently less reliable than inkjet printers in this regard. My laser printer, a Brother HL-L2360D prints exactly to scale.
+* Print the `.svg` files from a graphics editor, such as the excellent [Inkscape](https://inkscape.org/en/), which is free, open source, and available for Linux, Mac and Windows. Make sure that the scale is set to 100% in the printer dialog, since the print will not match the board if the scale is wrong. Cut the sheets to only include the design and the 4 corner markers.
+
+* Make sure to do the copper strip cuts before the wiring and soldering. Soldering tends to flood onto the areas where the cuts should be, and the cuts are easiest to do when not having to cut through solder. Start by fastening the cut sheet on the copper side, making sure to align the four corner points with the corner vias on the board, then tape it in place. Then, don't cut yet, instead score each cut location with a utility knife, remove the paper sheet, then cut as indicated by the scored lines. Since the cuts can be hard to see, you may want to mark them off on the paper as you go, or do them in a strict row by row order.
+
+* After having done the cuts, fasten the wire sheet on the top of the board and tape it in place. Then poke wires through the paper and solder them in place as you go. As removing the paper from underneath the wires can be a bit finicky, I prefer to solder the wires with a bit of slack to them first, then remove the paper, then reheat one of the solder points for each wire, and pull the wire tight.
 
 
 ### Tips and Tricks
@@ -99,6 +103,8 @@ If a good layout is found, the solution can be printed in two separate layers, w
 * The costs can be adjusted by hovering over the numbers and spinning the mouse wheel.
 
 * If the router is unable to find routes for all the required connections, the unrouted connections are shown in the layout. These can then be added by creating regular point-to-point connections with insulated wire at solder time.
+
+* If the print does not match even when the scale is set to 100%, you may be the unfortunate owner of a printer that does not print to scale, and will need to modify the print size. Laser printers are apparently less reliable than inkjet printers in this regard. My laser printer, a Brother HL-L2360D prints exactly to scale.
 
 * Some designs, such as [Rasperry Pi "Hats"](https://shop.pimoroni.com/collections/hats) require a double row header on the edge of the board. In the case of the Raspberry Pi, this is a 2x20 pin header. In order to connect to the outer header pins, the router must go around the header and use board area on the outer side for wires and traces, which makes it impossible for the header to be at the edge of the board. The more connections are required for the outer row, the further in on the board the header must be located.
 
@@ -309,41 +315,42 @@ If you have suggestions for improvement and/or wish to contribute code, [get in 
 
 ### Building on Linux
 
-* Tested on Linux Mint 19 64-bit.
-* Should also work on Ubuntu 18.04, Debian and other Debian based distributions.
+* Tested on Linux Mint 18 64-bit.
+* Should also work on Debian, Ubuntu and other Debian based distributions.
 
-Install packaged dependencies:
+#### Packaged dependencies
 
-    $ sudo apt-get install --yes \
-      build-essential cmake git libeigen3-dev libfmt-dev libfreetype6-dev libglew-dev \
-      libglfw3-dev libglm-dev libpng++-dev libxcursor-dev libxi-dev libxinerama-dev \
-      libxrandr-dev libz3-dev xorg-dev
+    $ sudo apt-get install --yes cmake git build-essential \
+    libglm-dev libxrandr-dev libxinerama-dev libxcursor-dev \
+    libxi-dev libglew-dev libfreetype6-dev libglfw3-dev \
+    libz3-dev libpng++-dev
 
-Get the code directly from this repository:
+#### Striprouter source
+
+Get the code directly from this repository.
 
     $ git clone <copy and paste the "Clone with HTTPS " URL from the top of this page>
-    $ cd striprouter
 
-Build NanoGUI:
+#### fmt
 
-    $ pushd libraries/linux
-    $ git clone --recursive https://github.com/wjakob/nanogui.git
-    $ cd nanogui
-    $ cmake .
+    $ cd striprouter/libraries/build
+    $ wget https://github.com/fmtlib/fmt/archive/3.0.0.tar.gz
+    $ tar xf 3.0.0.tar.gz
+    $ cd fmt-3.0.0
+    $ cmake -G 'Unix Makefiles'
     $ make
-    $ popd
+    $ cd ..
+    $ cp -r --parents fmt-3.0.0/fmt ../linux
 
-Build Striprouter:
+#### Build
 
-    $ mkdir -p build
-    $ pushd build
-    $ cmake ..
+    $ cd striprouter/build
+    $ cmake -G 'Unix Makefiles' ..
     $ make
-    $ popd
 
-Run:
+#### Run
 
-    $ cd bin
+    $ cd striprouter/bin
     $ ./striprouter
 
 
@@ -355,162 +362,76 @@ Include and library files need to be moved into the locations set up in CMakeLis
 
 #### Visual Studio Community 2015
 
-* Download
-    * https://go.microsoft.com/fwlink/?LinkId=691978&clcid=0x409
+https://go.microsoft.com/fwlink/?LinkId=691978&clcid=0x409
 * Chose the type of installation: Custom
 * Unselect everything
 * Select: Programming Languages > Visual C++ > Common Tools for Visual C++ 2015
 
 #### CMake
 
-* Download
-    * https://cmake.org/download/
-        cmake-3.6.3-win64-x64.msi
+https://cmake.org/download/ > `cmake-3.6.3-win64-x64.msi`
 
 #### FreeType2
 
-* Download
-    * https://sourceforge.net/projects/freetype/
-        * ft263.zip (2.6.3)
-* Download the .zip and unzip it
-* In the CMake GUI:
-    * Browse to the source
-        * Source: ft263/freetype-2.6.3
-        * Build: ft263/freetype-2.6.3/builds
-    * Click Configure
-        * Specify the generator for this project > Visual Studio 15 2017 Win64
-        * Use default native compilers
-        * Click Finish
-    * Set options:
-        * CMAKE_CONFIGURATION_TYPES: Debug;Release
-            * Remove the other types
-    * Click Generate
-    * Click Open Project
-        * Select Visual Studio 2017 (if prompted)
-* In Visual Studio:
-    * Solution configurations > Release
-	* Build > Build Solution
+https://sourceforge.net/projects/freetype/ > ft263.zip (2.6.3)
+* Open the CMake GUI and browse to the source.
+* Use default native compilers
+* Source: ft263/freetype-2.6.3
+* Build: ft263/freetype-2.6.3/builds
+* If "already exists" error: File > Delete Cache
+* Click Configure
+* Specify the generator for this project > Visual Studio 14 2015 Win64
+* Ignore error: "Could NOT find PkgConfig (missing:  PKG_CONFIG_EXECUTABLE)"
+* Click Generate
+* Open freetype-2.6.3\builds\freetype.sln
+* Layout Configurations > Release
+* Build > Build Layout
 
 #### GLFW
 
-* Download
-    * http://www.glfw.org/download.html
-        * 64-bit Windows binaries
+http://www.glfw.org/download.html > 64-bit Windows binaries
 
 #### fmt
 
-* Download
-    * https://github.com/cppformat/cppformat/releases
-        * 4.0.0
-* Download the .zip and unzip it
-* In the CMake GUI:
-    * Browse to the source
-        * Source: fmt-4.0.0
-        * Build: fmt-4.0.0/builds
-            Create the builds dir
-    * Click Configure
-        * Specify the generator for this project > Visual Studio 15 2017 Win64
-        * Use default native compilers
-        * Click Finish
-    * Set options:
-        * CMAKE_CONFIGURATION_TYPES = Debug;Release
-            * Remove the other types
-        * Checkmark only: FMT_INSTALL, FMT_USE_CPP11
-    * Click Generate
-    * Click Open Project
-        * Select Visual Studio 2017 (if prompted)
-* In Visual Studio:
-	* Build > Build Solution
+https://github.com/cppformat/cppformat/releases > 3.0.1
+* Open the CMake GUI and browse to the source.
+* Use default native compilers
+* Source: fmt-3.0.1
+* Build: fmt-3.0.1/builds (create the builds dir)
+* Click Configure
+* Select only: FMT_INSTALL, FMT_USE_CPP11
+* Click Generate
+* Open libraries\win64\fmt-3.0.1\builds\FMT.sln
+* Probably no longer required: Right click Layout "FMT" > Retarget solution
+* Layout Configurations > Release
+* Build > Build Layout
 
 #### glm
 
-* Download
-    * https://github.com/g-truc/glm/releases
-        * 0.9.8.5
-* Download the .zip and unzip it
-* glm is header only. Just move into place.
+https://github.com/g-truc/glm/releases > 0.9.7.4
+
+glm is header only. Just move into place.
 
 #### GLEW
 
-* Download
-    * https://sourceforge.net/projects/glew
-        * glew-2.1.0-win32.zip
-* Copy bin\Release\x64\glew32.dll to striprouter\bin
-    * glew32.dll is the **64-bit** DLL despite the conflicting name
-* Copy lib\Release\x64\glew32.lib to striprouter\libraries\win64\lib
-    * glew32.lib is the corresponding **64-bit** lib
+https://sourceforge.net/projects/glew/ > 1.13.0
+
+Copy `bin\Release\x64\glew32.dll` to `striprouter\bin`.
+
+`glew32.dll` is the 64-bit DLL despite the conflicting name.
+
+`lib\Release\x64\glew32.lib` is the corresponding 64-bit lib.
 
 #### NanoGUI
 
-* Download
-    * $ git clone --recursive https://github.com/wjakob/nanogui.git
-* In the CMake GUI:
-    * Browse to the source
-        * Source: nanogui
-        * Build: nanogui/builds
-            Create the builds dir
-    * Click Configure
-        * Specify the generator for this project > Visual Studio 15 2017 Win64
-        * Use default native compilers
-        * Click Finish
-    * Set options:
-        * CMAKE_CONFIGURATION_TYPES: Debug;Release
-            * Remove the other types
-        * Checkmark only:
-            * NANOGUI_USE_GLAD
-            * USE_MSVC_RUNTIME_LIBRARY_DLL
-    * Click Generate
-    * Click Open Project
-        * Select Visual Studio 2017 (if prompted)
-* In Visual Studio:
-	* Build > Build Solution
+git clone --recursive https://github.com/wjakob/nanogui.git
 
-#### libpng
-
-* Download
-    * https://sourceforge.net/projects/libpng/files
-        * libpng16 > 1.6.32 > lpng1632.zip
-* Build Debug and Release versions according to instructions
-    * https://github.com/winlibs/libpng/tree/master/projects/vstudio
-
-
-#### png++
-
-* Download
-    * http://download.savannah.nongnu.org/releases/pngpp
-        * png++-0.2.9.tar.gz
-
-#### simple-svg
-
-* Download
-    * https://github.com/adishavit/simple-svg
-        * simple_svg_1.0.0.hpp
-
-#### CmdParser
-
-* Download
-    * https://github.com/FlorianRappl/CmdParser
-        * cmdparser.hpp
-
-#### Striprouter
-
-* Download
-    * $ git clone https://github.com/rogerdahl/striprouter.git
-* In the CMake GUI:
-    * Browse to the source
-        * Source: striprouter
-        * Build: striprouter/builds
-            Create the builds dir
-    * Click Configure
-        * Specify the generator for this project > Visual Studio 15 2017 Win64
-        * Use default native compilers
-        * Click Finish
-    * Set options:
-        * CMAKE_CONFIGURATION_TYPES: Debug;Release
-            * Remove the other types
-    * Click Generate
-    * Click Open Project
-        * Select Visual Studio 2017 (if prompted)
-* In Visual Studio:
-    * Solution configurations > Release
-	* Build > Build Solution
+* Open in cmake > Configure
+* Select only
+  * CMAKE_CONFIGURATION_TYPES: Release
+  * NANOGUI_USE_GLAD
+  * USE_MSVC_RUNTIME_LIBRARY_DLL
+* Generate
+* Open NanoGUI.sln
+* Layout Configurations (toolbar) > Release
+* Build > Build Layout
