@@ -12,6 +12,7 @@ void Nets::connect(const Via& viaA, const Via& viaB)
 {
   int setIdxA = getViaSetIdx(viaA);
   int setIdxB = getViaSetIdx(viaB);
+  // TODO: These asserts get triggered by a fast component drag out of the board on the top side.
   assert(setIdxA < static_cast<int>(viaSetVec_.size()));
   assert(setIdxB < static_cast<int>(viaSetVec_.size()));
 

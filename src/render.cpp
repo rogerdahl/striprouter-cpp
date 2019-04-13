@@ -119,7 +119,7 @@ void Render::drawWireSections()
         RGBA rgba(0, 0, 0, 0.7f);
         auto mouseNet = getMouseNet();
         if (mouseNet.size() && mouseNet.count(section.start.via)) {
-          rgba = RGBA(0.7f, 0.7f, 0.7f, 0.7f);
+          rgba = RGBA(0.7f, 0.7f, 0.7f, 1.0f);
         }
         drawThickLine(
             section.start.via.cast<float>(), section.end.via.cast<float>(),

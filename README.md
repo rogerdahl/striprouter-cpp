@@ -313,44 +313,44 @@ If you have suggestions for improvement and/or wish to contribute code, [get in 
 * Style: http://geosoft.no/development/cppstyle.html
 * Format: See included `_clang-format` and `format-all.sh`
 
+
 ### Building on Linux
 
-* Tested on Linux Mint 18 64-bit.
-* Should also work on Debian, Ubuntu and other Debian based distributions.
+* Tested on Linux Mint 19 64-bit.
+* Should also work on Ubuntu 18.04, Debian and other Debian based distributions.
 
-#### Packaged dependencies
+Install packaged dependencies:
 
-    $ sudo apt-get install --yes cmake git build-essential \
-    libglm-dev libxrandr-dev libxinerama-dev libxcursor-dev \
-    libxi-dev libglew-dev libfreetype6-dev libglfw3-dev \
-    libz3-dev libpng++-dev
+    $ sudo apt-get install --yes \
+      build-essential cmake git libeigen3-dev libfmt-dev libfreetype6-dev libglew-dev \
+      libglfw3-dev libglm-dev libpng++-dev libxcursor-dev libxi-dev libxinerama-dev \
+      libxrandr-dev libz3-dev xorg-dev
 
-#### Striprouter source
-
-Get the code directly from this repository.
+Get the code directly from this repository:
 
     $ git clone <copy and paste the "Clone with HTTPS " URL from the top of this page>
+    $ cd striprouter
 
-#### fmt
+Build NanoGUI:
 
-    $ cd striprouter/libraries/build
-    $ wget https://github.com/fmtlib/fmt/archive/3.0.0.tar.gz
-    $ tar xf 3.0.0.tar.gz
-    $ cd fmt-3.0.0
-    $ cmake -G 'Unix Makefiles'
+    $ pushd libraries/linux
+    $ git clone --recursive https://github.com/wjakob/nanogui.git
+    $ cd nanogui
+    $ cmake .
     $ make
-    $ cd ..
-    $ cp -r --parents fmt-3.0.0/fmt ../linux
+    $ popd
 
-#### Build
+Build Striprouter:
 
-    $ cd striprouter/build
-    $ cmake -G 'Unix Makefiles' ..
+    $ mkdir -p build
+    $ pushd build
+    $ cmake ..
     $ make
+    $ popd
 
-#### Run
+Run:
 
-    $ cd striprouter/bin
+    $ cd bin
     $ ./striprouter
 
 
