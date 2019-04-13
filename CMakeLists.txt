@@ -4,6 +4,13 @@ project(striprouter)
 # https://cmake.org/cmake/help/v3.0/policy/CMP0015.html
 cmake_policy(SET "CMP0015" "NEW")
 
+# Set default build to Release
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set(SOURCE_DIR ${CMAKE_SOURCE_DIR}/src)
 
@@ -20,20 +27,19 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(GLFW_LIBRARIES glfw)
 else ()
   set(GLFW_LIBRARIES glfw3.lib)
-  set(GLFW_INCLUDE_DIRS ${LIBRARIES}/glfw-3.2.1.bin.WIN64/include)
-  set(GLFW_LINK_DIRS ${LIBRARIES}/glfw-3.2.1.bin.WIN64/lib-vc2015)
+  set(GLFW_INCLUDE_DIRS ${LIBRARIES}/include)
+  set(GLFW_LINK_DIRS ${LIBRARIES}/lib)
 endif ()
 
 # fmt
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(FMT_LIBRARIES fmt)
-  set(FMT_INCLUDE_DIR ${LIBRARIES}/fmt-3.0.1)
-  set(FMT_LINK_DIR ${LIBRARIES}/fmt-3.0.1/fmt)
+  set(FMT_INCLUDE_DIR "")
+  set(FMT_LINK_DIR "")
 else ()
   set(FMT_LIBRARIES fmt.lib)
-  set(FMT_INCLUDE_DIR ${LIBRARIES}/fmt-3.0.1)
-  set(FMT_LINK_DIR ${LIBRARIES}/fmt-3.0.1/builds/fmt/Release)
-  #set(FMT_LINK_DIR ${LIBRARIES}/fmt-3.0.1/builds/fmt/Debug)
+  set(FMT_INCLUDE_DIR ${LIBRARIES}/include)
+  set(FMT_LINK_DIR ${LIBRARIES}/lib/Release)
 endif ()
 
 # FreeType2
@@ -44,14 +50,14 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(FREETYPE_LINK_DIRS "")
 else ()
   set(FREETYPE_LIBRARIES freetype.lib)
-  set(FREETYPE_INCLUDE_DIRS ${LIBRARIES}/freetype-2.6.3/include)
-  set(FREETYPE_LINK_DIRS ${LIBRARIES}/freetype-2.6.3/builds/Release)
+  set(FREETYPE_INCLUDE_DIRS ${LIBRARIES}/include)
+  set(FREETYPE_LINK_DIRS ${LIBRARIES}/lib/Release)
 endif ()
 
 # glm
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 else ()
-  set(GLM_INCLUDE_DIR ${LIBRARIES}/glm-0.9.7.4/glm)
+  set(GLM_INCLUDE_DIR ${LIBRARIES}/include)
 endif ()
 
 # GLEW
@@ -59,11 +65,12 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(GLEW_LIBRARIES GLEW)
 else ()
   set(GLEW_LIBRARIES glew32.lib)
-  set(GLEW_INCLUDE_DIRS ${LIBRARIES}/glew-1.13.0/include)
-  set(GLEW_LINK_DIR ${LIBRARIES}/glew-1.13.0/lib/Release/x64)
+  set(GLEW_INCLUDE_DIRS ${LIBRARIES}/include)
+  set(GLEW_LINK_DIR ${LIBRARIES}/lib/Release)
 endif ()
 
 # OpenGL and GLU
+set(OpenGL_GL_PREFERENCE "GLVND")
 find_package(OpenGL REQUIRED)
 
 # X
@@ -91,20 +98,19 @@ endif ()
 # NanoGUI
 set(NANO_INCLUDE_DIR
   ${LIBRARIES}/nanogui/include
-  ${LIBRARIES}/nanogui/ext/eigen
   ${LIBRARIES}/nanogui/ext/nanovg/src
 )
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(NANO_LIBRARIES nanogui)
-  set(NANO_LINK_DIR ${LIBRARIES}/nanogui/build)
+  set(NANO_LINK_DIR ${LIBRARIES}/nanogui)
 else ()
   set(NANO_LIBRARIES nanogui.lib)
-  set(NANO_LINK_DIR ${LIBRARIES}/nanogui/build/Release)
+  set(NANO_LINK_DIR ${LIBRARIES}/lib/Release)
   #set(NANO_LINK_DIR ${LIBRARIES}/nanogui/build/Debug)
 endif ()
 
 # Eigen
-#find_package(Eigen3 REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 # libpng
 # png++
@@ -114,8 +120,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   find_package(PNG REQUIRED)
 else ()
   set(PNG_INCLUDE_DIRS
-	${HEADER_LIBRARIES}/png++-0.2.9
-	${LIBRARIES}/libpng-1.6.26
+	${HEADER_LIBRARIES}/pngpp
+#	${LIBRARIES}/libpng-1.6.26
   )
 endif ()
 
@@ -152,6 +158,7 @@ set(SOURCE_FILES
 )
 
 include_directories(
+  ${HEADER_LIBRARIES}
   ${CMD_PARSER_INCLUDE_DIR}
   ${EIGEN3_INCLUDE_DIR}
   ${FMT_INCLUDE_DIR}

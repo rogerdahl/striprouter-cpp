@@ -271,7 +271,7 @@ void OglText::drawText(int x, int y, int nLine, const std::string& str)
       GL_FALSE, // normalized?
       0, // stride
       (void*)0 // array buffer offset
-      );
+  );
 
   glEnableVertexAttribArray(1);
   glBindBuffer(GL_ARRAY_BUFFER, texBufId_);
@@ -285,7 +285,7 @@ void OglText::drawText(int x, int y, int nLine, const std::string& str)
       GL_FALSE, // normalized?
       0, // stride
       (void*)0 // array buffer offset
-      );
+  );
 
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
 }
@@ -325,6 +325,6 @@ void OglText::drawTextBackground(int x, int y, int nLine, const std::string& str
       GL_FALSE, // normalized?
       0, // stride
       (void*)0 // array buffer offset
-      );
+  );
   glDrawArrays(GL_TRIANGLES, 0, triVec.size());
 }

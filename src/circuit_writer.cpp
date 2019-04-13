@@ -20,9 +20,8 @@ void CircuitFileWriter::updateComponentPositions(
 
   std::ifstream inFile(circuitFilePath);
   if (!inFile.good()) {
-    throw std::runtime_error(
-        fmt::format(
-            "Could not open file for read. path=\"{}\"", circuitFilePath));
+    throw std::runtime_error(fmt::format(
+        "Could not open file for read. path=\"{}\"", circuitFilePath));
   }
 
   auto tmpFilePath = circuitFilePath + ".tmp";
@@ -62,10 +61,9 @@ void CircuitFileWriter::updateComponentPositions(
 
   result = rename(tmpFilePath.c_str(), circuitFilePath.c_str());
   if (result) {
-    throw std::runtime_error(
-        fmt::format(
-            "Could not replace file. new=\"{}\" old=\"{}\"", tmpFilePath,
-            circuitFilePath));
+    throw std::runtime_error(fmt::format(
+        "Could not replace file. new=\"{}\" old=\"{}\"", tmpFilePath,
+        circuitFilePath));
   }
 }
 
