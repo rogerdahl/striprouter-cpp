@@ -52,6 +52,15 @@ void CircuitFileParser::parse(std::string& circuitFilePath)
 
 void CircuitFileParser::parseLine(std::string lineStr)
 {
+  // Substitute aliases
+  std::string tmp;
+  for (auto it = begin(aliases_); it != end(aliases_); ++it) {
+    tmp = std::regex_replace(lineStr, std::regex(it->first), it->second);
+    if (lineStr.compare(tmp) != 0) {
+      lineStr = tmp;
+    }
+  }
+
   // Connections are most common, so they are parsed first to improve
   // performance.
   if (parseConnection(lineStr)) {
@@ -73,10 +82,25 @@ void CircuitFileParser::parseLine(std::string lineStr)
     return;
   }
   else if (parseDontCare(lineStr)) {
+    return;
+  }
+  else if (parseAlias(lineStr)) {
   }
   else {
     throw std::string("Invalid line");
   }
+}
+
+// Alias
+bool CircuitFileParser::parseAlias(std::string& lineStr)
+{
+  static std::regex AliasRx("^([\\w.]+) = ([\\w.]+)$", rxFlags);
+  std::smatch m;
+  if (!regex_match(lineStr, m, AliasRx)) {
+    return false;
+  }
+  aliases_.push_back(std::make_pair(m[1], m[2]));
+  return true;
 }
 
 // Comment or empty line
@@ -205,7 +229,8 @@ bool CircuitFileParser::parseDontCare(std::string& lineStr)
     if (dontCarePinIdx < 1
         || dontCarePinIdx > static_cast<int>(packagePosVec.size())) {
       throw fmt::format(
-          "Invalid \"Don't Care\" pin number for {}: {}. Must be between 1 and "
+          "Invalid \"Don't Care\" pin number for {}: {}. Must be between 1 "
+          "and "
           "{} (including)",
           componentName, dontCarePinIdx, packagePosVec.size());
     }
