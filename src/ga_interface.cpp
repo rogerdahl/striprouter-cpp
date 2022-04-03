@@ -19,7 +19,6 @@ GeneticAlgorithm::GeneticAlgorithm(
 
 void GeneticAlgorithm::reset(int nConnectionsInCircuit)
 {
-  assert(!(nConnectionsInCircuit & 1)); // Must have even number of connections
   nConnectionsInCircuit_ = nConnectionsInCircuit;
   population_.reset(nConnectionsInCircuit);
   nextOrderingIdx_ = 0;
